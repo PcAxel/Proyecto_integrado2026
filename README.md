@@ -1,0 +1,81 @@
+# FYAG ERP · Prototipo frontend
+
+Frío y Agroindustria SpA · Proyecto Integrado (TIHV43) · INACAP Chillán · Unidad 3
+
+Prototipo navegable de dos superficies sobre un mismo dominio:
+
+- **Portal ERP de oficina** (`/erp`, escritorio): presupuestos, obras, bodega y Cardex, compras, auditoría de terreno, personal y flota, maestros y log de auditoría.
+- **App móvil PWA de terreno** (`/app`, móvil): hoja de servicio en 5 pasos, solicitud de materiales, cola offline.
+
+El backend real (Django REST Framework + MySQL + SimpleJWT) aún no existe: todo el acceso a datos pasa por `src/services/*`, con la forma que tendrá la API.
+
+## Arranque
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm test           # 112 pruebas (dominio, servicios, arquitectura)
+npm run build      # build de producción + service worker
+```
+
+Los datos viven en IndexedDB del navegador (clave `fyag-db-v1`). Para volver al dataset original, borre la base `keyval-store` desde las herramientas del navegador.
+
+## Usuarios demo
+
+El login muestra una tarjeta por perfil. El rol **Técnico** entra a `/app`; el resto a `/erp`. En el ERP, el selector «Demo» de la barra superior cambia de rol sin volver a iniciar sesión.
+
+| Perfil | Rol | Qué se ve distinto |
+| --- | --- | --- |
+| Carolina Fuentealba | `ADMIN_GENERAL` | Todo; aprueba presupuestos con margen < 20 % |
+| Matías Contreras | `ADMINISTRACION` | Aprueba presupuestos (salvo margen < 20 %), compras, personal |
+| Rodrigo Sepúlveda | `BODEGA` | Artículos, Cardex, compras; no ve presupuestos ni costos de obra |
+| Patricio Mella | `SUPERVISOR` | Obras, CU30, auditoría de hojas; no ve el valor del inventario |
+| Jorge Quezada | `TECNICO` | Solo la PWA; nunca ve costos |
+| Francisca Valdés | `CONSULTA` | Solo lectura |
+
+## Principios y dónde se cumplen
+
+| | Principio | Cómo se garantiza |
+| --- | --- | --- |
+| P1 | Cardex inmutable | `cardexService` solo expone `list`, `retrieve`, `create`, `reversar`, `reingresarSobrante`. Las correcciones son contra-asientos. |
+| P2 | Sin borrado físico | Ningún servicio tiene `remove`/`delete`; los maestros se desactivan; `db.js` no expone borrado de filas. |
+| P3 | Reglas fuera de los componentes | `src/domain/*`: funciones puras con pruebas unitarias; los componentes solo muestran resultados. |
+| P4 | Todo cambio se audita | `registrarAuditoria()` en cada escritura: usuario, rol, fecha-hora, entidad, id, acción, valor anterior/nuevo, IP. |
+| P5 | RBAC visible | `domain/rbac.js` (`can(rol, accion)`), `RequireRole` en rutas y filtrado de campos de costo en los servicios. |
+| P6 | Mobile-first real | Botones de 56 px, teclado numérico propio, sin escritura libre salvo observaciones. |
+| P7 | Cero placeholders | La prueba `src/__tests__/arquitectura.test.js` revisa estos principios sobre todo el código fuente. |
+
+## Estructura
+
+```
+src/
+├─ domain/       reglas de negocio puras (money, cardex, obras, rentabilidad, checklist, geo, rut, hojas, sync, kpis, alertas, exportar…)
+├─ services/     capa tipo API (misma forma que DRF) + cola offline (syncQueue.js)
+├─ mocks/        seed realista (Región de Ñuble) y db en memoria con persistencia IndexedDB
+├─ stores/       auth (JWT simulado, inactividad), sync, ui
+├─ components/   ui/ (sistema de diseño) y domain/ (badges, MarginGauge, ChecklistGrid, GpsStamp…)
+├─ layouts/      ErpLayout, PwaLayout
+├─ features/     erp/* y pwa/*
+└─ lib/          GPS, imágenes, exportación Excel/PDF (carga bajo demanda)
+```
+
+## Reglas de negocio destacadas
+
+- **Cardex:** stock derivado, sin stock negativo, reversa única por movimiento, reingreso de sobrante tasado al costo original.
+- **CU30:** Emergencia y Garantía abren sin presupuesto; la obra queda marcada y debe regularizarse para finalizar.
+- **Cierre de obra:** 6 checks (presupuesto, horas, hojas auditadas, sobrantes conciliados, sync de terreno, costos calculables).
+- **Costo real:** materiales netos del Cardex + horas × tarifa hora-hombre **congelada** al sincronizar cada hoja.
+- **Rentabilidad:** margen sobre venta neta; semáforo rojo < 20 %, ámbar < 30 %; con margen < 20 % solo Gerencia aprueba.
+- **Checklist paramétrico:** 5 puntos (presión PSI, amperaje A, fugas, temperatura °C, limpieza) con rangos y tolerancias en `domain/checklist.js`.
+- **Offline:** los envíos sin señal se guardan en IndexedDB y se reenvían al reconectar; los reintentos son idempotentes (`client_id`).
+
+## Pasar del mock al backend real
+
+1. Reemplace el cuerpo de cada método de `src/services/*.service.js` por una llamada HTTP (`fetch`/axios) al endpoint DRF equivalente; las firmas y las respuestas no cambian.
+2. Mueva a DRF las validaciones que hoy viven en los servicios (permisos, auditoría, idempotencia). El dominio JS puede seguir usándose en el cliente para validar y mostrar.
+3. Sustituya `authStore.login` por `POST /api/auth/token/` (SimpleJWT) y envíe el token en cada llamada.
+4. Retire `src/mocks/` y `configureHttp()`.
+
+## Supuestos a validar con FYAG
+
+Los rangos del checklist, los stocks mínimos, las tarifas hora-hombre, el umbral de desvío de costos (±5 %) y los datos del seed son valores plausibles, no datos reales de la empresa.
