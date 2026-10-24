@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible { @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-canvas; }
+}
+
+@layer components {
+  .card { @apply min-w-0 bg-surface border border-line rounded-xl shadow-card; }
+  .num { @apply font-mono tabular-nums; }
+}
