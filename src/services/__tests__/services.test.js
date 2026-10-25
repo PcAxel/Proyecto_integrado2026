@@ -168,10 +168,14 @@ describe('maestros', () => {
 })
 
 describe('presupuestos y obras (Fase 4)', () => {
-  it('el catálogo del editor incluye costos solo para quien crea presupuestos', async () => {
+  it('el catálogo del editor está disponible para quien ve presupuestos (incluso sin poder crearlos)', async () => {
     login(SUPERVISOR)
     expect((await presupuestosService.catalogoMateriales())[0].costo_unitario).toBeGreaterThan(0)
     expect((await presupuestosService.tarifas()).length).toBeGreaterThan(3)
+    for (const id of [GERENCIA, 'U-006']) { // Administrador General y Consulta: solo lectura, igual ven los nombres de los artículos
+      login(id)
+      expect((await presupuestosService.catalogoMateriales()).length).toBeGreaterThan(30)
+    }
     login(BODEGA)
     await expect(presupuestosService.catalogoMateriales()).rejects.toMatchObject({ status: 403 })
   })
@@ -228,5 +232,52 @@ describe('dashboard por rol', () => {
     const a = await personalService.alertas()
     expect(a[0]).toMatchObject({ severidad: 'CRITICA', tipo: 'REVISION_TECNICA' })
     expect((await personalService.listFlota())[0].tecnico_nombre).not.toBe('—')
+  })
+})
+
+describe('segregación de funciones en los servicios', () => {
+  it('el Administrador General autoriza pero no ejecuta: sus escrituras operativas dan 403', async () => {
+    login(GERENCIA)
+    const [a] = await articulosService.list()
+    await expect(cardexService.create({ tipo: 'SALIDA_OBRA', articulo_id: a.id, cantidad: 1, obra_id: 'OB-0001' })).rejects.toMatchObject({ status: 403 })
+    await expect(articulosService.create({ sku: 'X-1', nombre: 'x', categoria: 'x', unidad: 'un', proveedor_id: 'PRV-001' })).rejects.toMatchObject({ status: 403 })
+    await expect(presupuestosService.create({ cliente_id: 'CLI-001', titulo: 'x', tipo_obra: 'INSTALACION' })).rejects.toMatchObject({ status: 403 })
+    await expect(obrasService.create({ nombre: 'x', cliente_id: 'CLI-001', tipo: 'EMERGENCIA', ubicacion: { lat: 1, lng: 1 } })).rejects.toMatchObject({ status: 403 })
+    await expect(hojasService.aprobar('HS-0006')).rejects.toMatchObject({ status: 403 })
+    await expect(personalService.actualizarTarifa('T-02', 12000)).rejects.toMatchObject({ status: 403 })
+    await expect(comprasService.createFactura({ proveedor_id: 'PRV-001', numero: '1', fecha: '2026-10-01', items: [{ articulo_id: 'ART-001', cantidad: 1, precio_lista: 1 }] })).rejects.toMatchObject({ status: 403 })
+    await expect(clientesService.create({ rut: '12.345.678-5', razon_social: 'x' })).rejects.toMatchObject({ status: 403 })
+  })
+  it('conserva lo que autoriza: aprueba presupuestos con margen bajo y finaliza obras', async () => {
+    login(SUPERVISOR)
+    const p = await presupuestosService.create({ cliente_id: 'CLI-001', titulo: 'Margen bajo', tipo_obra: 'MANTENCION', adicionales: [{ descripcion: 'x', monto: 100000 }], precio_venta_neto: 105000 })
+    await presupuestosService.enviar(p.id)
+    login(GERENCIA)
+    expect((await presupuestosService.aprobar(p.id)).estado).toBe('APROBADO')
+    expect((await obrasService.finalizar('OB-0007')).estado).toBe('FINALIZADA')
+  })
+  it('Administración (Finanzas) ya no modifica personal; RRHH sí', async () => {
+    login(ADMIN)
+    await expect(personalService.actualizarTarifa('T-02', 12000)).rejects.toMatchObject({ status: 403 })
+    await expect(personalService.setActivo('T-02', false)).rejects.toMatchObject({ status: 403 })
+    expect((await personalService.list()).length).toBe(16) // sigue pudiendo verlo
+    login('U-007')
+    expect((await personalService.actualizarTarifa('T-02', 12000)).costo_hora_hombre).toBe(12000)
+  })
+  it('Consulta no puede ejecutar ninguna escritura de servicio', async () => {
+    login('U-006')
+    const [a] = await articulosService.list()
+    const intentos = [
+      () => cardexService.create({ tipo: 'SALIDA_OBRA', articulo_id: a.id, cantidad: 1, obra_id: 'OB-0001' }),
+      () => cardexService.reversar('MOV-000001', 'intento de prueba'),
+      () => presupuestosService.create({ cliente_id: 'CLI-001', titulo: 'x', tipo_obra: 'INSTALACION' }),
+      () => presupuestosService.aprobar('PRE-0007'),
+      () => obrasService.finalizar('OB-0007'),
+      () => hojasService.aprobar('HS-0006'),
+      () => personalService.actualizarTarifa('T-02', 12000),
+      () => clientesService.setActivo('CLI-001', false),
+      () => retirosService.entregar('SR-0001'),
+    ]
+    for (const intento of intentos) await expect(intento()).rejects.toMatchObject({ status: 403 })
   })
 })

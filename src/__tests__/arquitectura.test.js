@@ -59,6 +59,22 @@ describe('principios de arquitectura', () => {
     expect(inexistentes).toEqual([])
   })
 
+  it('P5: todo método de servicio que escribe datos exige un permiso', () => {
+    const servicios = codigo.filter((p) => /services\/[\w-]+\.service\.js$/.test(p))
+    const sinControl = []
+    for (const archivo of servicios) {
+      // Cada `respond(` abre el cuerpo de un método del servicio; se revisa hasta el siguiente.
+      const [, ...metodos] = leer(archivo).split(/\brespond\(/)
+      metodos.forEach((cuerpo, i) => {
+        const escribe = /db\.(insert|patch)\(/.test(cuerpo)
+        const controla = /requirePermiso\(|puedeAprobarPresupuesto\(/.test(cuerpo)
+        if (escribe && !controla) sinControl.push(`${rel(archivo)} #${i + 1}`)
+      })
+    }
+    expect(servicios.length).toBeGreaterThan(10)
+    expect(sinControl).toEqual([])
+  })
+
   it('P1: el servicio de Cardex solo declara su contrato', () => {
     const t = leer(join(SRC, 'services/cardex.service.js'))
     const bloque = t.slice(t.indexOf('export const cardexService'))

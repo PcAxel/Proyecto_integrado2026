@@ -6,4 +6,5 @@ export const USUARIOS_DEMO = [
   { id: 'U-004', nombre: 'Patricio Mella', rol: 'SUPERVISOR', cargo: 'Supervisor de Obras', email: 'pmella@fyag.cl' },
   { id: 'U-005', nombre: 'Jorge Quezada', rol: 'TECNICO', cargo: 'Técnico Frigorista', email: 'jquezada@fyag.cl' },
   { id: 'U-006', nombre: 'Francisca Valdés', rol: 'CONSULTA', cargo: 'Directorio (solo lectura)', email: 'fvaldes@fyag.cl' },
+  { id: 'U-007', nombre: 'Camila Torres', rol: 'RRHH', cargo: 'Encargada de RRHH', email: 'ctorres@fyag.cl' },
 ]

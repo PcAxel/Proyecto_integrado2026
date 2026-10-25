@@ -22,7 +22,7 @@ export const personalService = {
   /** Cambiar la tarifa solo afecta hojas futuras: las ya sincronizadas conservan la suya. */
   actualizarTarifa(id, costo_hora_hombre) {
     return respond(() => {
-      requirePermiso('personal.gestionar')
+      requirePermiso('personal.editar')
       const p = db.find('personal', id)
       if (!p) throw new ApiError(404, 'Ficha no encontrada.')
       if (!(costo_hora_hombre > 0)) throw new ApiError(422, 'La tarifa debe ser mayor que cero.')
@@ -34,7 +34,7 @@ export const personalService = {
   },
   setActivo(id, activo) {
     return respond(() => {
-      requirePermiso('personal.gestionar')
+      requirePermiso('personal.editar')
       const p = db.find('personal', id)
       if (!p) throw new ApiError(404, 'Ficha no encontrada.')
       db.patch('personal', id, { activo })

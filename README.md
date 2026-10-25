@@ -26,12 +26,22 @@ El login muestra una tarjeta por perfil. El rol **Técnico** entra a `/app`; el 
 
 | Perfil | Rol | Qué se ve distinto |
 | --- | --- | --- |
-| Carolina Fuentealba | `ADMIN_GENERAL` | Todo; aprueba presupuestos con margen < 20 % |
-| Matías Contreras | `ADMINISTRACION` | Aprueba presupuestos (salvo margen < 20 %), compras, personal |
+| Carolina Fuentealba | `ADMIN_GENERAL` | Autoriza y supervisa: ve toda la gestión, aprueba presupuestos con margen < 20 %, cierra obras y administra usuarios. No ejecuta tareas operativas |
+| Matías Contreras | `ADMINISTRACION` | Presupuestos (aprueba salvo margen < 20 %), compras, clientes y proveedores; ve el personal pero no lo modifica |
 | Rodrigo Sepúlveda | `BODEGA` | Artículos, Cardex, compras; no ve presupuestos ni costos de obra |
 | Patricio Mella | `SUPERVISOR` | Obras, CU30, auditoría de hojas; no ve el valor del inventario |
 | Jorge Quezada | `TECNICO` | Solo la PWA; nunca ve costos |
 | Francisca Valdés | `CONSULTA` | Solo lectura |
+| Camila Torres | `RRHH` | Solo Dashboard y Personal y Flota: ve y edita fichas, tarifas y flota; sin acceso a obras, bodega ni compras |
+
+## Permisos y segregación de funciones
+
+La matriz completa (rol × permiso) está en **[`docs/matriz-permisos.md`](docs/matriz-permisos.md)**. Se genera desde `PERMISOS` con `npm run docs:permisos` y una prueba falla si el documento no coincide con el código. Reglas que se verifican automáticamente:
+
+- **Administrador General** autoriza y administra accesos, pero no ejecuta tareas operativas (0 permisos operativos).
+- **Consulta (Gerencia)** es estrictamente de solo lectura.
+- **RRHH** controla únicamente Personal y Flota (`dashboard.ver`, `personal.ver`, `personal.editar`), y `personal.editar` es exclusivo suyo.
+- Las listas de `PERMISOS` son explícitas: un rol nuevo no hereda ningún permiso por defecto.
 
 ## Principios y dónde se cumplen
 
@@ -41,7 +51,7 @@ El login muestra una tarjeta por perfil. El rol **Técnico** entra a `/app`; el 
 | P2 | Sin borrado físico | Ningún servicio tiene `remove`/`delete`; los maestros se desactivan; `db.js` no expone borrado de filas. |
 | P3 | Reglas fuera de los componentes | `src/domain/*`: funciones puras con pruebas unitarias; los componentes solo muestran resultados. |
 | P4 | Todo cambio se audita | `registrarAuditoria()` en cada escritura: usuario, rol, fecha-hora, entidad, id, acción, valor anterior/nuevo, IP. |
-| P5 | RBAC visible | `domain/rbac.js` (`can(rol, accion)`), `RequireRole` en rutas y filtrado de campos de costo en los servicios. |
+| P5 | RBAC visible | `domain/rbac.js` (`can(rol, accion)`), `RequireRole` en rutas y filtrado de campos de costo en los servicios. Segregación de funciones documentada en [`docs/matriz-permisos.md`](docs/matriz-permisos.md); una prueba exige que toda escritura de un servicio verifique un permiso. |
 | P6 | Mobile-first real | Botones de 56 px, teclado numérico propio, sin escritura libre salvo observaciones. |
 | P7 | Cero placeholders | La prueba `src/__tests__/arquitectura.test.js` revisa estos principios sobre todo el código fuente. |
 

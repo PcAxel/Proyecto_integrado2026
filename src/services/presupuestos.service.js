@@ -21,10 +21,10 @@ function cambiarEstado(id, estado, accion, extra = {}) {
 
 /** Un presupuesto APROBADO es inmutable y no se elimina (P2). */
 export const presupuestosService = {
-  /** Artículos con último costo, solo para armar presupuestos (el editor no tiene acceso a Bodega). */
+  /** Artículos con último costo para armar y para mostrar presupuestos (el editor no tiene acceso a Bodega). */
   catalogoMateriales() {
     return respond(() => {
-      requirePermiso('presupuestos.crear')
+      requirePermiso('presupuestos.ver')
       return db.all('articulos').filter((a) => a.activo)
         .map(({ id, sku, nombre, unidad, costo_unitario }) => ({ id, sku, nombre, unidad, costo_unitario }))
     })
@@ -32,7 +32,7 @@ export const presupuestosService = {
   /** Tarifas hora-hombre promedio por cargo (no expone fichas individuales). */
   tarifas() {
     return respond(() => {
-      requirePermiso('presupuestos.crear')
+      requirePermiso('presupuestos.ver')
       return promedioTarifasPorCargo(db.all('personal'))
     })
   },

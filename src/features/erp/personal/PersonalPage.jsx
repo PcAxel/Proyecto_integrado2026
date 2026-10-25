@@ -24,7 +24,7 @@ const COLS_FLOTA = [
 
 export function PersonalPage() {
   const rol = useAuthStore((s) => s.user.rol)
-  const gestiona = can(rol, 'personal.gestionar')
+  const gestiona = can(rol, 'personal.editar')
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') ?? 'fichas'
   const [tarifa, setTarifa] = useState(null) // { ficha, valor }
