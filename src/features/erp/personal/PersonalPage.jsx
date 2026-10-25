@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Users, Wallet, ShieldAlert, Pencil, Power, Truck, Gauge, Wrench } from 'lucide-react'
+import { Users, Wallet, ShieldAlert, Pencil, Power, Truck, Gauge, Wrench, X } from 'lucide-react'
 import { PageHeader, Tabs, Card, DataTable, KpiTile, Badge, Mono, IconButton, Modal, Button, NumberField, ConfirmDialog, ExportMenu } from '@/components/ui'
 import { MoneyCell, VencimientoBadge } from '@/components/domain'
 import { personalService } from '@/services'
 import { formatCLP } from '@/domain/money'
+import { normalizar } from '@/domain/busqueda'
 import { formatKm, resumenFlota, ESTADOS_VEHICULO } from '@/domain/flota'
 import { formatFecha, fechaLocal } from '@/domain/format'
 import { can } from '@/domain/rbac'
@@ -30,6 +31,8 @@ export function PersonalPage() {
   const gestiona = can(rol, 'personal.editar')
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') ?? 'fichas'
+  const buscar = params.get('buscar') ?? ''
+  const coincide = (...textos) => !buscar || normalizar(textos.join(' ')).includes(normalizar(buscar))
   const [tarifa, setTarifa] = useState(null) // { ficha, valor }
   const [toggle, setToggle] = useState(null)
   const [taller, setTaller] = useState(null)
@@ -104,12 +107,20 @@ export function PersonalPage() {
         <KpiTile label="Vencimientos vencidos" value={alertas.data ? vencidas : '—'} icon={ShieldAlert} tone={vencidas ? 'crit' : 'ok'} hint="Licencias, revisión y seguros" />
       </div>
 
-      <Tabs value={tab} onChange={(t) => setParams({ tab: t })} tabs={[
+      <Tabs value={tab} onChange={(t) => setParams(buscar ? { tab: t, buscar } : { tab: t })} tabs={[
         { id: 'fichas', label: 'Fichas', count: fichas.data?.length }, { id: 'flota', label: 'Flota', count: flota.data?.length }, { id: 'alertas', label: 'Alertas', count: alertas.data?.length },
       ]} />
 
-      {tab === 'fichas' && <Card padded={false}><DataTable columns={colsFichas} rows={fichas.data ?? []} rowKey={(p) => p.id} loading={fichas.loading && !fichas.data} /></Card>}
-      {tab === 'flota' && <Card padded={false}><DataTable columns={colsFlota} rows={flota.data ?? []} rowKey={(v) => v.id} loading={flota.loading && !flota.data} /></Card>}
+      {buscar && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-ink-soft">Filtrando por</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand-tint px-3 py-1 font-medium text-brand">«{buscar}»
+            <button type="button" aria-label="Quitar filtro" className="rounded-full p-0.5 hover:bg-white" onClick={() => setParams({ tab })}><X className="h-3.5 w-3.5" /></button>
+          </span>
+        </div>
+      )}
+      {tab === 'fichas' && <Card padded={false}><DataTable columns={colsFichas} rows={(fichas.data ?? []).filter((p) => coincide(p.nombre, p.rut, p.cargo, p.id))} rowKey={(p) => p.id} loading={fichas.loading && !fichas.data} /></Card>}
+      {tab === 'flota' && <Card padded={false}><DataTable columns={colsFlota} rows={(flota.data ?? []).filter((v) => coincide(v.patente, v.marca, v.modelo, v.tecnico_nombre))} rowKey={(v) => v.id} loading={flota.loading && !flota.data} /></Card>}
       {tab === 'alertas' && <Card title="Próximos vencimientos (60 días)">{alertas.data && <ListaAlertas alertas={alertas.data} />}</Card>}
 
       <Modal open={Boolean(tarifa)} onClose={() => setTarifa(null)} title={`Tarifa de ${tarifa?.ficha.nombre ?? ''}`}

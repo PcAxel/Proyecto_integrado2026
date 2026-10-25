@@ -3,7 +3,7 @@ import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
 import {
   configureHttp, cardexService, articulosService, obrasService, presupuestosService,
-  hojasService, comprasService, auditoriaService, personalService, retirosService, proveedoresService, clientesService, dashboardService, usuariosService,
+  hojasService, comprasService, auditoriaService, personalService, retirosService, proveedoresService, clientesService, dashboardService, usuariosService, busquedaService,
 } from '@/services'
 
 const login = (id) => useAuthStore.getState().login(id)
@@ -392,6 +392,41 @@ describe('gestión de accesos y usuarios', () => {
     const [a] = await articulosService.list()
     await cardexService.create({ tipo: 'SALIDA_OBRA', articulo_id: a.id, cantidad: 1, obra_id: 'OB-0001' })
     expect((await cardexService.list())[0].usuario_nombre).toBe('Sofía Reyes')
+  })
+})
+
+describe('búsqueda global: el índice respeta los permisos', () => {
+  const grupos = (items) => [...new Set(items.map((i) => i.grupo))].sort()
+
+  it('Gerencia encuentra obras, personas, vehículos y usuarios', async () => {
+    login(GERENCIA)
+    const idx = await busquedaService.indice()
+    expect(grupos(idx)).toEqual(['Artículos', 'Clientes', 'Hojas de servicio', 'Obras', 'Personal', 'Presupuestos', 'Proveedores', 'Usuarios', 'Vehículos'])
+    expect(idx.find((i) => i.codigo === 'OB-0005')).toMatchObject({ grupo: 'Obras', ruta: '/erp/obras/OB-0005' })
+    expect(idx.find((i) => i.titulo === 'Jorge Quezada' && i.grupo === 'Personal')).toBeTruthy()
+    expect(idx.find((i) => i.codigo === 'RTJK-45')).toMatchObject({ grupo: 'Vehículos' })
+  })
+  it('RRHH solo ve personal y flota; Bodega no ve personas ni usuarios', async () => {
+    login('U-007')
+    expect(grupos(await busquedaService.indice())).toEqual(['Personal', 'Vehículos'])
+    login(BODEGA)
+    const b = grupos(await busquedaService.indice())
+    expect(b).toEqual(expect.arrayContaining(['Artículos', 'Obras']))
+    expect(b).not.toEqual(expect.arrayContaining(['Personal']))
+    expect(b).not.toEqual(expect.arrayContaining(['Usuarios']))
+  })
+  it('solo Gerencia ve usuarios en la búsqueda, y nunca claves, tarifas ni costos', async () => {
+    for (const id of [ADMIN, SUPERVISOR, 'U-006']) {
+      login(id)
+      expect((await busquedaService.indice()).some((i) => i.grupo === 'Usuarios')).toBe(false)
+    }
+    login(GERENCIA)
+    const texto = JSON.stringify(await busquedaService.indice())
+    expect(texto).not.toMatch(/password|costo_hora|costo_unitario|tarifa/i)
+  })
+  it('exige sesión', async () => {
+    useAuthStore.getState().logout()
+    await expect(busquedaService.indice()).rejects.toMatchObject({ status: 401 })
   })
 })
 

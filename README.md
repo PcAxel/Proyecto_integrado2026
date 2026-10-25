@@ -34,6 +34,16 @@ El login muestra una tarjeta por perfil. El rol **Técnico** entra a `/app`; el 
 | Francisca Valdés | `CONSULTA` | Solo lectura |
 | Camila Torres | `RRHH` | Solo Dashboard y Personal y Flota: ve y edita fichas, tarifas y flota; sin acceso a obras, bodega ni compras |
 
+## Búsqueda global (Ctrl+K / ⌘K)
+
+Paleta de comandos en el ERP (`src/layouts/GlobalSearch.jsx`), sin dependencias externas. Se abre con **Ctrl+K** o **⌘K** (o con el botón «Buscar…» de la barra superior) y se cierra con **Esc**.
+
+- Encuentra **páginas y acciones** («Ir a Personal y Flota», «Crear presupuesto») y **datos**: obras por código o nombre (`OB-0005`, `ob0005`), personas por nombre o RUT, vehículos por patente, artículos por SKU, presupuestos, hojas de servicio, clientes, proveedores y usuarios. Ignora tildes y mayúsculas.
+- **Respeta los permisos:** el índice se arma en `busquedaService` solo con lo que el rol puede ver (RRHH no ve obras; solo Gerencia ve usuarios) y nunca incluye costos, tarifas ni claves.
+- Teclado: ↑ ↓ (con vuelta al extremo), Home/End, **Enter** abre y cierra, y el foco vuelve al elemento que tenía antes. Es un diálogo accesible con el patrón *combobox* (`aria-activedescendant`).
+- Al elegir un resultado se navega a su vista ya filtrada o seleccionada (`?buscar=`, `?hoja=`, `?nuevo=1`).
+- La lógica de coincidencia y ordenamiento es pura y está probada en `domain/busqueda.js`.
+
 ## Permisos y segregación de funciones
 
 La matriz completa (rol × permiso) está en **[`docs/matriz-permisos.md`](docs/matriz-permisos.md)**. Se genera desde `PERMISOS` con `npm run docs:permisos` y una prueba falla si el documento no coincide con el código. Reglas que se verifican automáticamente:

@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Snowflake, UserCog } from 'lucide-react'
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, Snowflake, UserCog } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { can, ROL_LABEL, rutaInicial } from '@/domain/rbac'
@@ -7,6 +8,25 @@ import { usuariosService } from '@/services'
 import { useResource } from '@/hooks/useResource'
 import { IconButton, cn } from '@/components/ui'
 import { ERP_NAV } from './nav'
+import { GlobalSearch } from './GlobalSearch'
+
+const esMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform ?? navigator.userAgent)
+
+/** Botón de la barra superior que abre la búsqueda global. En pantallas angostas queda solo el ícono. */
+function BotonBuscar({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Abrir búsqueda global"
+      aria-keyshortcuts="Control+K Meta+K"
+      className="flex h-9 items-center gap-2 rounded-lg border border-line bg-slate-50 px-2.5 text-sm text-ink-soft transition-colors hover:border-slate-300 hover:bg-white md:w-64 lg:w-80"
+    >
+      <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="hidden flex-1 truncate text-left md:inline">Buscar... ({esMac ? '⌘K' : 'Ctrl+K'})</span>
+    </button>
+  )
+}
 
 /** modo 'riel': barra lateral de escritorio (íconos hasta xl, etiquetas desde xl). modo 'menu': cajón del teléfono. */
 function Sidebar({ collapsed, onNavigate, modo = 'riel' }) {
@@ -79,7 +99,20 @@ export function ErpLayout() {
   const { user, logout } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar } = useUiStore()
   const navigate = useNavigate()
+  const [buscando, setBuscando] = useState(false)
   const initials = user.nombre.split(' ').map((p) => p[0]).slice(0, 2).join('')
+
+  // Ctrl+K (Windows/Linux) o ⌘K (Mac) abren y cierran la búsqueda desde cualquier pantalla del ERP.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setBuscando((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <div className="flex h-full">
@@ -109,6 +142,7 @@ export function ErpLayout() {
               className="hidden xl:inline-flex"
               onClick={toggleSidebar}
             />
+            <div className="ml-1"><BotonBuscar onClick={() => setBuscando(true)} /></div>
           </div>
           <div className="flex items-center gap-3">
             <RoleSwitcher />
@@ -126,6 +160,7 @@ export function ErpLayout() {
           <Outlet />
         </main>
       </div>
+      <GlobalSearch open={buscando} onClose={() => setBuscando(false)} />
     </div>
   )
 }

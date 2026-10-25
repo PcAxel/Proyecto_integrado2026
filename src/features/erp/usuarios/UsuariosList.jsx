@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { UserPlus, Pencil, KeyRound, Power, Lock, UserCheck, UserX, ShieldCheck, KeySquare } from 'lucide-react'
 import { PageHeader, Card, DataTable, KpiTile, Badge, Button, IconButton, Input, Select, ConfirmDialog, Mono } from '@/components/ui'
 import { usuariosService } from '@/services'
@@ -18,6 +19,17 @@ export function UsuariosList() {
   const yo = useAuthStore((s) => s.user)
   const { data, loading, reload } = useResource(() => usuariosService.list(), [])
   const [f, setF] = usePersistedFilters('usuarios', { q: '', rol: '', estado: '' })
+  const [params, setParams] = useSearchParams()
+  const buscar = params.get('buscar')
+  const nuevo = params.get('nuevo')
+  // Llegar desde la búsqueda global aplica el texto como filtro, sin arrastrar filtros de rol o estado previos.
+  // «Nuevo acceso» desde la búsqueda global abre directamente el formulario.
+  useEffect(() => {
+    if (!nuevo) return
+    setModal({})
+    setParams((p) => { p.delete('nuevo'); return p }, { replace: true }) // así la acción puede repetirse desde esta misma pantalla
+  }, [nuevo]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (buscar) { setF('q', buscar); setF('rol', ''); setF('estado', '') } }, [buscar]) // eslint-disable-line react-hooks/exhaustive-deps
   const [modal, setModal] = useState(null) // { usuario? } | null
   const [clave, setClave] = useState(null)
   const [toggle, setToggle] = useState(null)

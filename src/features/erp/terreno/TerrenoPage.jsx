@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ClipboardCheck, Undo2, MapPinOff, ShieldAlert, Inbox } from 'lucide-react'
 import { PageHeader, KpiTile, Select, Mono, EmptyState, Skeleton, cn } from '@/components/ui'
 import { ChecklistResultBadge, HojaStatusBadge } from '@/components/domain'
@@ -14,7 +15,11 @@ import { HojaDetalle } from './HojaDetalle'
 export function TerrenoPage() {
   const rol = useAuthStore((s) => s.user.rol)
   const [filtros, setFiltro] = usePersistedFilters('terreno', { estado: 'ENVIADA', obra: '' })
-  const [selId, setSelId] = useState(null)
+  const [params] = useSearchParams()
+  const hojaParam = params.get('hoja')
+  const [selId, setSelId] = useState(hojaParam)
+  // Llegar desde la búsqueda global muestra la hoja elegida aunque su estado no sea el filtro guardado.
+  useEffect(() => { if (hojaParam) { setSelId(hojaParam); setFiltro('estado', '') } }, [hojaParam]) // eslint-disable-line react-hooks/exhaustive-deps
   const { data, loading, reload } = useResource(() => hojasService.list(), [])
   const todas = data ?? []
 

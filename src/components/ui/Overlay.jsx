@@ -17,7 +17,7 @@ export function Overlay({ open, onClose, children, align = 'center' }) {
 
   if (!open) return null
   return createPortal(
-    <div className={`fixed inset-0 z-50 flex ${align === 'right' ? 'justify-end' : 'items-center justify-center p-4'}`}>
+    <div className={`fixed inset-0 z-50 flex ${align === 'right' ? 'justify-end' : align === 'top' ? 'items-start justify-center p-4 pt-[8vh] sm:pt-[12vh]' : 'items-center justify-center p-4'}`}>
       <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden="true" />
       {children}
     </div>,
