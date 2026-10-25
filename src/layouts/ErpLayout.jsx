@@ -3,7 +3,8 @@ import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Snowflake, UserCog } from 
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { can, ROL_LABEL, rutaInicial } from '@/domain/rbac'
-import { USUARIOS_DEMO } from '@/mocks/usuarios'
+import { usuariosService } from '@/services'
+import { useResource } from '@/hooks/useResource'
 import { IconButton, cn } from '@/components/ui'
 import { ERP_NAV } from './nav'
 
@@ -56,8 +57,9 @@ function Brand({ collapsed, modo = 'riel' }) {
 function RoleSwitcher({ className = 'hidden sm:flex' }) {
   const { user, switchRole } = useAuthStore()
   const navigate = useNavigate()
+  const perfiles = useResource(() => usuariosService.perfiles(), [])
   const onChange = (e) => {
-    const next = switchRole(e.target.value)
+    const next = switchRole(e.target.value, perfiles.data?.find((p) => p.id === e.target.value))
     if (next) navigate(rutaInicial(next.rol), { replace: true })
   }
   return (
@@ -65,8 +67,8 @@ function RoleSwitcher({ className = 'hidden sm:flex' }) {
       <UserCog className="h-4 w-4" />
       <span>Demo:</span>
       <select value={user.id} onChange={onChange} className="bg-transparent font-medium text-ink focus:outline-none" aria-label="Cambiar rol (demo)">
-        {USUARIOS_DEMO.map((u) => (
-          <option key={u.id} value={u.id}>{ROL_LABEL[u.rol]}</option>
+        {(perfiles.data ?? [user]).map((u) => (
+          <option key={u.id} value={u.id}>{ROL_LABEL[u.rol]} · {u.nombre.split(' ')[0]}</option>
         ))}
       </select>
     </label>

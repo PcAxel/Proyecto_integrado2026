@@ -3,7 +3,7 @@ import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
 import {
   configureHttp, cardexService, articulosService, obrasService, presupuestosService,
-  hojasService, comprasService, auditoriaService, personalService, retirosService, proveedoresService, clientesService, dashboardService,
+  hojasService, comprasService, auditoriaService, personalService, retirosService, proveedoresService, clientesService, dashboardService, usuariosService,
 } from '@/services'
 
 const login = (id) => useAuthStore.getState().login(id)
@@ -312,6 +312,89 @@ describe('kilometraje en la hoja de servicio', () => {
   })
 })
 
+describe('gestión de accesos y usuarios', () => {
+  const nuevo = (extra = {}) => ({ nombre: 'Andrea Poblete', rut: '760864285', cargo: 'Asistente administrativa', rol: 'ADMINISTRACION', email: 'apoblete@fyag.cl', password: 'Inicial-2026', ...extra })
+
+  it('solo la Gerencia General entra al módulo; el resto recibe 403', async () => {
+    for (const id of [ADMIN, BODEGA, SUPERVISOR, TECNICO, 'U-006', 'U-007']) {
+      login(id)
+      await expect(usuariosService.list()).rejects.toMatchObject({ status: 403 })
+      await expect(usuariosService.create(nuevo())).rejects.toMatchObject({ status: 403 })
+      await expect(usuariosService.setActivo('U-003', false)).rejects.toMatchObject({ status: 403 })
+    }
+    login(GERENCIA)
+    expect((await usuariosService.list()).length).toBe(7)
+  })
+
+  it('crea un acceso: normaliza datos, guarda la clave cifrada y no la expone', async () => {
+    login(GERENCIA)
+    const u = await usuariosService.create(nuevo({ email: 'APoblete@FYAG.cl' }))
+    expect(u).toMatchObject({ id: 'U-008', rut: '76.086.428-5', email: 'apoblete@fyag.cl', rol: 'ADMINISTRACION', activo: true, debe_cambiar_password: true, tiene_password: true })
+    expect(JSON.stringify(u)).not.toMatch(/Inicial-2026|password_hash|password_salt/)
+    const fila = db.find('usuarios', 'U-008')
+    expect(fila.password_hash).toMatch(/^[0-9a-f]{64}$/)
+    expect(fila.password_hash).not.toContain('Inicial')
+    expect(JSON.stringify(await usuariosService.list())).not.toMatch(/password_hash|password_salt/)
+  })
+
+  it('la misma clave produce hashes distintos por usuario (sal)', async () => {
+    login(GERENCIA)
+    await usuariosService.create(nuevo())
+    await usuariosService.create(nuevo({ nombre: 'Pedro Rojas', rut: '12.345.678-5', email: 'projas@fyag.cl' }))
+    expect(db.find('usuarios', 'U-008').password_hash).not.toBe(db.find('usuarios', 'U-009').password_hash)
+  })
+
+  it('rechaza datos inválidos con un error por campo, RUT y correo repetidos', async () => {
+    login(GERENCIA)
+    await expect(usuariosService.create(nuevo({ rut: '12.345.678-9', password: 'corta' }))).rejects.toMatchObject({ status: 422, detail: { rut: expect.any(String), password: expect.any(String) } })
+    await expect(usuariosService.create(nuevo({ email: 'cfuentealba@fyag.cl' }))).rejects.toMatchObject({ status: 422, detail: { email: expect.stringMatching(/Ya existe/) } })
+    await expect(usuariosService.create(nuevo({ rut: db.find('usuarios', 'U-001').rut }))).rejects.toMatchObject({ status: 422, detail: { rut: expect.stringMatching(/Ya existe/) } })
+  })
+
+  it('audita sin registrar contraseñas', async () => {
+    login(GERENCIA)
+    await usuariosService.create(nuevo())
+    await usuariosService.restablecerPassword('U-008', 'Otra-Clave-77')
+    await usuariosService.update('U-008', { rol: 'BODEGA' })
+    const log = (await auditoriaService.list({ entidad: 'Usuario' })).map((l) => l.accion)
+    expect(log).toEqual(expect.arrayContaining(['CREAR', 'RESTABLECER_CLAVE', 'CAMBIAR_ROL']))
+    expect(JSON.stringify(await auditoriaService.list())).not.toMatch(/Inicial-2026|Otra-Clave|password_hash/)
+    const cambio = (await auditoriaService.list({ accion: 'CAMBIAR_ROL' }))[0]
+    expect(cambio).toMatchObject({ anterior: { rol: 'ADMINISTRACION' }, nuevo: { rol: 'BODEGA' }, usuario_nombre: 'Carolina Fuentealba' })
+  })
+
+  it('no permite que la Gerencia se quede sin acceso', async () => {
+    login(GERENCIA)
+    await expect(usuariosService.setActivo('U-001', false)).rejects.toMatchObject({ status: 409 })
+    await expect(usuariosService.update('U-001', { rol: 'BODEGA' })).rejects.toMatchObject({ status: 422 })
+    await usuariosService.create(nuevo({ rol: 'ADMIN_GENERAL' }))
+    const perfil = (await usuariosService.perfiles()).find((p) => p.id === 'U-008')
+    useAuthStore.getState().login('U-008', perfil)
+    await expect(usuariosService.setActivo('U-001', false)).resolves.toMatchObject({ activo: false }) // ya hay otro administrador
+    await expect(usuariosService.setActivo('U-008', false)).rejects.toMatchObject({ status: 409 }) // el último que queda
+  })
+
+  it('los accesos desactivados no aparecen para ingresar y no se puede eliminar a nadie', async () => {
+    login(GERENCIA)
+    await usuariosService.setActivo('U-003', false)
+    expect((await usuariosService.perfiles()).some((p) => p.id === 'U-003')).toBe(false)
+    expect((await usuariosService.list()).find((u) => u.id === 'U-003').activo).toBe(false)
+    expect(Object.keys(usuariosService).some((k) => /remove|destroy|delete|eliminar|borrar/i.test(k))).toBe(false)
+  })
+
+  it('un acceso nuevo puede iniciar sesión como perfil y su nombre aparece en la auditoría', async () => {
+    login(GERENCIA)
+    const u = await usuariosService.create(nuevo({ rol: 'BODEGA', nombre: 'Sofía Reyes', rut: '12.345.678-5', email: 'sreyes@fyag.cl' }))
+    const perfil = (await usuariosService.perfiles()).find((p) => p.id === u.id)
+    expect(perfil).toMatchObject({ nombre: 'Sofía Reyes', rol: 'BODEGA' })
+    expect(perfil.password_hash).toBeUndefined()
+    useAuthStore.getState().login(perfil.id, perfil)
+    const [a] = await articulosService.list()
+    await cardexService.create({ tipo: 'SALIDA_OBRA', articulo_id: a.id, cantidad: 1, obra_id: 'OB-0001' })
+    expect((await cardexService.list())[0].usuario_nombre).toBe('Sofía Reyes')
+  })
+})
+
 describe('segregación de funciones en los servicios', () => {
   it('el Administrador General autoriza pero no ejecuta: sus escrituras operativas dan 403', async () => {
     login(GERENCIA)
@@ -353,6 +436,7 @@ describe('segregación de funciones en los servicios', () => {
       () => hojasService.aprobar('HS-0006'),
       () => personalService.actualizarTarifa('T-02', 12000),
       () => personalService.setEstadoVehiculo('VH-01', 'EN_TALLER'),
+      () => usuariosService.setActivo('U-003', false),
       () => clientesService.setActivo('CLI-001', false),
       () => retirosService.entregar('SR-0001'),
     ]

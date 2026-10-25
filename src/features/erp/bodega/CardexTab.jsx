@@ -3,7 +3,6 @@ import { Lock, Undo2, PackagePlus, ArrowUpFromLine } from 'lucide-react'
 import { Button, Select, DataTable, Card, Badge, Mono, Pagination, ExportMenu } from '@/components/ui'
 import { CardexTypeBadge, MoneyCell, TIPO_MOV_LABEL } from '@/components/domain'
 import { cardexService, articulosService, obrasService } from '@/services'
-import { USUARIOS_DEMO } from '@/mocks/usuarios'
 import { formatFechaHora, conSigno } from '@/domain/format'
 import { valorMovimiento } from '@/domain/cardex'
 import { can } from '@/domain/rbac'
@@ -14,7 +13,6 @@ import { ReversaModal } from './ReversaModal'
 import { ReingresoModal } from './ReingresoModal'
 
 const PAGE = 15
-const usuarioNombre = (id) => USUARIOS_DEMO.find((u) => u.id === id)?.nombre ?? id
 
 export function CardexTab({ articuloId, onArticuloChange }) {
   const rol = useAuthStore((s) => s.user.rol)
@@ -54,7 +52,7 @@ export function CardexTab({ articuloId, onArticuloChange }) {
         {m.reversado && <Badge tone="warn">Reversado</Badge>}
         {m.reversa_de && <p className="text-xs text-ink-soft">Reversa de <Mono>{m.reversa_de}</Mono></p>}
         <p className="truncate text-xs text-ink-soft" title={m.referencia}>{m.referencia}</p>
-        <p className="text-xs text-ink-faint">{usuarioNombre(m.usuario_id)}</p>
+        <p className="text-xs text-ink-faint">{m.usuario_nombre}</p>
       </div>
     ) },
     { key: 'acc', header: '', align: 'right', render: (m) => (
@@ -91,7 +89,7 @@ export function CardexTab({ articuloId, onArticuloChange }) {
             { titulo: 'Código', clave: 'id' }, { titulo: 'Fecha', clave: 'fecha', tipo: 'fechaHora', ancho: 18 }, { titulo: 'Tipo', clave: (m) => TIPO_MOV_LABEL[m.tipo], ancho: 20 },
             { titulo: 'SKU', clave: (m) => sku(m.articulo_id) }, { titulo: 'Artículo', clave: (m) => nombre(m.articulo_id), ancho: 34 }, { titulo: 'Cantidad', clave: (m) => m.signo * m.cantidad, tipo: 'numero' },
             { titulo: 'Costo unitario', clave: 'costo_unitario', tipo: 'moneda' }, { titulo: 'Valor', clave: (m) => (m.costo_unitario === undefined ? null : valorMovimiento(m)), tipo: 'moneda' },
-            { titulo: 'Obra', clave: 'obra_id' }, { titulo: 'Usuario', clave: (m) => usuarioNombre(m.usuario_id), ancho: 22 }, { titulo: 'Referencia', clave: 'referencia', ancho: 30 }, { titulo: 'Reversado', clave: (m) => (m.reversado ? 'Sí' : '') },
+            { titulo: 'Obra', clave: 'obra_id' }, { titulo: 'Usuario', clave: 'usuario_nombre', ancho: 22 }, { titulo: 'Referencia', clave: 'referencia', ancho: 30 }, { titulo: 'Reversado', clave: (m) => (m.reversado ? 'Sí' : '') },
           ]} />
           {can(rol, 'cardex.crear') && (
             <Button icon={ArrowUpFromLine} onClick={() => setModal({ tipo: 'salida' })}>Nueva salida a obra</Button>

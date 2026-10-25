@@ -6,7 +6,6 @@ import { ObraStatusBadge, EmergencyBadge, TIPO_OBRA_LABEL, MoneyCell } from '@/c
 import { obrasService, clientesService } from '@/services'
 import { formatFecha } from '@/domain/format'
 import { can } from '@/domain/rbac'
-import { USUARIOS_DEMO } from '@/mocks/usuarios'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
@@ -33,7 +32,7 @@ export function ObraDetalle() {
     ...(can(rol, 'terreno.ver') ? [{ id: 'hojas', label: 'Hojas de servicio' }] : []),
     { id: 'auditoria', label: 'Auditoría' },
   ]
-  const supervisor = USUARIOS_DEMO.find((u) => u.id === obra.supervisor_id)?.nombre ?? obra.supervisor_id
+  const supervisor = obra.supervisor_nombre
 
   const iniciar = async () => {
     setTrabajando(true)

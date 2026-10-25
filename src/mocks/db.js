@@ -8,7 +8,7 @@ const KEY = 'fyag-db-v2'
 const ID_FORMAT = {
   articulos: ['ART-', 3], clientes: ['CLI-', 3], proveedores: ['PRV-', 3],
   cardex: ['MOV-', 6], facturas: ['FC-', 4], notas_credito: ['NC-', 4],
-  presupuestos: ['PRE-', 4], obras: ['OB-', 4], hojas: ['HS-', 4], retiros: ['SR-', 4], auditoria: ['LOG-', 6],
+  presupuestos: ['PRE-', 4], obras: ['OB-', 4], hojas: ['HS-', 4], retiros: ['SR-', 4], usuarios: ['U-', 3], auditoria: ['LOG-', 6],
 }
 
 let tables = null

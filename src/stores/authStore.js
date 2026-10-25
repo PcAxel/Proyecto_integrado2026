@@ -31,15 +31,16 @@ export const useAuthStore = create(
       ip: '192.168.10.24',
 
       /** @param {string} userId */
-      login: (userId) => {
-        const user = USUARIOS_DEMO.find((u) => u.id === userId)
+      /** @param {string} userId @param {Usuario} [perfil] perfil devuelto por usuariosService.perfiles() */
+      login: (userId, perfil) => {
+        const user = perfil ?? USUARIOS_DEMO.find((u) => u.id === userId)
         if (!user) return null
         set({ user, token: fakeJwt(user), lastActivity: Date.now() })
         return user
       },
       logout: () => set({ user: null, token: null }),
       /** Modo demo: cambia de rol sin pasar por el login. */
-      switchRole: (userId) => get().login(userId),
+      switchRole: (userId, perfil) => get().login(userId, perfil),
       touch: () => set({ lastActivity: Date.now() }),
       /** Cierra sesión si superó el umbral de inactividad. @returns {boolean} true si cerró. */
       checkInactivity: () => {

@@ -18,6 +18,7 @@ import { TerrenoPage } from '@/features/erp/terreno/TerrenoPage'
 import { PersonalPage } from '@/features/erp/personal/PersonalPage'
 import { MaestrosPage } from '@/features/erp/maestros/MaestrosPage'
 import { AuditoriaPage } from '@/features/erp/auditoria/AuditoriaPage'
+import { UsuariosList } from '@/features/erp/usuarios/UsuariosList'
 import { RetiroPage } from '@/features/pwa/retiro/RetiroPage'
 
 
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: 'personal', element: <RequireRole accion="personal.ver"><PersonalPage /></RequireRole> },
       { path: 'maestros', element: <RequireRole accion="maestros.ver"><MaestrosPage /></RequireRole> },
       { path: 'auditoria', element: <RequireRole accion="auditoria.ver"><AuditoriaPage /></RequireRole> },
+      { path: 'usuarios', element: <RequireRole accion="usuarios.ver"><UsuariosList /></RequireRole> },
       { path: 'bodega', element: <RequireRole accion="bodega.ver"><BodegaPage /></RequireRole> },
       { path: 'compras', element: <RequireRole accion="compras.ver"><ComprasPage /></RequireRole> },
     ],

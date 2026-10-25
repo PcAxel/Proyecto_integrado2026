@@ -2,6 +2,7 @@ import { calcularNeto, desglosarTotal } from '@/domain/money'
 import { crearMovimiento, crearReversa, crearReingresoSobrante } from '@/domain/cardex'
 import { simularRentabilidad, precioParaMargen } from '@/domain/rentabilidad'
 import { formatRut } from '@/domain/rut'
+import { USUARIOS_DEMO } from '@/mocks/usuarios'
 
 /** Fecha de referencia del dataset (determinista: las capturas del informe son reproducibles). */
 const HOY = Date.UTC(2026, 9, 23, 12, 0, 0)
@@ -383,7 +384,19 @@ export function createSeed() {
   // El costo vigente del artículo es el de su última compra.
   ARTICULOS.forEach((a) => { a.costo_unitario = lastCost(a.id) })
 
+  // Usuarios con acceso al sistema. Los de demostración entran por tarjeta de perfil, sin contraseña almacenada.
+  const RUT_USUARIO = { 'U-001': 10_234_567, 'U-002': 12_456_789, 'U-003': 13_567_891, 'U-004': 11_678_912, 'U-006': 9_876_543, 'U-007': 14_321_098 }
+  const USUARIOS = USUARIOS_DEMO.map((u, i) => ({
+    ...u,
+    rut: u.id === 'U-005' ? TECNICOS[0].rut : formatRut(RUT_USUARIO[u.id]),
+    activo: true,
+    debe_cambiar_password: false,
+    creado_en: f(-120 + i, '09:00'),
+    creado_por: u.id === 'U-001' ? 'SISTEMA' : 'U-001',
+  }))
+
   return structuredClone({
+    usuarios: USUARIOS,
     clientes: CLIENTES,
     proveedores: PROVEEDORES,
     articulos: ARTICULOS,

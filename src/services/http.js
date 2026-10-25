@@ -27,14 +27,14 @@ const clone = (v) => (v === undefined ? v : structuredClone(v))
  * Ejecuta un handler como si fuera una llamada a la API: espera la DB, simula latencia
  * y fallos de red, y devuelve una copia (los componentes nunca mutan la "base de datos").
  * @template T
- * @param {() => T} handler
- * @returns {Promise<T>}
+ * @param {() => T | Promise<T>} handler
+ * @returns {Promise<Awaited<T>>}
  */
 export async function respond(handler) {
   await initDb()
   if (config.maxMs > 0) await wait(config.minMs + Math.random() * (config.maxMs - config.minMs))
   if (Math.random() < config.failRate) throw new ApiError(503, 'Servicio no disponible. Reintente.')
-  return clone(handler())
+  return clone(await handler())
 }
 
 /** Usuario autenticado o 401. */

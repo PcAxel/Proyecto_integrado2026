@@ -43,6 +43,16 @@ La matriz completa (rol × permiso) está en **[`docs/matriz-permisos.md`](docs/
 - **RRHH** controla únicamente Personal y Flota (`dashboard.ver`, `personal.ver`, `personal.editar`), y `personal.editar` es exclusivo suyo.
 - Las listas de `PERMISOS` son explícitas: un rol nuevo no hereda ningún permiso por defecto.
 
+## Accesos y usuarios (solo Gerencia General)
+
+La empresa no tiene área de TI, así que la administración de accesos está en **ERP › Accesos y Usuarios** (`/erp/usuarios`) y la controlan los permisos `usuarios.ver`, `usuarios.crear` y `usuarios.editar`, que **solo tiene `ADMIN_GENERAL`** (una prueba lo exige).
+
+- **Nuevo Acceso:** nombre, RUT (se normaliza y valida), cargo, rol, correo y contraseña inicial (con generador). Al crear, se muestran las credenciales una única vez para entregarlas al usuario, que deberá cambiarla en su primer ingreso.
+- **Contraseñas:** se guardan con hash y sal (nunca en texto plano), no salen del servicio y no se escriben en el log de auditoría.
+- **Sin eliminación:** los accesos se desactivan. No se puede desactivar el propio acceso, ni cambiar el propio rol, ni dejar al sistema sin un Administrador General activo.
+- **Ingreso demo:** la pantalla de login y el selector «Demo» listan a los usuarios activos de esta tabla, así que un acceso nuevo aparece de inmediato. El login por tarjeta no pide contraseña; la validación de credenciales real llegará con SimpleJWT en el backend.
+- Un usuario con rol Técnico necesita además su ficha en **Personal y Flota** para recibir obras en la app de terreno.
+
 ## Flota y kilometraje
 
 - **ERP › Personal y Flota › Flota:** patente, marca/modelo, técnico asignado, kilometraje actual, estado (Activo / En taller) y vencimientos. Solo RRHH (`personal.editar`) puede enviar un vehículo a taller o reactivarlo; un vehículo en taller no aparece en la app de terreno.

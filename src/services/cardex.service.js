@@ -5,6 +5,7 @@ import { registrarAuditoria } from './auditoria.service'
 
 const vista = (m, rol) => ({
   ...sinCostos(rol, 'costos_compra.ver', m, ['costo_unitario']),
+  usuario_nombre: db.find('usuarios', m.usuario_id)?.nombre ?? m.usuario_id,
   reversado: estaReversado(db.all('cardex'), m.id),
   reingresable: cantidadReingresable(db.all('cardex'), m.id),
 })

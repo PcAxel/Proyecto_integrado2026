@@ -2,8 +2,9 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Snowflake, ChevronRight, Lock, WifiOff, ScrollText } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { ROL_LABEL, rutaInicial } from '@/domain/rbac'
-import { USUARIOS_DEMO } from '@/mocks/usuarios'
-import { Badge } from '@/components/ui'
+import { usuariosService } from '@/services'
+import { useResource } from '@/hooks/useResource'
+import { Badge, Skeleton } from '@/components/ui'
 
 const PUNTOS = [
   { icon: Lock, titulo: 'Cardex inmutable', texto: 'Cada movimiento de bodega queda registrado; los errores se corrigen con reversas auditadas.' },
@@ -16,11 +17,12 @@ export function LoginPage() {
   const { user, login } = useAuthStore()
   const navigate = useNavigate()
   const from = useLocation().state?.from
+  const perfiles = useResource(() => usuariosService.perfiles(), [])
 
   if (user) return <Navigate to={rutaInicial(user.rol)} replace />
 
-  const enter = (id) => {
-    const u = login(id)
+  const enter = (perfil) => {
+    const u = login(perfil.id, perfil)
     // Un técnico nunca debe aterrizar en una ruta del ERP.
     const dest = u.rol !== 'TECNICO' && from?.startsWith('/erp') ? from : rutaInicial(u.rol)
     navigate(dest, { replace: true })
@@ -57,10 +59,11 @@ export function LoginPage() {
             <div className="mt-3"><Badge tone="info">Modo demo · selecciona un perfil</Badge></div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-3">
-            {USUARIOS_DEMO.map((u) => (
+            {!perfiles.data && <div className="card sm:col-span-2 2xl:col-span-3"><Skeleton rows={3} /></div>}
+            {(perfiles.data ?? []).map((u) => (
               <button
                 key={u.id}
-                onClick={() => enter(u.id)}
+                onClick={() => enter(u)}
                 className="card group flex min-h-[5.5rem] items-center justify-between gap-3 p-4 text-left transition-colors hover:border-brand sm:p-5"
               >
                 <div className="min-w-0">

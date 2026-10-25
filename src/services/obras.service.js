@@ -18,6 +18,7 @@ function vista(obra, rol) {
   const costos = can(rol, 'costos.ver')
   return {
     ...obra,
+    supervisor_nombre: db.find('usuarios', obra.supervisor_id)?.nombre ?? obra.supervisor_id,
     tecnicos_detalle: obra.tecnicos.map((id) => {
       const p = db.find('personal', id)
       return { id, nombre: p?.nombre ?? id, cargo: p?.cargo ?? '' }

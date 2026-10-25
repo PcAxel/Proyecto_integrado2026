@@ -16,6 +16,19 @@ export function formatRut(cuerpo) {
   return `${limpio.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${digitoVerificador(limpio)}`
 }
 
+/**
+ * Normaliza lo que escribe el usuario ("12345678-5", "123456785", "12.345.678-5") al formato oficial.
+ * Si no hay al menos 7 dígitos más el verificador, devuelve el texto tal cual para que validarRut lo rechace.
+ * @param {string} texto
+ */
+export function normalizarRut(texto) {
+  const limpio = String(texto).replace(/[^0-9kK]/g, '').toUpperCase()
+  if (limpio.length < 8) return String(texto).trim()
+  const cuerpo = limpio.slice(0, -1)
+  if (!/^\d+$/.test(cuerpo)) return String(texto).trim()
+  return `${cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${limpio.slice(-1)}`
+}
+
 /** @param {string} rut */
 export function validarRut(rut) {
   const m = /^(\d{1,2}(?:\.?\d{3}){2})-([\dkK])$/.exec(String(rut).trim())
