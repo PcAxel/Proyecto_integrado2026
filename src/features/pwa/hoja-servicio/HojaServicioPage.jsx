@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, Stepper, Skeleton } from '@/components/ui'
-import { obrasService, articulosService, enviarOEncolar } from '@/services'
+import { obrasService, articulosService, personalService, enviarOEncolar } from '@/services'
 import { PASOS_HOJA, borradorVacio, validarPasoHoja, primerPasoIncompleto } from '@/domain/hojas'
 import { useSyncStore } from '@/stores/syncStore'
 import { useResource } from '@/hooks/useResource'
@@ -24,6 +24,7 @@ export function HojaServicioPage() {
   const [enviando, setEnviando] = useState(false)
   const obras = useResource(() => obrasService.list({ estado: 'EN_CURSO' }), [])
   const catalogo = useResource(() => articulosService.catalogo(), [])
+  const vehiculos = useResource(() => personalService.vehiculosParaTerreno(), [])
 
   useEffect(() => {
     cargarBorrador().then((b) => {
@@ -34,6 +35,16 @@ export function HojaServicioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => { if (estado) guardarBorrador(estado) }, [estado])
+  // La primera vez se propone el vehículo asignado al técnico; después respeta lo que elija (incluido «No usé vehículo»).
+  useEffect(() => {
+    if (!estado || !vehiculos.data || estado.vehiculoAuto) return
+    const propio = vehiculos.data.find((v) => v.asignado)
+    setEstado((s) => ({
+      ...s,
+      vehiculoAuto: true,
+      draft: propio && !s.draft.vehiculo_id ? { ...s.draft, vehiculo_id: propio.id, km_salida: propio.km_actual, km_regreso: null } : s.draft,
+    }))
+  }, [estado, vehiculos.data])
 
   if (!estado) return <div className="card"><Skeleton rows={5} /></div>
   const { draft, paso, lineas } = estado
@@ -58,6 +69,7 @@ export function HojaServicioPage() {
       const r = await enviarOEncolar('HOJA', {
         obra_id: draft.obra_id, checklist_json: draft.checklist, horas_trabajadas: draft.horas_trabajadas, materiales: draft.materiales,
         fotos: draft.fotos, gps: { lat: gps.lat, lng: gps.lng }, firma_cliente: true, firma_img: draft.firma, observaciones: draft.observaciones.trim(),
+        vehiculo_id: draft.vehiculo_id || null, km_salida: draft.vehiculo_id ? draft.km_salida : null, km_regreso: draft.vehiculo_id ? draft.km_regreso : null,
         client_id: draft.client_id,
       }, { obra_nombre: obra?.nombre })
       await limpiarBorrador()
@@ -83,8 +95,8 @@ export function HojaServicioPage() {
         {paso === 1 && <PasoChecklist draft={draft} setDraft={setDraft} />}
         {paso > 1 && !obra && <div className="card"><Skeleton rows={4} /></div>}
         {paso === 2 && obra && <PasoFotos obra={obra} draft={draft} setDraft={setDraft} />}
-        {paso === 3 && obra && <PasoHoras draft={draft} setDraft={setDraft} catalogo={catalogo.data ?? []} lineas={lineas} setLineas={setLineas} />}
-        {paso === 4 && obra && <PasoCierre obra={obra} draft={draft} setDraft={setDraft} lineas={lineas} irAPaso={irAPaso} />}
+        {paso === 3 && obra && <PasoHoras draft={draft} setDraft={setDraft} catalogo={catalogo.data ?? []} lineas={lineas} setLineas={setLineas} vehiculos={vehiculos.data ?? []} />}
+        {paso === 4 && obra && <PasoCierre obra={obra} draft={draft} setDraft={setDraft} lineas={lineas} irAPaso={irAPaso} vehiculos={vehiculos.data ?? []} />}
       </div>
 
       <div className="sticky -bottom-4 -mx-4 -mb-4 space-y-2 border-t border-line bg-surface p-3 pb-7">

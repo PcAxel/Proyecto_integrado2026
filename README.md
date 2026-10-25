@@ -43,6 +43,12 @@ La matriz completa (rol × permiso) está en **[`docs/matriz-permisos.md`](docs/
 - **RRHH** controla únicamente Personal y Flota (`dashboard.ver`, `personal.ver`, `personal.editar`), y `personal.editar` es exclusivo suyo.
 - Las listas de `PERMISOS` son explícitas: un rol nuevo no hereda ningún permiso por defecto.
 
+## Flota y kilometraje
+
+- **ERP › Personal y Flota › Flota:** patente, marca/modelo, técnico asignado, kilometraje actual, estado (Activo / En taller) y vencimientos. Solo RRHH (`personal.editar`) puede enviar un vehículo a taller o reactivarlo; un vehículo en taller no aparece en la app de terreno.
+- **PWA › Hoja de servicio › paso 4 «Horas y vehículo»:** el técnico elige la patente (se propone la asignada), registra el kilometraje de salida y de regreso, y el regreso debe ser mayor a la salida (`domain/flota.js`). El vehículo es opcional.
+- Al sincronizar la hoja, el odómetro del vehículo avanza al kilometraje de regreso y nunca retrocede (un envío atrasado desde la cola offline no lo altera). Cada cambio queda en el log de auditoría.
+
 ## Principios y dónde se cumplen
 
 | | Principio | Cómo se garantiza |

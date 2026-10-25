@@ -1,11 +1,12 @@
 import { simularRentabilidad, compararCostos } from './rentabilidad.js'
+import { resumenFlota } from './flota.js'
 
 /**
  * Indicadores de gerencia. Cada grupo es null si el rol no tiene acceso a esos datos
  * (el servicio pasa `null` en la fuente correspondiente).
  * @param {{presupuestos:any[]|null, obras:any[]|null, hojas:any[]|null, retiros:any[]|null, articulos:any[]|null, costos:Record<string,number>|null}} fuentes
  */
-export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, costos }) {
+export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, costos, personal = null, flota = null }) {
   const kpis = {}
   if (obras) {
     kpis.obrasActivas = obras.filter((o) => o.estado === 'EN_CURSO').length
@@ -30,6 +31,18 @@ export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, c
     kpis.articulosBajoMinimo = activos.filter((a) => a.estado_stock === 'BAJO').length
     kpis.articulosSinStock = activos.filter((a) => a.estado_stock === 'SIN_STOCK').length
     kpis.valorInventario = activos.some((a) => a.costo_unitario === undefined) ? null : Math.round(activos.reduce((s, a) => s + a.stock * a.costo_unitario, 0))
+  }
+  if (personal) {
+    const activos = personal.filter((p) => p.activo)
+    kpis.tecnicosActivos = activos.length
+    kpis.tecnicosTotal = personal.length
+    kpis.tarifaPromedio = activos.length ? Math.round(activos.reduce((s, p) => s + p.costo_hora_hombre, 0) / activos.length) : 0
+  }
+  if (flota) {
+    const f = resumenFlota(flota)
+    kpis.vehiculosOperativos = f.operativos
+    kpis.vehiculosEnTaller = f.enTaller
+    kpis.kmFlota = f.kmTotal
   }
   if (costos && obras) {
     kpis.costoRealObrasActivas = Math.round(obras.filter((o) => o.estado === 'EN_CURSO').reduce((s, o) => s + (costos[o.id] ?? 0), 0))

@@ -77,3 +77,21 @@ describe('exportar', () => {
     expect(nombreArchivo('Log de Auditoría', '2026-10-23T10:00:00')).toBe('log-de-auditoria-2026-10-23')
   })
 })
+
+import { kpisGerencia as kpis2 } from '../kpis.js'
+
+describe('kpis de personal y flota', () => {
+  it('resume dotación, tarifa promedio y estado de la flota', () => {
+    const k = kpis2({
+      presupuestos: null, obras: null, hojas: null, retiros: null, articulos: null, costos: null,
+      personal: [{ activo: true, costo_hora_hombre: 10000 }, { activo: true, costo_hora_hombre: 8000 }, { activo: false, costo_hora_hombre: 99999 }],
+      flota: [{ estado: 'ACTIVO', km_actual: 1000, activo: true }, { estado: 'EN_TALLER', km_actual: 500, activo: true }],
+    })
+    expect(k).toMatchObject({ tecnicosActivos: 2, tecnicosTotal: 3, tarifaPromedio: 9000, vehiculosOperativos: 1, vehiculosEnTaller: 1, kmFlota: 1500 })
+  })
+  it('sin acceso a personal no devuelve esos grupos', () => {
+    const k = kpis2({ presupuestos: null, obras: null, hojas: null, retiros: null, articulos: null, costos: null })
+    expect(k.tecnicosActivos).toBeUndefined()
+    expect(k.kmFlota).toBeUndefined()
+  })
+})

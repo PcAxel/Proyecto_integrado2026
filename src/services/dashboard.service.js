@@ -34,11 +34,13 @@ export const dashboardService = {
         ? Object.fromEntries(obras.map((o) => [o.id, costoRealObra(o.id, db.all('cardex'), db.all('hojas')).total]))
         : null
 
-      const kpis = kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, costos })
+      const personal = ve('personal.ver') ? db.all('personal') : null
+      const flota = ve('personal.ver') ? db.all('flota') : null
+      const kpis = kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, costos, personal, flota })
       const comparativo = presupuestos && obras && costos ? comparativoObras(obras, presupuestos, costos) : null
       const alertas = ordenarAlertas([
         ...alertasOperativas({ obras: obras ?? [], articulos: articulos ?? [], hojas: hojas ?? [], retiros: retiros ?? [], hoy }),
-        ...(ve('personal.ver') ? alertasVencimiento({ personal: db.all('personal'), flota: db.all('flota'), hoy }) : []),
+        ...(ve('personal.ver') ? alertasVencimiento({ personal: personal ?? [], flota: flota ?? [], hoy }) : []),
       ])
       const actividad = ve('auditoria.ver')
         ? db.all('auditoria').slice().sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id)).slice(0, 8)

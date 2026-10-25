@@ -26,5 +26,8 @@ export function isoLocal(d = new Date()) {
 /** "YYYY-MM-DD" local. @param {Date} [d] */
 export const fechaLocal = (d = new Date()) => isoLocal(d).slice(0, 10)
 
+/** 48250 → "48.250" (separador de miles chileno, sin decimales). @param {number} n */
+export const formatNumero = (n) => (Number.isFinite(n) ? Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—')
+
 /** 34.5 → "34,5 %". @param {number} n */
 export const formatPct = (n) => `${(Number.isFinite(n) ? n : 0).toFixed(1).replace('.', ',')} %`

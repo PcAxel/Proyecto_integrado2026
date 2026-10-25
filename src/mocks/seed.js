@@ -130,15 +130,17 @@ const TECNICOS = [
   activo: true,
 }))
 
+/** [id, patente, marca, modelo, técnico asignado, revisión (días), seguro (días), km actual, estado] */
 const FLOTA = [
-  ['VH-01', 'KLRT-42', 'Toyota Hilux 2.4 DX', 'T-01', 12, 95],
-  ['VH-02', 'LPXB-18', 'Toyota Hilux 2.4 DX', 'T-02', 160, 210],
-  ['VH-03', 'JHYS-77', 'Nissan NP300 Frontier', 'T-03', -4, 150],
-  ['VH-04', 'MNCD-30', 'Chevrolet N400 Max', 'T-05', 240, 20],
-  ['VH-05', 'KSZV-65', 'Hyundai H-1 Furgón', 'T-09', 75, 300],
-  ['VH-06', 'LTGA-09', 'Ford Ranger XL', 'T-06', 190, 120],
-].map(([id, patente, modelo, tecnico_id, rev, seguro]) => ({
-  id, patente, modelo, tecnico_id, vencimiento_revision: fd(rev), vencimiento_seguro: fd(seguro), activo: true,
+  ['VH-01', 'KLRT-42', 'Toyota', 'Hilux 2.4 DX', 'T-01', 12, 95, 48250, 'ACTIVO'],
+  ['VH-02', 'LPXB-18', 'Toyota', 'Hilux 2.4 DX', 'T-02', 160, 210, 62910, 'ACTIVO'],
+  ['VH-03', 'JHYS-77', 'Nissan', 'NP300 Frontier', 'T-03', -4, 150, 91340, 'ACTIVO'],
+  ['VH-04', 'MNCD-30', 'Chevrolet', 'N400 Max', 'T-05', 240, 20, 35780, 'ACTIVO'],
+  ['VH-05', 'KSZV-65', 'Hyundai', 'H-1 Furgón', 'T-09', 75, 300, 74120, 'ACTIVO'],
+  ['VH-06', 'LTGA-09', 'Ford', 'Ranger XL', 'T-06', 190, 120, 27560, 'ACTIVO'],
+  ['VH-07', 'RTJK-45', 'Mitsubishi', 'L200 Katana', 'T-04', 120, 200, 118420, 'EN_TALLER'],
+].map(([id, patente, marca, modelo, tecnico_id, rev, seguro, km_actual, estado]) => ({
+  id, patente, marca, modelo, tecnico_id, km_actual, estado, vencimiento_revision: fd(rev), vencimiento_seguro: fd(seguro), activo: true,
 }))
 
 /** Parámetros de obra: [nombre, cliente, tipo, presupuesto, estado, comuna, dirección, lat, lng, supervisor, técnicos, inicio, fin] */
@@ -330,6 +332,21 @@ export function createSeed() {
     }
   })
 
+  // Kilometraje de las hojas con el vehículo asignado al técnico. Se reconstruye hacia atrás desde
+  // el odómetro actual para que cada hoja continúe donde terminó la anterior.
+  const FLOTA_SEED = FLOTA.map((v) => ({ ...v }))
+  FLOTA_SEED.forEach((v) => {
+    const suyas = HOJAS.filter((h) => h.tecnico_id === v.tecnico_id).sort((a, b) => a.fecha.localeCompare(b.fecha))
+    const recorridos = suyas.map((h) => 30 + ((Number(h.id.slice(3)) * 29) % 80))
+    let odometro = v.km_actual - recorridos.reduce((s, r) => s + r, 0)
+    suyas.forEach((h, i) => {
+      h.vehiculo_id = v.id
+      h.km_salida = odometro
+      odometro += recorridos[i]
+      h.km_regreso = odometro
+    })
+  })
+
   // ── Solicitudes de retiro desde terreno ───────────────────────────
   const retiro = (n, obraN, tecnico_id, dia, estado, items, observaciones, motivo_rechazo = null) => ({
     id: `SR-${pad(n, 4)}`,
@@ -366,7 +383,7 @@ export function createSeed() {
   // El costo vigente del artículo es el de su última compra.
   ARTICULOS.forEach((a) => { a.costo_unitario = lastCost(a.id) })
 
-  return {
+  return structuredClone({
     clientes: CLIENTES,
     proveedores: PROVEEDORES,
     articulos: ARTICULOS,
@@ -378,7 +395,8 @@ export function createSeed() {
     hojas: HOJAS,
     retiros: RETIROS,
     personal: TECNICOS,
-    flota: FLOTA,
+    flota: FLOTA_SEED,
     auditoria: LOG,
-  }
+  })
 }
+

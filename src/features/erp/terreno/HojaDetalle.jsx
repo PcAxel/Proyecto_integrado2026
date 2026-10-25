@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { AlertTriangle, CheckCircle2, Undo2, Camera, Clock, PackageOpen, Pencil } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Undo2, Camera, Clock, PackageOpen, Pencil, Truck } from 'lucide-react'
 import { Card, Button, Badge, Mono, Modal, Textarea } from '@/components/ui'
 import { ChecklistGrid, ChecklistResultBadge, HojaStatusBadge, GpsStamp } from '@/components/domain'
 import { hojasService } from '@/services'
-import { formatFechaHora } from '@/domain/format'
+import { formatFechaHora, formatNumero } from '@/domain/format'
+import { formatKm } from '@/domain/flota'
 import { runAction } from '@/hooks/runAction'
 
 function Foto({ f }) {
@@ -76,6 +77,13 @@ export function HojaDetalle({ hoja: h, puedeAuditar, onChanged }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Trabajo registrado">
           <p className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-ink-faint" /><Mono className="font-semibold">{h.horas_trabajadas} h</Mono> trabajadas</p>
+          <p className="mb-1 mt-4 flex items-center gap-2 text-xs font-medium text-ink-soft"><Truck className="h-3.5 w-3.5" />Vehículo</p>
+          {h.vehiculo ? (
+            <div className="text-sm">
+              <p><Mono className="font-semibold">{h.vehiculo.patente}</Mono> <span className="text-ink-soft">{h.vehiculo.marca} {h.vehiculo.modelo}</span></p>
+              <p className="mt-0.5"><Mono>{formatNumero(h.km_salida)}</Mono> → <Mono>{formatNumero(h.km_regreso)}</Mono> <span className="text-ink-faint">·</span> <Mono className="font-semibold">{formatKm(h.km_recorridos)}</Mono> recorridos</p>
+            </div>
+          ) : <p className="text-sm text-ink-faint">Sin vehículo declarado.</p>}
           <p className="mb-1 mt-4 flex items-center gap-2 text-xs font-medium text-ink-soft"><PackageOpen className="h-3.5 w-3.5" />Materiales usados</p>
           {h.materiales.length === 0 ? <p className="text-sm text-ink-faint">Sin materiales declarados.</p>
             : <ul className="space-y-1 text-sm">{h.materiales.map((m) => <li key={m.articulo_id}><Mono>{m.cantidad} {m.unidad}</Mono> {m.nombre}</li>)}</ul>}

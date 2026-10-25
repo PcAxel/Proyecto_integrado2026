@@ -19,4 +19,19 @@ describe('seed', () => {
     const p = s.presupuestos.find((x) => x.estado === 'BORRADOR')
     expect(simularRentabilidad(p).semaforo).toBe('ROJO')
   })
+  it('la flota es coherente con el kilometraje de las hojas', () => {
+    expect(s.flota.length).toBeGreaterThanOrEqual(3)
+    expect(s.flota.some((v) => v.patente === 'RTJK-45' && v.estado === 'EN_TALLER')).toBe(true)
+    for (const v of s.flota) {
+      const hojas = s.hojas.filter((h) => h.vehiculo_id === v.id).sort((a, b) => a.fecha.localeCompare(b.fecha))
+      expect(hojas.every((h) => h.km_regreso > h.km_salida)).toBe(true)
+      hojas.slice(1).forEach((h, i) => expect(h.km_salida).toBe(hojas[i].km_regreso))
+      if (hojas.length) expect(hojas.at(-1).km_regreso).toBe(v.km_actual)
+    }
+  })
+  it('db.reset restaura el seed aunque se haya mutado antes', () => {
+    const a = createSeed()
+    a.flota[0].km_actual = 1
+    expect(createSeed().flota[0].km_actual).toBe(48250)
+  })
 })

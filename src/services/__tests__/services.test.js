@@ -235,6 +235,83 @@ describe('dashboard por rol', () => {
   })
 })
 
+describe('rol RRHH', () => {
+  const RRHH = 'U-007'
+  it('ve y edita personal y flota, pero nada más', async () => {
+    login(RRHH)
+    expect((await personalService.list()).length).toBe(16)
+    expect((await personalService.listFlota()).length).toBeGreaterThanOrEqual(3)
+    expect((await personalService.actualizarTarifa('T-02', 11800)).costo_hora_hombre).toBe(11800)
+    await expect(obrasService.list()).rejects.toMatchObject({ status: 403 })
+    await expect(presupuestosService.list()).rejects.toMatchObject({ status: 403 })
+    await expect(clientesService.list()).rejects.toMatchObject({ status: 403 })
+    await expect(articulosService.list()).rejects.toMatchObject({ status: 403 })
+    await expect(hojasService.list()).rejects.toMatchObject({ status: 403 })
+    await expect(auditoriaService.list()).rejects.toMatchObject({ status: 403 })
+  })
+  it('su dashboard solo trae indicadores de personal y flota', async () => {
+    login(RRHH)
+    const r = await dashboardService.resumen()
+    expect(r.kpis).toMatchObject({ tecnicosActivos: 16, vehiculosEnTaller: 1 })
+    expect(r.kpis.kmFlota).toBeGreaterThan(400000)
+    expect(r.kpis.ventaAprobada).toBeUndefined()
+    expect(r.kpis.valorInventario).toBeUndefined()
+    expect(r.comparativo).toBeNull()
+    expect(r.alertas.every((a) => ['LICENCIA', 'REVISION_TECNICA', 'SEGURO'].includes(a.tipo))).toBe(true)
+  })
+  it('puede cambiar un vehículo a taller y queda auditado', async () => {
+    login(RRHH)
+    const v = await personalService.setEstadoVehiculo('VH-02', 'EN_TALLER')
+    expect(v.estado).toBe('EN_TALLER')
+    login(GERENCIA)
+    const [l] = await auditoriaService.list({ accion: 'ACTUALIZAR_ESTADO' })
+    expect(l).toMatchObject({ entidad: 'Vehiculo', entidad_id: 'VH-02', usuario_nombre: 'Camila Torres', anterior: { estado: 'ACTIVO' }, nuevo: { estado: 'EN_TALLER' } })
+    login(TECNICO)
+    await expect(personalService.setEstadoVehiculo('VH-02', 'ACTIVO')).rejects.toMatchObject({ status: 403 })
+  })
+})
+
+describe('kilometraje en la hoja de servicio', () => {
+  const hoja = (extra = {}) => ({
+    obra_id: 'OB-0001', horas_trabajadas: 5, gps: { lat: -36.6285, lng: -72.1331 },
+    checklist_json: { presion_psi: 90, amperaje_a: 15, fugas: 'SIN_FUGAS', temperatura_c: -18, limpieza: 'OK' }, ...extra,
+  })
+  beforeEach(() => login(TECNICO))
+
+  it('el técnico ve solo vehículos operativos, el suyo primero', async () => {
+    const v = await personalService.vehiculosParaTerreno()
+    expect(v[0]).toMatchObject({ id: 'VH-01', patente: 'KLRT-42', asignado: true })
+    expect(v.some((x) => x.estado || x.vencimiento_revision)).toBe(false)
+    expect(v.find((x) => x.patente === 'RTJK-45')).toBeUndefined() // en taller
+  })
+  it('rechaza regreso menor o igual a la salida, y vehículo en taller', async () => {
+    await expect(hojasService.enviar(hoja({ vehiculo_id: 'VH-01', km_salida: 48250, km_regreso: 48250 }))).rejects.toMatchObject({ status: 422 })
+    await expect(hojasService.enviar(hoja({ vehiculo_id: 'VH-01', km_salida: 48250, km_regreso: 48000 }))).rejects.toMatchObject({ status: 422 })
+    await expect(hojasService.enviar(hoja({ vehiculo_id: 'VH-01', km_salida: 48250 }))).rejects.toMatchObject({ status: 422 })
+    await expect(hojasService.enviar(hoja({ vehiculo_id: 'VH-07', km_salida: 118420, km_regreso: 118500 }))).rejects.toMatchObject({ status: 422 })
+    await expect(hojasService.enviar(hoja({ vehiculo_id: 'VH-99', km_salida: 1, km_regreso: 2 }))).rejects.toMatchObject({ status: 422 })
+  })
+  it('sin vehículo la hoja se envía normalmente', async () => {
+    const h = await hojasService.enviar(hoja())
+    expect(h.vehiculo).toBeNull()
+    expect(h.km_recorridos).toBeNull()
+  })
+  it('con vehículo actualiza el odómetro, calcula el recorrido y audita', async () => {
+    const h = await hojasService.enviar(hoja({ vehiculo_id: 'VH-01', km_salida: 48250, km_regreso: 48312 }))
+    expect(h.vehiculo).toMatchObject({ patente: 'KLRT-42', marca: 'Toyota' })
+    expect(h.km_recorridos).toBe(62)
+    expect(db.find('flota', 'VH-01').km_actual).toBe(48312)
+    login(GERENCIA)
+    const [l] = await auditoriaService.list({ accion: 'ACTUALIZAR_KM' })
+    expect(l).toMatchObject({ entidad_id: 'VH-01', anterior: { km_actual: 48250 }, nuevo: { km_actual: 48312 } })
+  })
+  it('una hoja atrasada (sync offline) no hace retroceder el odómetro', async () => {
+    await hojasService.enviar(hoja({ vehiculo_id: 'VH-01', km_salida: 48250, km_regreso: 48400 }))
+    await hojasService.enviar(hoja({ vehiculo_id: 'VH-01', km_salida: 48300, km_regreso: 48350 }))
+    expect(db.find('flota', 'VH-01').km_actual).toBe(48400)
+  })
+})
+
 describe('segregación de funciones en los servicios', () => {
   it('el Administrador General autoriza pero no ejecuta: sus escrituras operativas dan 403', async () => {
     login(GERENCIA)
@@ -275,6 +352,7 @@ describe('segregación de funciones en los servicios', () => {
       () => obrasService.finalizar('OB-0007'),
       () => hojasService.aprobar('HS-0006'),
       () => personalService.actualizarTarifa('T-02', 12000),
+      () => personalService.setEstadoVehiculo('VH-01', 'EN_TALLER'),
       () => clientesService.setActivo('CLI-001', false),
       () => retirosService.entregar('SR-0001'),
     ]

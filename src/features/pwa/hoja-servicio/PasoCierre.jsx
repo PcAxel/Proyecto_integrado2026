@@ -4,10 +4,13 @@ import { ChecklistResultBadge } from '@/components/domain'
 import { evaluarChecklist } from '@/domain/checklist'
 import { dentroDeGeocerca } from '@/domain/geo'
 import { PASOS_HOJA, validarPasoHoja } from '@/domain/hojas'
+import { validarKilometraje, formatKm } from '@/domain/flota'
 
-export function PasoCierre({ obra, draft, setDraft, lineas, irAPaso }) {
+export function PasoCierre({ obra, draft, setDraft, lineas, irAPaso, vehiculos = [] }) {
   const { resultado } = evaluarChecklist(draft.checklist)
   const fuera = draft.fotos.filter((f) => !dentroDeGeocerca(f, obra.ubicacion, obra.ubicacion.radio_m).dentro).length
+  const vehiculo = vehiculos.find((v) => v.id === draft.vehiculo_id)
+  const km = validarKilometraje(draft)
   const pendientes = [0, 1, 2, 3].filter((i) => !validarPasoHoja(i, draft).ok)
 
   return (
@@ -17,6 +20,7 @@ export function PasoCierre({ obra, draft, setDraft, lineas, irAPaso }) {
         <Fila k="Checklist" v={<ChecklistResultBadge resultado={resultado} />} />
         <Fila k="Fotos" v={<Mono>{draft.fotos.length}</Mono>} />
         <Fila k="Horas" v={<Mono>{draft.horas_trabajadas ?? 0} h</Mono>} />
+        <Fila k="Vehículo" v={vehiculo ? <span className="flex items-center gap-2"><Mono>{vehiculo.patente}</Mono>{km.recorrido && <Mono className="text-ink-soft">· {formatKm(km.recorrido)}</Mono>}</span> : <span className="text-ink-faint">Sin vehículo</span>} />
         <Fila k="Materiales usados" v={<Mono>{lineas.length}</Mono>} />
       </section>
 

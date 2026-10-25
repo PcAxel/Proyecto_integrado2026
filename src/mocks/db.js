@@ -1,7 +1,8 @@
 import { get, set } from 'idb-keyval'
 import { createSeed } from './seed'
 
-const KEY = 'fyag-db-v1'
+// v2: la flota incorpora marca, modelo, kilometraje y estado; las hojas registran vehículo y kilómetros.
+const KEY = 'fyag-db-v2'
 
 /** Prefijo y ancho del id autogenerado por tabla (equivale al AutoField de Django). */
 const ID_FORMAT = {

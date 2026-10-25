@@ -1,6 +1,7 @@
 import { db } from '@/mocks/db'
 import { evaluarChecklist } from '@/domain/checklist'
 import { dentroDeGeocerca } from '@/domain/geo'
+import { validarKilometraje, kmActualizado, ESTADOS_VEHICULO } from '@/domain/flota'
 import { can } from '@/domain/rbac'
 import { respond, requirePermiso, actor, ApiError, ahora, sinCostos } from './http'
 import { registrarAuditoria } from './auditoria.service'
@@ -14,6 +15,8 @@ function vista(h, rol) {
     obra_nombre: obra?.nombre ?? '—',
     evaluacion: evaluarChecklist(h.checklist_json),
     geocerca: obra && h.gps ? dentroDeGeocerca(h.gps, obra.ubicacion, obra.ubicacion.radio_m) : null,
+    vehiculo: h.vehiculo_id ? (({ patente, marca, modelo }) => ({ patente, marca, modelo }))(db.find('flota', h.vehiculo_id) ?? {}) : null,
+    km_recorridos: h.vehiculo_id ? h.km_regreso - h.km_salida : null,
     fotos: (h.fotos ?? []).map((f) => ({ ...f, geocerca: obra ? dentroDeGeocerca(f, obra.ubicacion, obra.ubicacion.radio_m) : null })),
     materiales: (h.materiales ?? []).map((m) => {
       const a = db.find('articulos', m.articulo_id)
@@ -71,11 +74,26 @@ export const hojasService = {
       if (!obra.tecnicos.includes(ficha.id)) throw new ApiError(403, 'No estás asignado a esta obra.')
       if (!evaluarChecklist(data.checklist_json).completo) throw new ApiError(422, 'El checklist está incompleto.')
       if (!(data.horas_trabajadas > 0)) throw new ApiError(422, 'Debe registrar las horas trabajadas.')
+      // Vehículo (opcional): si se declara, ambos kilómetros son obligatorios y el regreso debe superar a la salida.
+      const km = validarKilometraje(data)
+      if (!km.ok) throw new ApiError(422, km.error)
+      const vehiculo = data.vehiculo_id ? db.find('flota', data.vehiculo_id) : null
+      if (data.vehiculo_id && (!vehiculo || !vehiculo.activo)) throw new ApiError(422, 'El vehículo indicado no existe.')
+      if (vehiculo && vehiculo.estado !== ESTADOS_VEHICULO.ACTIVO) throw new ApiError(422, `El vehículo ${vehiculo.patente} está en taller.`)
       const h = db.insert('hojas', {
         materiales: [], fotos: [], firma_cliente: false, observaciones: '', ...data,
+        vehiculo_id: vehiculo?.id ?? null, km_salida: vehiculo ? data.km_salida : null, km_regreso: vehiculo ? data.km_regreso : null,
         id: db.nextId('hojas'), tecnico_id: ficha.id, fecha: ahora(), estado: 'ENVIADA',
         costo_hora_hombre: ficha.costo_hora_hombre, auditoria: null,
       })
+      if (vehiculo) {
+        const anterior = vehiculo.km_actual // se lee antes de parchar: db.patch muta la fila
+        const nuevo = kmActualizado(anterior, data.km_regreso)
+        if (nuevo !== anterior) {
+          db.patch('flota', vehiculo.id, { km_actual: nuevo })
+          registrarAuditoria({ entidad: 'Vehiculo', entidad_id: vehiculo.id, accion: 'ACTUALIZAR_KM', anterior: { km_actual: anterior }, nuevo: { km_actual: nuevo, hoja: h.id } })
+        }
+      }
       // El dispositivo había reportado este registro como pendiente de sync; al llegar, se descuenta.
       if (desde_cola && obra.pendientes_sync > 0) db.patch('obras', obra.id, { pendientes_sync: obra.pendientes_sync - 1 })
       registrarAuditoria({ entidad: 'HojaServicio', entidad_id: h.id, accion: 'ENVIAR', nuevo: { obra_id: h.obra_id, horas: h.horas_trabajadas, desde_cola } })

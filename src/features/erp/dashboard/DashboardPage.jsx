@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { HardHat, Package, ClipboardCheck, FileText, Wallet, TrendingUp, Banknote, AlertTriangle, CheckCircle2, Layers, PackageOpen } from 'lucide-react'
+import { Users, Truck, Gauge, ShieldAlert, HardHat, Package, ClipboardCheck, FileText, Wallet, TrendingUp, Banknote, AlertTriangle, CheckCircle2, Layers, PackageOpen } from 'lucide-react'
 import { KpiTile, Card, EmptyState, Skeleton, PageHeader, Mono, cn } from '@/components/ui'
 import { dashboardService } from '@/services'
 import { useAuthStore } from '@/stores/authStore'
@@ -7,6 +7,7 @@ import { useResource } from '@/hooks/useResource'
 import { ROL_LABEL } from '@/domain/rbac'
 import { formatCLP } from '@/domain/money'
 import { formatFechaHora, formatPct } from '@/domain/format'
+import { formatKm } from '@/domain/flota'
 import { MARGEN_MINIMO, MARGEN_SALUDABLE } from '@/domain/rentabilidad'
 import { BarrasPareadas, ListaAlertas, ActividadReciente } from './Charts'
 
@@ -16,6 +17,7 @@ export function DashboardPage() {
   const { data, loading, error } = useResource(() => dashboardService.resumen(), [])
   const k = data?.kpis ?? {}
   const definido = (v) => v !== undefined && v !== null
+  const docsVencidos = (data?.alertas ?? []).filter((a) => a.severidad === 'CRITICA' && ['LICENCIA', 'REVISION_TECNICA', 'SEGURO'].includes(a.tipo)).length
 
   const tiles = [
     definido(k.ventaAprobada) && { id: 'venta', label: 'Venta aprobada (neto)', value: formatCLP(k.ventaAprobada), icon: Banknote, hint: 'Presupuestos aprobados' },
@@ -28,6 +30,11 @@ export function DashboardPage() {
     definido(k.hojasPorAuditar) && { id: 'hojas', label: 'Hojas por auditar', value: k.hojasPorAuditar, icon: ClipboardCheck, tone: k.hojasPorAuditar ? 'warn' : 'ok', hint: 'Enviadas desde terreno' },
     definido(k.articulosBajoMinimo) && { id: 'stock', label: 'Stock en alerta', value: k.articulosBajoMinimo + k.articulosSinStock, icon: Layers, tone: k.articulosSinStock ? 'crit' : k.articulosBajoMinimo ? 'warn' : 'ok', hint: `${k.articulosSinStock} sin stock` },
     definido(k.retirosPendientes) && { id: 'retiros', label: 'Retiros pendientes', value: k.retirosPendientes, icon: PackageOpen, tone: k.retirosPendientes ? 'warn' : 'ok', hint: 'Esperan entrega de Bodega' },
+    definido(k.tecnicosActivos) && { id: 'tec', label: 'Técnicos activos', value: k.tecnicosActivos, icon: Users, hint: `de ${k.tecnicosTotal} en dotación` },
+    definido(k.tarifaPromedio) && { id: 'tarifa', label: 'Tarifa hora-hombre', value: formatCLP(k.tarifaPromedio), icon: Wallet, hint: 'Promedio de técnicos activos' },
+    definido(k.vehiculosOperativos) && { id: 'veh', label: 'Vehículos operativos', value: k.vehiculosOperativos, icon: Truck, tone: k.vehiculosEnTaller ? 'warn' : 'ok', hint: `${k.vehiculosEnTaller} en taller` },
+    definido(k.kmFlota) && { id: 'km', label: 'Kilometraje de la flota', value: formatKm(k.kmFlota), icon: Gauge, hint: 'Suma de odómetros' },
+    definido(k.tecnicosActivos) && { id: 'venc', label: 'Documentos vencidos', value: docsVencidos, icon: ShieldAlert, tone: docsVencidos ? 'crit' : 'ok', hint: 'Licencias, revisión técnica, seguros' },
   ].filter(Boolean)
 
   return (

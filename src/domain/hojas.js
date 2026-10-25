@@ -1,8 +1,9 @@
 import { evaluarChecklist } from './checklist.js'
 import { nuevoClientId } from './sync.js'
+import { validarKilometraje } from './flota.js'
 
 /** Pasos del wizard de Hoja de Servicio en la PWA. */
-export const PASOS_HOJA = ['Obra', 'Checklist', 'Fotos', 'Horas', 'Cierre']
+export const PASOS_HOJA = ['Obra', 'Checklist', 'Fotos', 'Horas y vehículo', 'Cierre']
 
 export const HORAS_MAX_DIA = 16
 export const FOTOS_MIN = 2
@@ -15,6 +16,7 @@ export const FOTOS_MIN = 2
 /** @returns {BorradorHoja} */
 export const borradorVacio = (obraId = '') => ({
   client_id: nuevoClientId(), obra_id: obraId, checklist: {}, fotos: [], horas_trabajadas: null, materiales: [], observaciones: '', firma: null,
+  vehiculo_id: '', km_salida: null, km_regreso: null,
 })
 
 /**
@@ -32,7 +34,8 @@ export function validarPasoHoja(paso, b) {
       return b.fotos.length >= FOTOS_MIN ? { ok: true } : { ok: false, error: `Toma al menos ${FOTOS_MIN} fotos (antes y después).` }
     case 3:
       if (!(b.horas_trabajadas > 0)) return { ok: false, error: 'Indica las horas trabajadas.' }
-      return b.horas_trabajadas <= HORAS_MAX_DIA ? { ok: true } : { ok: false, error: `Máximo ${HORAS_MAX_DIA} horas por hoja.` }
+      if (b.horas_trabajadas > HORAS_MAX_DIA) return { ok: false, error: `Máximo ${HORAS_MAX_DIA} horas por hoja.` }
+      return validarKilometraje(b)
     case 4:
       return b.firma ? { ok: true } : { ok: false, error: 'Falta la firma del cliente.' }
     default:
