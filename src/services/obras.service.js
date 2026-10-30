@@ -81,7 +81,28 @@ export const obrasService = {
   retrieve(id) {
     return respond(() => {
       const u = actor()
-      return vista(buscar(id), u.rol)
+      const obra = buscar(id)
+      if (u.rol === 'TECNICO') {
+        const ficha = db.all('personal').find((p) => p.usuario_id === u.id)
+        if (!obra.tecnicos.includes(ficha?.id)) throw new ApiError(403, 'No estás asignado a esta obra.')
+      }
+      return vista(obra, u.rol)
+    })
+  },
+  /** Reemplaza los técnicos asignados. Los asignados son los únicos que ven la obra en la app de terreno. */
+  asignarTecnicos(id, tecnicos) {
+    return respond(() => {
+      const u = requirePermiso('obras.crear')
+      const o = buscar(id)
+      if (o.estado === 'FINALIZADA') throw new ApiError(409, 'No se puede reasignar una obra finalizada.')
+      const ids = [...new Set(tecnicos ?? [])]
+      const invalido = ids.find((t) => !db.find('personal', t)?.activo)
+      if (invalido) throw new ApiError(422, `El técnico ${invalido} no existe o está inactivo.`)
+      const anterior = [...o.tecnicos]
+      if (anterior.length === ids.length && anterior.every((t) => ids.includes(t))) return vista(o, u.rol)
+      db.patch('obras', id, { tecnicos: ids })
+      registrarAuditoria({ entidad: 'Obra', entidad_id: id, accion: 'ASIGNAR_TECNICOS', anterior: { tecnicos: anterior }, nuevo: { tecnicos: ids } })
+      return vista(o, u.rol)
     })
   },
   /** CU30: Emergencia/Garantía abren sin presupuesto y quedan marcadas hasta regularizar. */

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Play, AlertTriangle, MapPin, CalendarDays, Users } from 'lucide-react'
-import { PageHeader, Tabs, Card, Button, Skeleton, Mono, ConfirmDialog } from '@/components/ui'
+import { ArrowLeft, Play, AlertTriangle, MapPin, CalendarDays, Users, UserPlus } from 'lucide-react'
+import { PageHeader, Tabs, Card, Button, Skeleton, Mono, ConfirmDialog, Modal } from '@/components/ui'
 import { ObraStatusBadge, EmergencyBadge, TIPO_OBRA_LABEL, MoneyCell } from '@/components/domain'
 import { obrasService, clientesService } from '@/services'
 import { formatFecha } from '@/domain/format'
@@ -11,6 +11,7 @@ import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 import { PanelCierre } from './PanelCierre'
 import { CostosTab, MaterialesTab, HojasTab, AuditoriaTab } from './ObraTabs'
+import { SelectorTecnicos } from './SelectorTecnicos'
 
 export function ObraDetalle() {
   const { id } = useParams()
@@ -18,9 +19,12 @@ export function ObraDetalle() {
   const [tab, setTab] = useState('resumen')
   const [iniciando, setIniciando] = useState(false)
   const [trabajando, setTrabajando] = useState(false)
+  const [asignando, setAsignando] = useState(null) // ids elegidos mientras el modal está abierto
   const obraRes = useResource(() => obrasService.retrieve(id), [id])
   const cliente = useResource(() => clientesService.retrieve(obraRes.data?.cliente_id ?? 'CLI-001').catch(() => null), [obraRes.data?.cliente_id])
   const obra = obraRes.data
+  const puedeAsignar = Boolean(obra) && can(rol, 'obras.crear') && obra.estado !== 'FINALIZADA'
+  const tecnicos = useResource(() => (puedeAsignar ? obrasService.tecnicosDisponibles() : Promise.resolve(null)), [puedeAsignar])
 
   if (obraRes.error) return <div className="card p-6 text-sm text-crit">{obraRes.error.message}</div>
   if (!obra) return <div className="card"><Skeleton rows={8} /></div>
@@ -39,6 +43,13 @@ export function ObraDetalle() {
     const r = await runAction(obrasService.iniciar(obra.id), 'Obra iniciada')
     setTrabajando(false)
     if (r) { setIniciando(false); obraRes.reload() }
+  }
+
+  const guardarAsignacion = async () => {
+    setTrabajando(true)
+    const r = await runAction(obrasService.asignarTecnicos(obra.id, asignando), 'Técnicos asignados actualizados')
+    setTrabajando(false)
+    if (r) { setAsignando(null); obraRes.reload() }
   }
 
   return (
@@ -71,11 +82,12 @@ export function ObraDetalle() {
               <Dato label="Geocerca"><Mono>{obra.ubicacion.radio_m} m · {obra.ubicacion.lat.toFixed(4)}, {obra.ubicacion.lng.toFixed(4)}</Mono></Dato>
               <Dato label="Plazo"><span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5 text-ink-faint" /><Mono>{formatFecha(obra.fecha_inicio)} → {formatFecha(obra.fecha_cierre ?? obra.fecha_fin_estimada)}</Mono></span></Dato>
               {obra.costo_real && <Dato label="Costo real a la fecha"><MoneyCell value={obra.costo_real.total} className="font-semibold" /></Dato>}
-              <Dato label={`Técnicos (${obra.tecnicos_detalle.length})`} full>
+              <Dato label={`Técnicos asignados (${obra.tecnicos_detalle.length})`} full>
                 <ul className="flex flex-wrap gap-2">
                   {obra.tecnicos_detalle.map((t) => <li key={t.id} className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs"><Users className="h-3 w-3 text-ink-faint" />{t.nombre}<span className="text-ink-faint">· {t.cargo}</span></li>)}
-                  {obra.tecnicos_detalle.length === 0 && <li className="text-ink-faint">Sin técnicos asignados</li>}
+                  {obra.tecnicos_detalle.length === 0 && <li className="text-ink-faint">Sin técnicos asignados: nadie la verá en la app de terreno.</li>}
                 </ul>
+                {puedeAsignar && <Button variant="secondary" size="sm" icon={UserPlus} className="mt-3" onClick={() => setAsignando(obra.tecnicos)}>Asignar técnicos</Button>}
               </Dato>
             </dl>
           </Card>
@@ -87,6 +99,10 @@ export function ObraDetalle() {
       {tab === 'hojas' && <HojasTab obra={obra} />}
       {tab === 'auditoria' && <AuditoriaTab obra={obra} />}
 
+      <Modal open={Boolean(asignando)} onClose={() => setAsignando(null)} title="Asignar técnicos"
+        footer={<><Button variant="secondary" onClick={() => setAsignando(null)}>Cancelar</Button><Button loading={trabajando} onClick={guardarAsignacion}>Guardar asignación</Button></>}>
+        {asignando && <SelectorTecnicos tecnicos={tecnicos.data ?? undefined} value={asignando} onChange={setAsignando} compacto />}
+      </Modal>
       <ConfirmDialog open={iniciando} onClose={() => setIniciando(false)} onConfirm={iniciar} loading={trabajando} confirmLabel="Iniciar obra"
         title="Iniciar obra" message="La obra pasará a «En curso»: los técnicos asignados podrán registrar hojas de servicio y solicitar materiales." />
     </div>

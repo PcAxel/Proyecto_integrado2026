@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 import { ToggleEmergencia } from './ToggleEmergencia'
+import { SelectorTecnicos } from './SelectorTecnicos'
 
 export function ObraForm() {
   const navigate = useNavigate()
@@ -43,7 +44,6 @@ export function ObraForm() {
   const valido = form.nombre.trim() && form.cliente_id && validacion.ok && form.direccion.trim() && (!usaCU30 || can(rol, 'obras.emergencia'))
 
   const cambiarComuna = (comuna) => setForm((f) => ({ ...f, comuna, ...COMUNAS_NUBLE[comuna] }))
-  const alternarTecnico = (id) => set('tecnicos', form.tecnicos.includes(id) ? form.tecnicos.filter((t) => t !== id) : [...form.tecnicos, id])
 
   const guardar = async () => {
     setGuardando(true)
@@ -99,15 +99,7 @@ export function ObraForm() {
             <Input label="Inicio" type="date" value={form.fecha_inicio} onChange={(e) => set('fecha_inicio', e.target.value)} />
             <Input label="Término estimado" type="date" value={form.fecha_fin_estimada} min={form.fecha_inicio} onChange={(e) => set('fecha_fin_estimada', e.target.value)} />
           </div>
-          <p className="mb-2 mt-5 text-xs font-medium text-ink-soft">Técnicos asignados ({form.tecnicos.length})</p>
-          <div className="grid gap-1 sm:grid-cols-2">
-            {(tecnicos.data ?? []).map((t) => (
-              <label key={t.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-50">
-                <input type="checkbox" className="h-4 w-4 accent-brand" checked={form.tecnicos.includes(t.id)} onChange={() => alternarTecnico(t.id)} />
-                <span>{t.nombre}</span><span className="text-xs text-ink-faint">{t.cargo}</span>
-              </label>
-            ))}
-          </div>
+          <div className="mt-5"><SelectorTecnicos tecnicos={tecnicos.data ?? undefined} value={form.tecnicos} onChange={(ids) => set('tecnicos', ids)} /></div>
         </Card>
 
         <div className="flex justify-end gap-2 xl:col-span-full">
