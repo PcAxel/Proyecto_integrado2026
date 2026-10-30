@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 import { ListaAlertas } from '../dashboard/Charts'
+import { AsistenciaHoy } from './AsistenciaHoy'
 
 const COLS_FICHAS = [
   { titulo: 'Código', clave: 'id' }, { titulo: 'Nombre', clave: 'nombre', ancho: 26 }, { titulo: 'RUT', clave: 'rut' }, { titulo: 'Cargo', clave: 'cargo', ancho: 28 },
@@ -29,6 +30,7 @@ const COLS_FLOTA = [
 export function PersonalPage() {
   const rol = useAuthStore((s) => s.user.rol)
   const gestiona = can(rol, 'personal.editar')
+  const veAsistencia = can(rol, 'asistencia.ver')
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') ?? 'fichas'
   const buscar = params.get('buscar') ?? ''
@@ -108,7 +110,9 @@ export function PersonalPage() {
       </div>
 
       <Tabs value={tab} onChange={(t) => setParams(buscar ? { tab: t, buscar } : { tab: t })} tabs={[
-        { id: 'fichas', label: 'Fichas', count: fichas.data?.length }, { id: 'flota', label: 'Flota', count: flota.data?.length }, { id: 'alertas', label: 'Alertas', count: alertas.data?.length },
+        { id: 'fichas', label: 'Fichas', count: fichas.data?.length },
+        ...(veAsistencia ? [{ id: 'asistencia', label: 'Asistencia de hoy' }] : []),
+        { id: 'flota', label: 'Flota', count: flota.data?.length }, { id: 'alertas', label: 'Alertas', count: alertas.data?.length },
       ]} />
 
       {buscar && (
@@ -121,6 +125,7 @@ export function PersonalPage() {
       )}
       {tab === 'fichas' && <Card padded={false}><DataTable columns={colsFichas} rows={(fichas.data ?? []).filter((p) => coincide(p.nombre, p.rut, p.cargo, p.id))} rowKey={(p) => p.id} loading={fichas.loading && !fichas.data} /></Card>}
       {tab === 'flota' && <Card padded={false}><DataTable columns={colsFlota} rows={(flota.data ?? []).filter((v) => coincide(v.patente, v.marca, v.modelo, v.tecnico_nombre))} rowKey={(v) => v.id} loading={flota.loading && !flota.data} /></Card>}
+      {tab === 'asistencia' && veAsistencia && <AsistenciaHoy />}
       {tab === 'alertas' && <Card title="Próximos vencimientos (60 días)">{alertas.data && <ListaAlertas alertas={alertas.data} />}</Card>}
 
       <Modal open={Boolean(tarifa)} onClose={() => setTarifa(null)} title={`Tarifa de ${tarifa?.ficha.nombre ?? ''}`}
