@@ -1,4 +1,4 @@
-import { RefreshCw, CloudOff, CheckCircle2, AlertCircle, ClipboardList, PackageOpen, Wifi } from 'lucide-react'
+import { RefreshCw, CloudOff, CheckCircle2, AlertCircle, ClipboardList, PackageOpen, Wifi, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, Badge, Mono, Select, EmptyState } from '@/components/ui'
 import { useSyncStore } from '@/stores/syncStore'
@@ -6,8 +6,8 @@ import { procesarCola, descartarDeCola, reintentarItem } from '@/services'
 import { resumenCola } from '@/domain/sync'
 import { formatFechaHora } from '@/domain/format'
 
-const ICONO = { HOJA: ClipboardList, RETIRO: PackageOpen }
-const TITULO = { HOJA: 'Hoja de servicio', RETIRO: 'Solicitud de materiales' }
+const ICONO = { HOJA: ClipboardList, RETIRO: PackageOpen, ASISTENCIA: Clock }
+const TITULO = { HOJA: 'Hoja de servicio', RETIRO: 'Solicitud de materiales', ASISTENCIA: 'Marca de asistencia' }
 
 export function SyncPage() {
   const { online, setOnline, pendientes, ultimoSync, sincronizando, gpsModo, setGpsModo } = useSyncStore()

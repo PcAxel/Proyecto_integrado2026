@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Home, ClipboardList, PackageOpen, RefreshCw, LogOut, WifiOff, Wifi } from 'lucide-react'
+import { Home, Clock, ClipboardList, PackageOpen, RefreshCw, LogOut, WifiOff, Wifi } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { cn } from '@/components/ui'
@@ -8,6 +8,7 @@ import { SyncManager } from './SyncManager'
 
 const TABS = [
   { to: '/app', label: 'Hoy', icon: Home, end: true },
+  { to: '/app/asistencia', label: 'Reloj', icon: Clock },
   { to: '/app/hoja-servicio', label: 'Hoja', icon: ClipboardList },
   { to: '/app/retiro', label: 'Retiro', icon: PackageOpen },
   { to: '/app/sync', label: 'Sync', icon: RefreshCw },
@@ -53,7 +54,7 @@ export function PwaLayout() {
       <main className="flex-1 overflow-y-auto p-4">
         <Outlet />
       </main>
-      <nav className="grid shrink-0 grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]" aria-label="Navegación móvil">
+      <nav className="grid shrink-0 grid-cols-5 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]" aria-label="Navegación móvil">
         {TABS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -65,7 +66,7 @@ export function PwaLayout() {
           >
             {({ isActive }) => (
               <>
-                <span className={cn('flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-150', isActive && 'bg-brand-tint')}><Icon className="h-5 w-5" /></span>
+                <span className={cn('flex h-7 w-11 items-center justify-center rounded-full transition-colors duration-150', isActive && 'bg-brand-tint')}><Icon className="h-5 w-5" /></span>
                 {label}
               </>
             )}

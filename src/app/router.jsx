@@ -13,6 +13,7 @@ import { ObrasPage } from '@/features/erp/obras/ObrasPage'
 import { ObraForm } from '@/features/erp/obras/ObraForm'
 import { ObraDetalle } from '@/features/erp/obras/ObraDetalle'
 import { HojaServicioPage } from '@/features/pwa/hoja-servicio/HojaServicioPage'
+import { AsistenciaPage } from '@/features/pwa/asistencia/AsistenciaPage'
 import { SyncPage } from '@/features/pwa/sync/SyncPage'
 import { TerrenoPage } from '@/features/erp/terreno/TerrenoPage'
 import { PersonalPage } from '@/features/erp/personal/PersonalPage'
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'asistencia', element: <AsistenciaPage /> },
       { path: 'hoja-servicio', element: <HojaServicioPage /> },
       { path: 'retiro', element: <RetiroPage /> },
       { path: 'sync', element: <SyncPage /> },

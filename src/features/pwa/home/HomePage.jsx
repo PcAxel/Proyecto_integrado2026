@@ -1,14 +1,35 @@
 import { Link } from 'react-router-dom'
-import { HardHat, MapPin, ClipboardList, PackageOpen, CheckCircle2, CloudOff } from 'lucide-react'
-import { Badge, Mono, EmptyState, Skeleton } from '@/components/ui'
+import { HardHat, MapPin, ClipboardList, PackageOpen, CheckCircle2, CloudOff, LogIn, LogOut, ChevronRight } from 'lucide-react'
+import { Badge, Mono, EmptyState, Skeleton, cn } from '@/components/ui'
 import { TIPO_OBRA_LABEL, EmergencyBadge } from '@/components/domain'
 import { obrasService, hojasService } from '@/services'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useResource } from '@/hooks/useResource'
 import { fechaLocal } from '@/domain/format'
+import { horaDe, TIPOS_MARCA } from '@/domain/asistencia'
+import { useAsistencia } from '../asistencia/useAsistencia'
 
-/** "Mis obras de hoy": obras en curso donde el técnico está asignado. */
+/** Acceso destacado al reloj control: dice qué marca toca ahora y lleva a la pantalla de asistencia. */
+function TarjetaAsistencia() {
+  const { cargando, siguiente, ultima } = useAsistencia()
+  if (cargando) return <div className="card h-[72px] animate-pulse" aria-hidden="true" />
+  const entrada = siguiente === TIPOS_MARCA.ENTRADA
+  return (
+    <Link to="/app/asistencia" className="card flex items-center gap-3 p-3.5 active:bg-slate-50">
+      <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white', entrada ? 'bg-ok' : 'bg-crit')}>
+        {entrada ? <LogIn className="h-6 w-6" /> : <LogOut className="h-6 w-6" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{entrada ? 'Marcar entrada' : 'Marcar salida'}</span>
+        <span className="block truncate text-xs text-ink-soft">{ultima ? `${ultima.tipo === TIPOS_MARCA.ENTRADA ? 'Entrada' : 'Salida'} a las ${horaDe(ultima.fecha)}` : 'Aún no marcas hoy'}</span>
+      </span>
+      <ChevronRight className="h-5 w-5 text-ink-faint" />
+    </Link>
+  )
+}
+
+/** "Mis obras de hoy": solo las obras en curso donde el técnico está asignado (el servicio filtra por su ficha). */
 export function HomePage() {
   const user = useAuthStore((s) => s.user)
   const pendientes = useSyncStore((s) => s.pendientes)
@@ -24,6 +45,8 @@ export function HomePage() {
         <h1 className="text-lg font-bold">Mis obras de hoy</h1>
         <p className="text-xs text-ink-soft">Hola, {user.nombre.split(' ')[0]}</p>
       </div>
+
+      <TarjetaAsistencia />
 
       {!obras.data && <div className="card"><Skeleton rows={4} /></div>}
       {obras.data?.length === 0 && <div className="card"><EmptyState icon={HardHat} title="Sin obras asignadas" hint="Cuando el supervisor te asigne una obra en curso aparecerá aquí." /></div>}
