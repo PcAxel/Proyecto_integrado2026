@@ -3,6 +3,7 @@ import { crearMovimiento, crearReversa, crearReingresoSobrante } from '@/domain/
 import { simularRentabilidad, precioParaMargen } from '@/domain/rentabilidad'
 import { formatRut } from '@/domain/rut'
 import { USUARIOS_DEMO } from '@/mocks/usuarios'
+import { fechaLocal, isoLocal } from '@/domain/format'
 
 /** Fecha de referencia del dataset (determinista: las capturas del informe son reproducibles). */
 const HOY = Date.UTC(2026, 9, 23, 12, 0, 0)
@@ -183,6 +184,31 @@ const HOJAS_BASE = [
   [7, 'T-04', -7, 12, 'APROBADA', OK, [0.0001, 0.0001], 'Reemplazo de condensador.'],
   [7, 'T-09', -6, 9, 'APROBADA', { ...OK, presion_psi: 112 }, [0.0002, 0.0001], 'Soldadura y prueba de presión.'],
 ]
+
+/**
+ * Marcas de entrada de hoy para que el panel de RRHH no parta vacío. Jorge Quezada (T-01, usuario demo de la app)
+ * queda sin marcar para poder probar el reloj; dos técnicos no marcan y una marca cae fuera de la geocerca.
+ * Solo se siembran marcas que ya ocurrieron a la hora de creación.
+ */
+function crearAsistenciaDeHoy(tecnicos, obras) {
+  const hoy = fechaLocal()
+  const ahoraIso = isoLocal()
+  const entradas = { 'T-02': '07:52', 'T-03': '07:58', 'T-04': '08:03', 'T-05': '08:07', 'T-06': '08:11', 'T-07': '08:34', 'T-08': '07:49', 'T-09': '08:01' }
+  const fuera = new Set(['T-05'])
+  const filas = []
+  Object.entries(entradas).forEach(([tecnico_id, hora]) => {
+    const fecha = `${hoy}T${hora}:00`
+    if (fecha > ahoraIso || !tecnicos.some((t) => t.id === tecnico_id)) return
+    const obra = obras.find((o) => o.estado === 'EN_CURSO' && o.tecnicos.includes(tecnico_id)) ?? null
+    const base = obra?.ubicacion ?? { lat: -36.6066, lng: -72.1034 }
+    const d = fuera.has(tecnico_id) ? 0.021 : 0.0003
+    filas.push({
+      id: `ASI-${pad(filas.length + 1, 6)}`, tecnico_id, tipo: 'ENTRADA', fecha, obra_id: obra?.id ?? null,
+      lat: base.lat + d, lng: base.lng + d, gps_simulado: true, client_id: `seed-${tecnico_id}-${hoy}`,
+    })
+  })
+  return filas
+}
 
 export function createSeed() {
   const recomputeId = (n) => `OB-${pad(n, 4)}`
@@ -408,6 +434,7 @@ export function createSeed() {
     hojas: HOJAS,
     retiros: RETIROS,
     personal: TECNICOS,
+    asistencia: crearAsistenciaDeHoy(TECNICOS, OBRAS),
     flota: FLOTA_SEED,
     auditoria: LOG,
   })

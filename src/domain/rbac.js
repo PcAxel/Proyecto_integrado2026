@@ -76,6 +76,8 @@ export const CATALOGO_PERMISOS = {
   'usuarios.ver': { tipo: 'lectura', modulo: 'Accesos y Usuarios', descripcion: 'Ver los usuarios con acceso al sistema' },
   'usuarios.crear': { tipo: 'sistema', modulo: 'Accesos y Usuarios', descripcion: 'Crear accesos y asignar roles y contraseña inicial' },
   'usuarios.editar': { tipo: 'sistema', modulo: 'Accesos y Usuarios', descripcion: 'Editar usuarios, cambiar roles, restablecer claves y desactivar accesos' },
+  'asistencia.marcar': { tipo: 'operativa', modulo: 'App de terreno', descripcion: 'Marcar entrada y salida en el reloj control desde la app móvil' },
+  'asistencia.ver': { tipo: 'lectura', modulo: 'Personal y Flota', descripcion: 'Ver la asistencia diaria de los técnicos (hora de entrada, salida y ubicación)' },
   'pwa.usar': { tipo: 'operativa', modulo: 'App de terreno', descripcion: 'Usar la app móvil: hojas de servicio y solicitudes de retiro' },
 }
 
@@ -108,6 +110,7 @@ export const PERMISOS = {
   'costos_compra.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'CONSULTA'],
   'exportar': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   'usuarios.ver': ['ADMIN_GENERAL'],
+  'asistencia.ver': ['ADMIN_GENERAL', 'RRHH'],
 
   // ── Aprobación ──
   'presupuestos.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
@@ -126,6 +129,7 @@ export const PERMISOS = {
   'personal.editar': ['RRHH'],
   'maestros.gestionar': ['ADMINISTRACION'],
   'pwa.usar': ['TECNICO'],
+  'asistencia.marcar': ['TECNICO'],
 
   // ── Sistema: la empresa no tiene área de TI, así que solo la Gerencia General administra usuarios ──
   'usuarios.crear': ['ADMIN_GENERAL'],

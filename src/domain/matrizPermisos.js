@@ -18,7 +18,7 @@ export function verificarSegregacion() {
   const consulta = permisosDe(ROLES.CONSULTA)
   const noLectura = consulta.filter((a) => CATALOGO_PERMISOS[a]?.tipo !== 'lectura')
   const rrhh = permisosDe(ROLES.RRHH)
-  const rrhhEsperado = ['dashboard.ver', 'personal.editar', 'personal.ver']
+  const rrhhEsperado = ['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver']
   const sinCatalogo = Object.keys(PERMISOS).filter((a) => !CATALOGO_PERMISOS[a])
   const rolesInvalidos = Object.entries(PERMISOS).flatMap(([a, roles]) => roles.filter((r) => !ROLES_ORDEN.includes(r)).map((r) => `${a}:${r}`))
   const borrado = Object.keys(PERMISOS).filter((a) => /eliminar|borrar|delete|remove|destroy/i.test(a))
@@ -39,7 +39,7 @@ export function verificarSegregacion() {
       `Solo ${rrhhEsperado.join(', ')}`, `Permisos de RRHH: ${rrhh.join(', ')}`),
     r('personal-exclusivo', 'Solo RRHH modifica el personal y la flota (personal.editar)', iguales(PERMISOS['personal.editar'], ['RRHH']),
       'Administración (Finanzas) y el Administrador General ya no lo modifican', `personal.editar tiene: ${PERMISOS['personal.editar'].join(', ')}`),
-    r('tecnico-solo-app', 'El Técnico solo usa la app de terreno', iguales(permisosDe(ROLES.TECNICO), ['pwa.usar']), 'Su único permiso es pwa.usar', `Permisos del Técnico: ${permisosDe(ROLES.TECNICO).join(', ')}`),
+    r('tecnico-solo-app', 'El Técnico solo usa la app de terreno', iguales(permisosDe(ROLES.TECNICO), ['asistencia.marcar', 'pwa.usar']), 'Solo pwa.usar y asistencia.marcar (reloj control)', `Permisos del Técnico: ${permisosDe(ROLES.TECNICO).join(', ')}`),
     r('catalogo-completo', 'Toda acción está catalogada y solo nombra roles existentes', sinCatalogo.length === 0 && rolesInvalidos.length === 0,
       `${Object.keys(PERMISOS).length} acciones catalogadas`, `Sin catálogo: ${sinCatalogo.join(', ')} · roles inválidos: ${rolesInvalidos.join(', ')}`),
     r('sin-borrado', 'Ninguna acción permite borrar (Cardex y entidades críticas inmutables)', borrado.length === 0, 'No existen acciones de eliminación', `Acciones de borrado: ${borrado.join(', ')}`),

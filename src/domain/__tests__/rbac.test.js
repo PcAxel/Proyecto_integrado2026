@@ -14,9 +14,9 @@ describe('rbac', () => {
     expect(can('BODEGA', 'proveedores.ver')).toBe(true)
     expect(can('BODEGA', 'maestros.gestionar')).toBe(false)
   })
-  it('RRHH tiene exactamente dashboard.ver, personal.ver y personal.editar', () => {
+  it('RRHH tiene exactamente dashboard.ver, personal.ver, personal.editar y asistencia.ver', () => {
     const suyas = Object.keys(PERMISOS).filter((a) => PERMISOS[a].includes('RRHH')).sort()
-    expect(suyas).toEqual(['dashboard.ver', 'personal.editar', 'personal.ver'])
+    expect(suyas).toEqual(['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver'])
     expect(can('RRHH', 'costos.ver')).toBe(false)
     expect(can('RRHH', 'obras.ver')).toBe(false)
   })

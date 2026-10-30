@@ -30,7 +30,7 @@ describe('segregación de funciones', () => {
     expect(PERMISOS['personal.editar']).toEqual(['RRHH'])
     expect(can('ADMINISTRACION', 'personal.editar')).toBe(false)
     expect(can('ADMINISTRACION', 'personal.ver')).toBe(true) // sigue viendo tarifas para costear
-    expect(permisosDe(ROLES.RRHH).sort()).toEqual(['dashboard.ver', 'personal.editar', 'personal.ver'])
+    expect(permisosDe(ROLES.RRHH).sort()).toEqual(['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver'])
   })
 
   it('las acciones de sistema son solo del Administrador General', () => {

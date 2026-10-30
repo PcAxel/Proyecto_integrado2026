@@ -22,6 +22,7 @@ export function resumenCola(items) {
     errores: items.filter((i) => i.estado === ESTADOS_COLA.ERROR).length,
     hojas: items.filter((i) => i.tipo === 'HOJA').length,
     retiros: items.filter((i) => i.tipo === 'RETIRO').length,
+    asistencias: items.filter((i) => i.tipo === 'ASISTENCIA').length,
   }
 }
 

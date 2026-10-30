@@ -7,13 +7,13 @@
 
 | Rol | Código | Qué hace | Lectura | Aprobación | Operativas | Sistema |
 | --- | --- | --- | :-: | :-: | :-: | :-: |
-| **Administrador General** | `ADMIN_GENERAL` | Autoriza y supervisa: aprueba presupuestos con margen bajo, cierra obras, ve toda la gestión y administra los accesos. No ejecuta tareas operativas. | 15 | 2 | 0 | 2 |
+| **Administrador General** | `ADMIN_GENERAL` | Autoriza y supervisa: aprueba presupuestos con margen bajo, cierra obras, ve toda la gestión y administra los accesos. No ejecuta tareas operativas. | 16 | 2 | 0 | 2 |
 | **Administración** | `ADMINISTRACION` | Presupuestos, compras, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 14 | 1 | 4 | 0 |
 | **Bodega** | `BODEGA` | Artículos, Cardex, compras y solicitudes de retiro. | 8 | 0 | 5 | 0 |
 | **Supervisor de Obras** | `SUPERVISOR` | Obras, CU30, auditoría de hojas de terreno y presupuestos. | 8 | 1 | 4 | 0 |
-| **Técnico de Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio y retiro de materiales. | 0 | 0 | 1 | 0 |
+| **Técnico de Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio y retiro de materiales. | 0 | 0 | 2 | 0 |
 | **Consulta (Gerencia)** | `CONSULTA` | Solo lectura de la información de gestión. No puede modificar nada. | 14 | 0 | 0 | 0 |
-| **Recursos Humanos** | `RRHH` | Único rol que modifica personal y flota: fichas, tarifas, vehículos y vencimientos. | 2 | 0 | 1 | 0 |
+| **Recursos Humanos** | `RRHH` | Único rol que modifica personal y flota: fichas, tarifas, vehículos y vencimientos. | 3 | 0 | 1 | 0 |
 
 Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 
@@ -42,6 +42,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Auditoría de terreno | `hojas.auditar` | Operativa | Aprobar o devolver hojas de servicio | — | — | — | ✅ | — | — | — |
 | Personal y Flota | `personal.ver` | Lectura | Ver fichas, tarifas, vehículos y vencimientos | ✅ | ✅ | — | — | — | ✅ | ✅ |
 | Personal y Flota | `personal.editar` | Operativa | Modificar fichas, tarifas hora-hombre y estado de vehículos | — | — | — | — | — | — | ✅ |
+| Personal y Flota | `asistencia.ver` | Lectura | Ver la asistencia diaria de los técnicos (hora de entrada, salida y ubicación) | ✅ | — | — | — | — | — | ✅ |
 | Clientes y Proveedores | `maestros.ver` | Lectura | Ver el módulo de clientes y proveedores | ✅ | ✅ | — | — | — | ✅ | — |
 | Clientes y Proveedores | `clientes.ver` | Lectura | Consultar clientes (para presupuestos y obras) | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | Clientes y Proveedores | `proveedores.ver` | Lectura | Consultar proveedores (para compras y artículos) | ✅ | ✅ | ✅ | — | — | ✅ | — |
@@ -53,6 +54,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Accesos y Usuarios | `usuarios.ver` | Lectura | Ver los usuarios con acceso al sistema | ✅ | — | — | — | — | — | — |
 | Accesos y Usuarios | `usuarios.crear` | Sistema | Crear accesos y asignar roles y contraseña inicial | ✅ | — | — | — | — | — | — |
 | Accesos y Usuarios | `usuarios.editar` | Sistema | Editar usuarios, cambiar roles, restablecer claves y desactivar accesos | ✅ | — | — | — | — | — | — |
+| App de terreno | `asistencia.marcar` | Operativa | Marcar entrada y salida en el reloj control desde la app móvil | — | — | — | — | ✅ | — | — |
 | App de terreno | `pwa.usar` | Operativa | Usar la app móvil: hojas de servicio y solicitudes de retiro | — | — | — | — | ✅ | — | — |
 
 ## 3. Verificación de segregación de funciones
@@ -64,10 +66,10 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | El Administrador General no ejecuta tareas operativas | Tiene 0 acciones operativas: solo lectura, aprobación y sistema |
 | ✅ | El Administrador General conserva la autorización (margen < 20 % y cierre de obras) | Puede aprobar presupuestos y finalizar obras |
 | ✅ | Consulta es estrictamente solo lectura | 14 permisos y todos son de lectura |
-| ✅ | RRHH controla únicamente Personal y Flota | Solo dashboard.ver, personal.editar, personal.ver |
+| ✅ | RRHH controla únicamente Personal y Flota | Solo asistencia.ver, dashboard.ver, personal.editar, personal.ver |
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Administración (Finanzas) y el Administrador General ya no lo modifican |
-| ✅ | El Técnico solo usa la app de terreno | Su único permiso es pwa.usar |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 31 acciones catalogadas |
+| ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 33 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)

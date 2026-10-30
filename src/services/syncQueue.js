@@ -4,9 +4,10 @@ import { clasificarErrorSync, ESTADOS_COLA, nuevoClientId } from '@/domain/sync'
 import { isoLocal } from '@/domain/format'
 import { hojasService } from './hojas.service'
 import { retirosService } from './retiros.service'
+import { asistenciaService } from './asistencia.service'
 
 const KEY = 'fyag-cola'
-const ENVIAR = { HOJA: (p) => hojasService.enviar({ ...p, desde_cola: true }), RETIRO: (p) => retirosService.create(p) }
+const ENVIAR = { HOJA: (p) => hojasService.enviar({ ...p, desde_cola: true }), RETIRO: (p) => retirosService.create(p), ASISTENCIA: (p) => asistenciaService.marcar(p) }
 
 // Respaldo en memoria cuando IndexedDB no existe (tests, modo privado).
 let memoria = []
@@ -49,7 +50,7 @@ async function encolar(tipo, payload, meta) {
 /**
  * Envía el registro si hay conexión; si no hay señal o el servidor falla, lo guarda en la cola.
  * Un rechazo del servidor (4xx) NO se encola: se informa al usuario para que lo corrija.
- * @param {'HOJA'|'RETIRO'} tipo @param {object} payload @param {{obra_nombre?:string}} [meta]
+ * @param {'HOJA'|'RETIRO'|'ASISTENCIA'} tipo @param {object} payload @param {{obra_nombre?:string}} [meta]
  * @returns {Promise<{encolado:boolean, resultado?:any}>}
  */
 export async function enviarOEncolar(tipo, payload, meta = {}) {

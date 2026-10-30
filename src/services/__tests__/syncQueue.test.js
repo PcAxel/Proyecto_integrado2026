@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
-import { configureHttp, enviarOEncolar, procesarCola, descartarDeCola, hojasService, retirosService } from '@/services'
+import { configureHttp, enviarOEncolar, procesarCola, descartarDeCola, hojasService, retirosService, asistenciaService } from '@/services'
 
 const hoja = (extra = {}) => ({
   obra_id: 'OB-0001', horas_trabajadas: 3, gps: { lat: -36.6285, lng: -72.1331 },
@@ -68,5 +68,20 @@ describe('cola offline', () => {
     configureHttp({ failRate: 0 })
     expect((await procesarCola()).enviados).toBe(1)
     expect((await retirosService.list()).some((r) => r.obra_id === 'OB-0001')).toBe(true)
+  })
+
+  it('una marca de asistencia sin señal queda en cola, se envía al reconectar y no se duplica', async () => {
+    useSyncStore.getState().setOnline(false)
+    const marca = { tipo: 'ENTRADA', lat: -36.6, lng: -72.1, capturado_en: '2026-01-05T07:55:00', client_id: 'C-asist' }
+    const r = await enviarOEncolar('ASISTENCIA', marca, { obra_nombre: 'Reloj control' })
+    expect(r.encolado).toBe(true)
+    expect(db.all('asistencia').filter((m) => m.tecnico_id === 'T-01')).toHaveLength(0)
+    useSyncStore.getState().setOnline(true)
+    expect(await procesarCola()).toMatchObject({ enviados: 1, errores: 0, pendientes: 0 })
+    const guardada = db.all('asistencia').filter((m) => m.tecnico_id === 'T-01')
+    expect(guardada).toHaveLength(1)
+    expect(guardada[0].fecha).toBe('2026-01-05T07:55:00') // conserva la hora capturada en el dispositivo
+    await asistenciaService.marcar(marca) // reintento con el mismo client_id
+    expect(db.all('asistencia').filter((m) => m.tecnico_id === 'T-01')).toHaveLength(1)
   })
 })

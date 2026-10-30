@@ -13,3 +13,4 @@ export { enviarOEncolar, procesarCola, refrescarCola, descartarDeCola, reintenta
 export { dashboardService } from './dashboard.service'
 export { usuariosService } from './usuarios.service'
 export { busquedaService } from './busqueda.service'
+export { asistenciaService } from './asistencia.service'

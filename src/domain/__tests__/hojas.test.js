@@ -37,7 +37,7 @@ describe('cola de sincronización', () => {
   })
   it('resume la cola', () => {
     expect(resumenCola([{ estado: 'PENDIENTE', tipo: 'HOJA' }, { estado: 'ERROR', tipo: 'RETIRO' }]))
-      .toEqual({ total: 2, pendientes: 1, errores: 1, hojas: 1, retiros: 1 })
+      .toEqual({ total: 2, pendientes: 1, errores: 1, hojas: 1, retiros: 1, asistencias: 0 })
   })
   it('genera client ids distintos', () => {
     expect(nuevoClientId(1, 0.1)).not.toBe(nuevoClientId(1, 0.2))
