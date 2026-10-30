@@ -478,3 +478,33 @@ describe('segregación de funciones en los servicios', () => {
     for (const intento of intentos) await expect(intento()).rejects.toMatchObject({ status: 403 })
   })
 })
+
+describe('inicio por rol: «Pendientes para ti»', () => {
+  const ids = async (id) => { login(id); return (await dashboardService.resumen()).tareas.map((t) => t.id) }
+
+  it('cada rol recibe tareas distintas, acordes a sus permisos', async () => {
+    const g = await ids(GERENCIA)
+    expect(g.some((i) => i.startsWith('apr-'))).toBe(true)
+    expect(g.some((i) => i.startsWith('ret-') || i.startsWith('hoja-'))).toBe(false)
+    expect((await ids(SUPERVISOR)).some((i) => i.startsWith('hoja-'))).toBe(true)
+    const b = await ids(BODEGA)
+    expect(b.some((i) => i.startsWith('ret-'))).toBe(true)
+    expect(b).toContain('reponer')
+    expect((await ids('U-007')).every((i) => i.startsWith('venc-') || i.startsWith('taller-'))).toBe(true)
+  })
+  it('Consulta no recibe tareas; ninguna tarea apunta a algo que el rol no pueda abrir', async () => {
+    expect(await ids('U-006')).toEqual([])
+    login(ADMIN)
+    const { tareas } = await dashboardService.resumen()
+    expect(tareas.length).toBeGreaterThan(0)
+    expect(tareas.every((t) => t.ruta.startsWith('/erp'))).toBe(true)
+  })
+  it('expone los indicadores de salud que mueven el manómetro', async () => {
+    login(GERENCIA)
+    const { kpis } = await dashboardService.resumen()
+    expect(kpis.margenPonderado).toBeGreaterThan(0)
+    expect(kpis.inventarioSanoPct).toBeGreaterThan(0)
+    expect(kpis.inventarioSanoPct).toBeLessThanOrEqual(100)
+    expect(kpis.documentosAlDiaPct).toBeLessThan(100) // la camioneta con revisión vencida
+  })
+})

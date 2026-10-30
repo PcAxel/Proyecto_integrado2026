@@ -6,7 +6,7 @@ import { resumenFlota } from './flota.js'
  * (el servicio pasa `null` en la fuente correspondiente).
  * @param {{presupuestos:any[]|null, obras:any[]|null, hojas:any[]|null, retiros:any[]|null, articulos:any[]|null, costos:Record<string,number>|null}} fuentes
  */
-export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, costos, personal = null, flota = null }) {
+export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, costos, personal = null, flota = null, documentos = null }) {
   const kpis = {}
   if (obras) {
     kpis.obrasActivas = obras.filter((o) => o.estado === 'EN_CURSO').length
@@ -30,6 +30,7 @@ export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, c
     const activos = articulos.filter((a) => a.activo)
     kpis.articulosBajoMinimo = activos.filter((a) => a.estado_stock === 'BAJO').length
     kpis.articulosSinStock = activos.filter((a) => a.estado_stock === 'SIN_STOCK').length
+    kpis.inventarioSanoPct = activos.length ? Math.round((activos.filter((a) => a.estado_stock === 'OK').length / activos.length) * 100) : 100
     kpis.valorInventario = activos.some((a) => a.costo_unitario === undefined) ? null : Math.round(activos.reduce((s, a) => s + a.stock * a.costo_unitario, 0))
   }
   if (personal) {
@@ -44,6 +45,7 @@ export function kpisGerencia({ presupuestos, obras, hojas, retiros, articulos, c
     kpis.vehiculosEnTaller = f.enTaller
     kpis.kmFlota = f.kmTotal
   }
+  if (documentos) kpis.documentosAlDiaPct = documentos.total ? Math.round(((documentos.total - documentos.vencidos) / documentos.total) * 100) : 100
   if (costos && obras) {
     kpis.costoRealObrasActivas = Math.round(obras.filter((o) => o.estado === 'EN_CURSO').reduce((s, o) => s + (costos[o.id] ?? 0), 0))
   }
