@@ -1,18 +1,46 @@
+import { useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Snowflake, ChevronRight, Lock, WifiOff, ScrollText } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { ROL_LABEL, rutaInicial } from '@/domain/rbac'
+import { ROL_LABEL, ROL_DESCRIPCION, rutaInicial } from '@/domain/rbac'
 import { usuariosService } from '@/services'
 import { useResource } from '@/hooks/useResource'
-import { Badge, Skeleton } from '@/components/ui'
+import { Skeleton, cn } from '@/components/ui'
+import { Avatar, BrandMark } from '@/components/domain'
 
-const PUNTOS = [
-  { icon: Lock, titulo: 'Cardex inmutable', texto: 'Cada movimiento de bodega queda registrado; los errores se corrigen con reversas auditadas.' },
-  { icon: WifiOff, titulo: 'Terreno sin señal', texto: 'Los técnicos completan sus hojas de servicio offline y se sincronizan al reconectar.' },
-  { icon: ScrollText, titulo: 'Auditoría completa', texto: 'Quién cambió qué, cuándo y desde dónde, en todo el sistema.' },
-]
+const fmt = (n) => n.toFixed(1).replace('.', ',')
 
-/** Login demo: a pantalla completa, con panel de marca desde `lg` y tarjetas de perfil que se reparten el ancho. */
+/**
+ * Lectura de una cámara de frío, como la del controlador de una cámara real: la temperatura oscila unas décimas
+ * alrededor del punto de consigna. Es lo único que se mueve en esta pantalla, y se detiene con «reducir movimiento».
+ */
+function LecturaCamara() {
+  const [t, setT] = useState(-18.0)
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined
+    const id = setInterval(() => setT(-18 + (Math.random() - 0.5) * 0.5), 2200)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <div className="instrument max-w-md border border-white/10 p-6" aria-hidden="true">
+      <div className="lattice pointer-events-none absolute inset-0 opacity-70" />
+      <div className="relative">
+        <div className="flex items-center justify-between text-sm text-white/65">
+          <span>Cámara 3 · Packing Cordillera</span>
+          <span className="flex items-center gap-2"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ice/70" /><span className="relative inline-flex h-2 w-2 rounded-full bg-ice" /></span>En rango</span>
+        </div>
+        <p className="t-display mt-4 text-[5.5rem] leading-none tabular-nums text-white">{fmt(t)}<span className="ml-1 text-4xl text-ice">°C</span></p>
+        <div className="mt-6 grid grid-cols-3 gap-3 border-t border-white/10 pt-4 text-sm">
+          <div><p className="text-white/50">Consigna</p><p className="t-display mt-0.5 text-xl text-white">−18,0 °C</p></div>
+          <div><p className="text-white/50">Compresor</p><p className="t-display mt-0.5 text-xl text-white">Operando</p></div>
+          <div><p className="text-white/50">Descarche</p><p className="t-display mt-0.5 text-xl text-white">en 4 h</p></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Ingreso demo: elige un perfil y entra a la vista que le corresponde. */
 export function LoginPage() {
   const { user, login } = useAuthStore()
   const navigate = useNavigate()
@@ -30,52 +58,54 @@ export function LoginPage() {
 
   return (
     <div className="grid min-h-full lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <aside className="hidden flex-col justify-between bg-gradient-to-br from-brand-dark to-brand p-10 text-white lg:flex xl:p-14">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15"><Snowflake className="h-6 w-6" /></span>
-          <div className="leading-tight"><p className="text-lg font-bold">FYAG ERP</p><p className="text-sm text-white/70">Frío y Agroindustria SpA</p></div>
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-deep via-deep to-[#081E2C] p-10 text-white lg:flex xl:p-14">
+        <div className="lattice pointer-events-none absolute inset-0" aria-hidden="true" />
+        <div className="pointer-events-none absolute -right-32 top-1/3 h-96 w-96 rounded-full bg-brand/25 blur-3xl" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <BrandMark size={44} />
+          <div className="leading-none">
+            <p className="t-display text-3xl tracking-wide">FYAG</p>
+            <p className="mt-1.5 text-sm text-white/60">Frío y Agroindustria SpA</p>
+          </div>
         </div>
-        <div className="max-w-xl">
-          <h2 className="text-3xl font-bold leading-tight xl:text-4xl">Obras, bodega y terreno en un solo lugar.</h2>
-          <p className="mt-3 text-white/75">Portal de oficina y app móvil para los técnicos, sobre un mismo dominio de negocio. Región de Ñuble.</p>
-          <ul className="mt-8 space-y-5">
-            {PUNTOS.map(({ icon: Icono, titulo, texto }) => (
-              <li key={titulo} className="flex gap-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15"><Icono className="h-4 w-4" /></span>
-                <div><p className="font-semibold">{titulo}</p><p className="text-sm text-white/70">{texto}</p></div>
-              </li>
-            ))}
-          </ul>
+        <div className="relative space-y-10">
+          <div className="max-w-md">
+            <h2 className="t-display text-[3.2rem] leading-[1.02] xl:text-[3.8rem]">De la cámara de frío a la gerencia, en un solo sistema.</h2>
+            <p className="mt-5 text-lg leading-relaxed text-white/70">Obras, bodega y terreno conectados, con cada persona viendo solo lo que necesita para su trabajo.</p>
+          </div>
+          <LecturaCamara />
         </div>
-        <p className="text-xs text-white/60">Prototipo · Proyecto Integrado INACAP Chillán</p>
+        <p className="relative text-sm text-white/45">Región de Ñuble, Chile</p>
       </aside>
 
-      <main className="flex items-center justify-center px-4 py-8 sm:px-8 lg:px-10">
+      <main className="flex items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
         <div className="w-full max-w-4xl">
-          <div className="mb-8 text-center lg:text-left">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white lg:hidden"><Snowflake className="h-6 w-6" /></span>
-            <h1 className="mt-4 text-2xl font-bold lg:mt-0 xl:text-3xl">Ingresa a FYAG ERP</h1>
-            <p className="mt-1 text-sm text-ink-soft">Frío y Agroindustria SpA · Región de Ñuble</p>
-            <div className="mt-3"><Badge tone="info">Modo demo · selecciona un perfil</Badge></div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-3">
-            {!perfiles.data && <div className="card sm:col-span-2 2xl:col-span-3"><Skeleton rows={3} /></div>}
+          <div className="mb-8 flex items-center gap-3 lg:hidden"><BrandMark size={40} /><p className="t-display text-3xl tracking-wide">FYAG</p></div>
+          <h1 className="t-display text-[2.4rem] leading-none sm:text-[3rem]">¿Quién ingresa hoy?</h1>
+          <p className="mt-3 max-w-xl text-ink-soft">Elige un perfil de demostración. Cada rol entra a una vista distinta, con las herramientas que le corresponden.</p>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            {!perfiles.data && <div className="card sm:col-span-2"><Skeleton rows={4} /></div>}
             {(perfiles.data ?? []).map((u) => (
               <button
                 key={u.id}
                 onClick={() => enter(u)}
-                className="card group flex min-h-[5.5rem] items-center justify-between gap-3 p-4 text-left transition-colors hover:border-brand sm:p-5"
+                className={cn('card group flex items-start gap-4 p-4 text-left transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift sm:p-5')}
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{u.nombre}</p>
-                  <p className="mt-0.5 truncate text-xs text-ink-soft">{u.cargo}</p>
-                  <div className="mt-2"><Badge tone={u.rol === 'TECNICO' ? 'warn' : 'neutral'}>{ROL_LABEL[u.rol]}</Badge></div>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-ink-faint transition-colors group-hover:text-brand" />
+                <Avatar nombre={u.nombre} rol={u.rol} size="lg" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate font-semibold text-ink">{u.nombre}</span>
+                    <ArrowRight className="h-4 w-4 shrink-0 -translate-x-1 text-brand opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+                  </span>
+                  <span className="block truncate text-sm text-ink-soft">{u.cargo}</span>
+                  <span className="mt-2 block text-[13px] font-medium text-brand-dark">{ROL_LABEL[u.rol]}</span>
+                  <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-ink-soft">{ROL_DESCRIPCION[u.rol]}</span>
+                </span>
               </button>
             ))}
           </div>
-          <p className="mt-6 text-center text-xs text-ink-faint lg:text-left">Técnicos ingresan a la app de terreno (/app); el resto al portal ERP (/erp).</p>
+          <p className="mt-6 text-sm text-ink-faint">Los técnicos ingresan a la app de terreno; el resto, al portal de oficina.</p>
         </div>
       </main>
     </div>
