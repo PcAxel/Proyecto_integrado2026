@@ -24,9 +24,9 @@ export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTit
       <div className="hidden overflow-x-auto sm:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-xs font-medium text-ink-soft">
+            <tr className="border-b border-line-strong/60 bg-slate-50/80 text-left text-[12px] font-semibold text-ink-soft">
               {columns.map((c) => (
-                <th key={c.key} className={cn('px-4 py-2.5 font-medium', c.align === 'right' && 'text-right', c.className)}>
+                <th key={c.key} className={cn('whitespace-nowrap px-4 py-3 font-semibold', c.align === 'right' && 'text-right', c.className)}>
                   {c.header}
                 </th>
               ))}
@@ -37,10 +37,10 @@ export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTit
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn('border-b border-line last:border-0', onRowClick && 'cursor-pointer hover:bg-slate-50')}
+                className={cn('border-b border-line last:border-0 transition-colors duration-100', onRowClick ? 'cursor-pointer hover:bg-brand-tint/45' : 'hover:bg-slate-50/70')}
               >
                 {columns.map((c) => (
-                  <td key={c.key} className={cn('px-4 py-3', c.align === 'right' && 'text-right', c.mono && 'whitespace-nowrap font-mono tabular-nums', c.className)}>
+                  <td key={c.key} className={cn('px-4 py-3.5', c.align === 'right' && 'text-right', c.mono && 'whitespace-nowrap font-mono text-[13px] tabular-nums text-ink/90', c.className)}>
                     {celda(c, row)}
                   </td>
                 ))}

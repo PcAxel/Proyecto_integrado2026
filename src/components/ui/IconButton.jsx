@@ -13,13 +13,13 @@ export const IconButton = forwardRef(function IconButton(
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-slate-100 hover:text-ink disabled:text-ink-faint',
+        'inline-flex items-center justify-center rounded-lg text-ink-soft transition-colors duration-150 hover:bg-brand-tint hover:text-brand active:scale-95 disabled:text-ink-faint disabled:hover:bg-transparent disabled:hover:text-ink-faint',
         dim,
         className,
       )}
       {...rest}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className={size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'} />
     </button>
   )
 })

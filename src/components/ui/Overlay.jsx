@@ -1,7 +1,13 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
-/** Base compartida de Modal y Drawer: portal, scrim, Escape y bloqueo de scroll. */
+const POSICION = {
+  center: 'items-center justify-center p-4',
+  top: 'items-start justify-center p-4 pt-[8vh] sm:pt-[12vh]',
+  right: 'justify-end',
+}
+
+/** Base compartida de Modal, Drawer y la búsqueda global: portal, velo, Escape y bloqueo de scroll. */
 export function Overlay({ open, onClose, children, align = 'center' }) {
   useEffect(() => {
     if (!open) return undefined
@@ -17,8 +23,8 @@ export function Overlay({ open, onClose, children, align = 'center' }) {
 
   if (!open) return null
   return createPortal(
-    <div className={`fixed inset-0 z-50 flex ${align === 'right' ? 'justify-end' : align === 'top' ? 'items-start justify-center p-4 pt-[8vh] sm:pt-[12vh]' : 'items-center justify-center p-4'}`}>
-      <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden="true" />
+    <div className={`fixed inset-0 z-50 flex ${POSICION[align] ?? POSICION.center}`}>
+      <div className="absolute inset-0 animate-fade bg-deep/55 backdrop-blur-[3px]" onClick={onClose} aria-hidden="true" />
       {children}
     </div>,
     document.body,
