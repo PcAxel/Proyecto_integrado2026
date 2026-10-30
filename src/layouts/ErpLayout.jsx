@@ -85,12 +85,9 @@ function Navegacion({ collapsed, onNavigate, modo = 'riel' }) {
 function MarcaLateral({ collapsed, modo = 'riel' }) {
   const texto = modo === 'menu' ? '' : collapsed ? 'hidden' : 'hidden xl:block'
   return (
-    <div className={cn('flex h-16 shrink-0 items-center gap-3 px-4', modo === 'riel' && (collapsed ? 'justify-center px-0' : 'justify-center px-0 xl:justify-start xl:px-5'))}>
-      <BrandMark size={34} />
-      <div className={cn('leading-none', texto)}>
-        <p className="t-display text-[22px] tracking-wide">FYAG</p>
-        <p className="mt-1 text-[11px] text-white/50">Frío y Agroindustria</p>
-      </div>
+    <div className={cn('flex h-20 shrink-0 items-center px-4', modo === 'riel' && (collapsed ? 'justify-center px-0' : 'justify-center px-0 xl:justify-start xl:px-5'))}>
+      {/* Con el menú contraído solo cabe un logo pequeño; desde xl se ve completo. */}
+      <BrandMark height={modo === 'menu' || !collapsed ? 52 : 32} placa className={cn(modo === 'riel' && !collapsed && 'xl:[&>img]:!h-[52px] [&>img]:!h-8')} />
     </div>
   )
 }

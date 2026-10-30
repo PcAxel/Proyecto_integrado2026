@@ -61,13 +61,7 @@ export function LoginPage() {
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-deep via-deep to-[#081E2C] p-10 text-white lg:flex xl:p-14">
         <div className="lattice pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="pointer-events-none absolute -right-32 top-1/3 h-96 w-96 rounded-full bg-brand/25 blur-3xl" aria-hidden="true" />
-        <div className="relative flex items-center gap-3">
-          <BrandMark size={44} />
-          <div className="leading-none">
-            <p className="t-display text-3xl tracking-wide">FYAG</p>
-            <p className="mt-1.5 text-sm text-white/60">Frío y Agroindustria SpA</p>
-          </div>
-        </div>
+        <div className="relative"><BrandMark height={96} placa /></div>
         <div className="relative space-y-10">
           <div className="max-w-md">
             <h2 className="t-display text-[3.2rem] leading-[1.02] xl:text-[3.8rem]">De la cámara de frío a la gerencia, en un solo sistema.</h2>
@@ -80,7 +74,7 @@ export function LoginPage() {
 
       <main className="flex items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
         <div className="w-full max-w-4xl">
-          <div className="mb-8 flex items-center gap-3 lg:hidden"><BrandMark size={40} /><p className="t-display text-3xl tracking-wide">FYAG</p></div>
+          <div className="mb-8 lg:hidden"><BrandMark height={56} /></div>
           <h1 className="t-display text-[2.4rem] leading-none sm:text-[3rem]">¿Quién ingresa hoy?</h1>
           <p className="mt-3 max-w-xl text-ink-soft">Elige un perfil de demostración. Cada rol entra a una vista distinta, con las herramientas que le corresponden.</p>
 
