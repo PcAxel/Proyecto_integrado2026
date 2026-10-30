@@ -35,7 +35,10 @@ export function PanelCierre({ obra, onChanged }) {
   }
 
   return (
-    <Card title="Panel de cierre" action={<Mono className={cn('text-sm font-semibold', ok === 6 ? 'text-ok' : 'text-ink-soft')}>{ok}/6</Mono>}>
+    <Card title="Panel de cierre" subtitle={ok === 6 ? 'Lista para finalizar' : `${6 - ok} requisito${6 - ok === 1 ? '' : 's'} pendiente${6 - ok === 1 ? '' : 's'}`} action={<span className={cn('t-display text-2xl tabular-nums', ok === 6 ? 'text-ok' : 'text-ink')}>{ok}<span className="text-ink-faint">/6</span></span>}>
+      <div className="mb-4 flex gap-1" role="img" aria-label={`${ok} de 6 requisitos cumplidos`}>
+        {checks.map((c) => <span key={c.id} className={cn('h-1.5 flex-1 rounded-full transition-colors duration-300', c.ok ? 'bg-ok' : 'bg-slate-200')} title={c.label} />)}
+      </div>
       <ul className="space-y-3">
         {checks.map((c) => (
           <li key={c.id} className="flex items-start gap-3">

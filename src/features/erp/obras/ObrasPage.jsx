@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Plus, HardHat, AlertTriangle, CalendarClock, CheckCircle2 } from 'lucide-react'
-import { PageHeader, Button, Card, DataTable, KpiTile, Select, Mono, ExportMenu } from '@/components/ui'
-import { MoneyCell, ObraStatusBadge, EmergencyBadge, TIPO_OBRA_LABEL } from '@/components/domain'
+import { Plus, AlertTriangle } from 'lucide-react'
+import { PageHeader, Button, Card, DataTable, Select, Mono, ExportMenu } from '@/components/ui'
+import { MoneyCell, ObraStatusBadge, EmergencyBadge, FranjaEstados, TIPO_OBRA_LABEL } from '@/components/domain'
 import { obrasService, clientesService } from '@/services'
 import { TIPOS_OBRA } from '@/domain/obras'
 import { formatFecha } from '@/domain/format'
@@ -21,7 +21,6 @@ export function ObrasPage() {
   const todas = lista.data ?? []
   const filas = todas.filter((o) => (!filtros.estado || o.estado === filtros.estado) && (!filtros.tipo || o.tipo === filtros.tipo))
   const cu30 = todas.filter((o) => o.es_emergencia_sin_presupuesto && o.estado !== 'FINALIZADA')
-  const kpi = (v) => (lista.data ? v : '—')
   const verCostos = can(rol, 'costos.ver')
 
   const columns = [
@@ -54,17 +53,23 @@ export function ObrasPage() {
           {can(rol, 'obras.crear') && <Button icon={Plus} onClick={() => navigate('/erp/obras/nueva')}>Nueva obra</Button>}
         </>} />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiTile label="En curso" value={kpi(todas.filter((o) => o.estado === 'EN_CURSO').length)} icon={HardHat} />
-        <KpiTile label="CU30 por regularizar" value={kpi(cu30.length)} icon={AlertTriangle} tone={cu30.length ? 'warn' : 'neutral'} hint="Emergencias sin presupuesto" />
-        <KpiTile label="Planificadas" value={kpi(todas.filter((o) => o.estado === 'PLANIFICADA').length)} icon={CalendarClock} />
-        <KpiTile label="Finalizadas" value={kpi(todas.filter((o) => o.estado === 'FINALIZADA').length)} icon={CheckCircle2} tone="ok" />
-      </div>
+      <FranjaEstados
+        cargando={!lista.data}
+        activo={filtros.estado}
+        onElegir={(id) => setFiltro('estado', id)}
+        segmentos={[
+          { id: '', label: 'Todas', valor: todas.length },
+          { id: 'EN_CURSO', label: 'En curso', valor: todas.filter((o) => o.estado === 'EN_CURSO').length, tono: 'info' },
+          { id: 'PLANIFICADA', label: 'Planificadas', valor: todas.filter((o) => o.estado === 'PLANIFICADA').length, tono: 'neutral' },
+          { id: 'FINALIZADA', label: 'Finalizadas', valor: todas.filter((o) => o.estado === 'FINALIZADA').length, tono: 'ok' },
+        ]}
+        nota={cu30.length > 0 ? (
+          <p className="flex items-start gap-2 text-sm text-warn"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span><b>{cu30.length} obra{cu30.length === 1 ? '' : 's'} sin presupuesto</b> por regularizar (CU30)</span></p>
+        ) : undefined}
+      />
 
       <Card padded={false}>
         <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
-          <Select label="Estado" value={filtros.estado} onChange={(e) => setFiltro('estado', e.target.value)} placeholder="Todos" className="w-full sm:w-44"
-            options={[{ value: 'PLANIFICADA', label: 'Planificada' }, { value: 'EN_CURSO', label: 'En curso' }, { value: 'FINALIZADA', label: 'Finalizada' }]} />
           <Select label="Tipo" value={filtros.tipo} onChange={(e) => setFiltro('tipo', e.target.value)} placeholder="Todos" className="w-full sm:w-44"
             options={TIPOS_OBRA.map((t) => ({ value: t, label: TIPO_OBRA_LABEL[t] }))} />
           <Mono className="ml-auto pb-2 text-xs text-ink-soft">{filas.length} resultados</Mono>
