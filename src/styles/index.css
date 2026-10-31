@@ -41,3 +41,7 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* App de terreno: etiquetas y campos de lectura más cómoda para quien usa poco la tecnología. */
+.terreno label > span:first-child { font-size: 1rem; font-weight: 600; }
+.terreno input:not([type='checkbox']):not([type='file']), .terreno select, .terreno textarea { font-size: 1.125rem; border-width: 2px; }

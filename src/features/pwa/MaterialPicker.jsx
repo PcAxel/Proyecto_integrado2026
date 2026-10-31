@@ -33,14 +33,14 @@ export function MaterialPicker({ catalogo, lineas, onChange, vacio = 'Escanea o 
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
+      <div className="flex items-end gap-2">
         <Input size="lg" mono className="flex-1" label="Escanear o buscar" placeholder="SKU o nombre" value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)} onKeyDown={onEnter} autoComplete="off" />
-        <Button type="button" size="lg" variant="secondary" icon={ScanLine} className="mt-5 shrink-0" onClick={simularEscaneo}>Escanear</Button>
+        <Button type="button" size="lg" variant="secondary" icon={ScanLine} className="shrink-0" onClick={simularEscaneo}>Escanear</Button>
       </div>
       {sugerencias.map((a) => (
         <button key={a.id} type="button" onClick={() => agregar(a)} className="card flex min-h-14 w-full items-center justify-between px-4 py-2 text-left active:bg-slate-50">
-          <span><span className="block text-sm font-medium">{a.nombre}</span><Mono className="text-xs text-ink-soft">{a.sku}</Mono></span>
+          <span><span className="block text-base font-medium">{a.nombre}</span><Mono className="text-sm text-ink-soft">{a.sku}</Mono></span>
           <Plus className="h-5 w-5 text-brand" />
         </button>
       ))}
@@ -48,7 +48,7 @@ export function MaterialPicker({ catalogo, lineas, onChange, vacio = 'Escanea o 
       {lineas.map(({ articulo, cantidad }) => (
         <div key={articulo.id} className="card p-3">
           <div className="flex items-start justify-between gap-2">
-            <div><p className="text-sm font-medium">{articulo.nombre}</p><Mono className="text-xs text-ink-soft">{articulo.sku} · {articulo.unidad}</Mono></div>
+            <div><p className="text-base font-medium">{articulo.nombre}</p><Mono className="text-sm text-ink-soft">{articulo.sku} · {articulo.unidad}</Mono></div>
             <IconButton icon={X} label="Quitar de la lista" size="sm" onClick={() => onChange(lineas.filter((l) => l.articulo.id !== articulo.id))} />
           </div>
           <div className="mt-3 flex items-center justify-between">

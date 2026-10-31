@@ -17,7 +17,7 @@ function EditorNumero({ def, valor, onChange }) {
         <Mono className="text-4xl font-bold">{texto || '0'}</Mono>
         <span className="text-lg font-semibold text-ink-soft">{def.unidad}</span>
       </div>
-      <p className="text-xs text-ink-soft">Rango esperado: <Mono>{rangoLegible(def)}</Mono></p>
+      <p className="text-sm text-ink-soft">Rango esperado: <Mono>{rangoLegible(def)}</Mono></p>
       <NumericKeypad value={texto} onChange={(t) => { setTexto(t); onChange(aNumero(t)) }} />
     </div>
   )
@@ -53,8 +53,8 @@ export function PasoChecklist({ draft, setDraft }) {
         return (
           <div key={def.id} className={cn('card overflow-hidden border-2', COLOR[it.estado])}>
             <button type="button" onClick={() => setActivo(abierto ? -1 : idx)} className="flex min-h-14 w-full items-center justify-between px-4 text-left" aria-expanded={abierto}>
-              <span className="text-sm font-semibold">{idx + 1}. {def.label}</span>
-              <Mono className={cn('text-sm font-semibold', TEXTO[it.estado])}>{valorLegible(def, it.valor)}</Mono>
+              <span className="text-base font-semibold">{idx + 1}. {def.label}</span>
+              <Mono className={cn('text-base font-semibold', TEXTO[it.estado])}>{valorLegible(def, it.valor)}</Mono>
             </button>
             {abierto && (
               <div className="space-y-3 border-t border-line bg-surface p-4">

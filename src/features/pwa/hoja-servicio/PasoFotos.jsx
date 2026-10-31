@@ -38,7 +38,7 @@ export function PasoFotos({ obra, draft, setDraft }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-soft">Toma al menos {FOTOS_MIN} fotos: una <b>antes</b> y una <b>después</b>. Cada foto lleva sello GPS.</p>
+      <p className="text-base text-ink-soft">Toma al menos {FOTOS_MIN} fotos: una <b>antes</b> y una <b>después</b>. Cada foto lleva sello GPS.</p>
       <div className="grid grid-cols-2 gap-3">
         {['Antes', 'Después'].map((et) => (
           <div key={et}>
@@ -58,7 +58,7 @@ export function PasoFotos({ obra, draft, setDraft }) {
             <figure key={f.id} className="card overflow-hidden">
               <div className="relative">
                 <img src={f.thumb} alt={`Foto ${f.etiqueta}`} className="aspect-[4/3] w-full object-cover" />
-                <span className="absolute left-2 top-2 rounded bg-slate-900/70 px-1.5 py-0.5 text-[11px] font-medium text-white">{f.etiqueta}</span>
+                <span className="absolute left-2 top-2 rounded bg-slate-900/70 px-1.5 py-0.5 text-sm font-medium text-white">{f.etiqueta}</span>
                 <IconButton icon={X} label="Quitar foto" size="sm" className="absolute right-1 top-1 bg-white/90" onClick={() => setDraft({ ...draft, fotos: draft.fotos.filter((x) => x.id !== f.id) })} />
               </div>
               <figcaption className="p-2"><GpsStamp lat={f.lat} lng={f.lng} geocerca={g} simulado={f.simulado} className="flex-wrap" /></figcaption>
@@ -66,7 +66,7 @@ export function PasoFotos({ obra, draft, setDraft }) {
           )
         })}
       </div>
-      <p className="text-center text-xs text-ink-faint">{draft.fotos.length} de {FOTOS_MIN} fotos mínimas</p>
+      <p className="text-center text-sm text-ink-faint">{draft.fotos.length} de {FOTOS_MIN} fotos mínimas</p>
     </div>
   )
 }

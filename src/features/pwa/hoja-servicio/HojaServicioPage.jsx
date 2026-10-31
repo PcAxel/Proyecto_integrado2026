@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Send } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button, Stepper, Skeleton } from '@/components/ui'
+import { Button, Skeleton, cn } from '@/components/ui'
 import { obrasService, articulosService, personalService, enviarOEncolar } from '@/services'
 import { PASOS_HOJA, borradorVacio, validarPasoHoja, primerPasoIncompleto } from '@/domain/hojas'
 import { useSyncStore } from '@/stores/syncStore'
@@ -13,6 +13,8 @@ import { PasoChecklist } from './PasoChecklist'
 import { PasoFotos } from './PasoFotos'
 import { PasoHoras } from './PasoHoras'
 import { PasoCierre } from './PasoCierre'
+
+const PREGUNTA = ['¿En qué obra trabajaste?', 'Revisa el equipo', 'Saca fotos', '¿Cuántas horas trabajaste?', 'Revisa y firma']
 
 /** Wizard de 5 pasos. El borrador se guarda en IndexedDB para no perder datos si se corta la señal. */
 export function HojaServicioPage() {
@@ -74,7 +76,7 @@ export function HojaServicioPage() {
       }, { obra_nombre: obra?.nombre })
       await limpiarBorrador()
       if (r.encolado) toast.info('Sin señal: la hoja quedó guardada y se enviará sola al reconectar.')
-      else toast.success('Hoja de servicio enviada')
+      else toast.success('Listo: hoja enviada')
       navigate('/app', { replace: true })
     } catch (e) {
       setError(e.message)
@@ -85,9 +87,14 @@ export function HojaServicioPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="mb-4 space-y-2">
-        <Stepper steps={PASOS_HOJA} current={paso} />
-        <h1 className="text-lg font-bold">{paso + 1}. {PASOS_HOJA[paso]}</h1>
+      <div className="mb-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-lg font-bold text-ink">Paso {paso + 1} de {PASOS_HOJA.length}</p>
+        </div>
+        <div className="flex gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={PASOS_HOJA.length} aria-valuenow={paso + 1} aria-label="Avance de la hoja">
+          {PASOS_HOJA.map((p, i) => <span key={p} className={cn('h-3 flex-1 rounded-full', i <= paso ? 'bg-brand-dark' : 'bg-slate-300')} />)}
+        </div>
+        <h2 className="t-display text-[1.9rem] leading-tight text-ink">{PREGUNTA[paso]}</h2>
       </div>
 
       <div className="flex-1 pb-4">
@@ -99,13 +106,13 @@ export function HojaServicioPage() {
         {paso === 4 && obra && <PasoCierre obra={obra} draft={draft} setDraft={setDraft} lineas={lineas} irAPaso={irAPaso} vehiculos={vehiculos.data ?? []} />}
       </div>
 
-      <div className="sticky -bottom-4 -mx-4 -mb-4 space-y-2 border-t border-line bg-surface p-3 pb-7">
-        {error && <p role="alert" className="text-center text-sm font-medium text-crit">{error}</p>}
+      <div className="sticky -bottom-4 -mx-4 -mb-4 space-y-2 border-t-2 border-line-strong bg-white p-3 pb-7">
+        {error && <p role="alert" className="rounded-xl bg-crit-bg p-3 text-center text-base font-semibold text-crit">{error}</p>}
         <div className="flex gap-2">
-          {paso > 0 && <Button type="button" variant="secondary" size="lg" icon={ChevronLeft} onClick={() => irAPaso(paso - 1)} aria-label="Paso anterior" />}
+          {paso > 0 && <Button type="button" variant="secondary" size="lg" className="!h-16 border-2 !text-lg font-bold" icon={ChevronLeft} onClick={() => irAPaso(paso - 1)}>Atrás</Button>}
           {ultimo
-            ? <Button type="button" size="lg" className="flex-1" icon={Send} loading={enviando} onClick={enviar}>{online ? 'Enviar hoja' : 'Guardar para enviar'}</Button>
-            : <Button type="button" size="lg" className="flex-1" onClick={avanzar}>Siguiente<ChevronRight className="h-5 w-5" /></Button>}
+            ? <Button type="button" size="lg" className="!h-16 flex-1 !bg-ok !text-xl font-bold" icon={Send} loading={enviando} onClick={enviar}>{online ? 'Enviar hoja' : 'Guardar para enviar'}</Button>
+            : <Button type="button" size="lg" className="!h-16 flex-1 !text-xl font-bold" onClick={avanzar}>Siguiente<ChevronRight className="h-6 w-6" /></Button>}
         </div>
       </div>
     </div>

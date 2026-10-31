@@ -15,7 +15,7 @@ export function PasoCierre({ obra, draft, setDraft, lineas, irAPaso, vehiculos =
 
   return (
     <div className="space-y-5">
-      <section className="card divide-y divide-line text-sm">
+      <section className="card divide-y divide-line text-base">
         <Fila k="Obra" v={obra.nombre} />
         <Fila k="Checklist" v={<ChecklistResultBadge resultado={resultado} />} />
         <Fila k="Fotos" v={<Mono>{draft.fotos.length}</Mono>} />
@@ -25,10 +25,10 @@ export function PasoCierre({ obra, draft, setDraft, lineas, irAPaso, vehiculos =
       </section>
 
       {fuera > 0 && (
-        <p className="flex items-start gap-2 rounded-lg bg-warn-bg p-3 text-xs text-warn"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{fuera} foto(s) fuera de la geocerca. El supervisor lo verá en la auditoría.</p>
+        <p className="flex items-start gap-2 rounded-lg bg-warn-bg p-3 text-sm text-warn"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{fuera} foto(s) fuera de la geocerca. El supervisor lo verá en la auditoría.</p>
       )}
       {pendientes.length > 0 && (
-        <div className="rounded-lg bg-crit-bg p-3 text-xs text-crit">
+        <div className="rounded-lg bg-crit-bg p-3 text-sm text-crit">
           <p className="font-semibold">Falta completar:</p>
           <div className="mt-2 flex flex-wrap gap-2">{pendientes.map((i) => <Button key={i} type="button" size="sm" variant="secondary" onClick={() => irAPaso(i)}>{PASOS_HOJA[i]}</Button>)}</div>
         </div>
@@ -36,7 +36,7 @@ export function PasoCierre({ obra, draft, setDraft, lineas, irAPaso, vehiculos =
 
       <Textarea label="Observaciones (opcional)" value={draft.observaciones} onChange={(e) => setDraft({ ...draft, observaciones: e.target.value })} />
       <div>
-        <p className="mb-2 flex items-center gap-2 text-sm font-semibold">Firma del cliente {draft.firma && <CheckCircle2 className="h-4 w-4 text-ok" />}</p>
+        <p className="mb-2 flex items-center gap-2 text-base font-semibold">Firma del cliente {draft.firma && <CheckCircle2 className="h-4 w-4 text-ok" />}</p>
         <SignaturePad value={draft.firma} onChange={(f) => setDraft({ ...draft, firma: f })} />
       </div>
     </div>
