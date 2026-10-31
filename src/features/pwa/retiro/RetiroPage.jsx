@@ -43,26 +43,25 @@ export function RetiroPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-bold">Retiro de materiales</h1>
       <Select size="lg" label="Obra" placeholder="Seleccione la obra…" value={obraId} onChange={(e) => setObraId(e.target.value)}
         options={(obras.data ?? []).map((o) => ({ value: o.id, label: `${o.id} · ${o.nombre}` }))} />
       <MaterialPicker catalogo={catalogo.data ?? []} lineas={lineas} onChange={setLineas} />
       <Textarea label="Observaciones (opcional)" value={obs} onChange={(e) => setObs(e.target.value)} />
       {!online && (
-        <p className="flex items-center gap-2 rounded-lg bg-warn-bg p-3 text-xs text-warn"><WifiOff className="h-4 w-4 shrink-0" />Sin señal: la solicitud quedará en la cola y se enviará sola al reconectar.</p>
+        <p className="flex items-center gap-2 rounded-lg bg-warn-bg p-3 text-sm text-warn"><WifiOff className="h-4 w-4 shrink-0" />Sin señal: la solicitud quedará en la cola y se enviará sola al reconectar.</p>
       )}
       <Button size="lg" className="w-full" icon={Send} onClick={enviar} loading={enviando} disabled={!obraId || lineas.length === 0}>{online ? 'Enviar solicitud' : 'Guardar para enviar'}</Button>
 
       <section className="space-y-2 pt-2">
-        <h2 className="text-sm font-semibold">Mis solicitudes</h2>
-        {(mias.data ?? []).length === 0 && <p className="text-xs text-ink-soft">Aún no has enviado solicitudes.</p>}
+        <h2 className="text-base font-semibold">Mis solicitudes</h2>
+        {(mias.data ?? []).length === 0 && <p className="text-sm text-ink-soft">Aún no has enviado solicitudes.</p>}
         {(mias.data ?? []).map((r) => (
-          <div key={r.id} className="card p-3 text-sm">
+          <div key={r.id} className="card p-3 text-base">
             <div className="flex items-center justify-between"><Mono className="font-medium">{r.id}</Mono><Badge tone={TONO[r.estado]}>{r.estado.charAt(0) + r.estado.slice(1).toLowerCase()}</Badge></div>
-            <p className="mt-1 text-xs text-ink-soft">{r.obra_nombre}</p>
-            <p className="mt-1 text-xs">{r.items.map((i) => `${i.cantidad} ${i.unidad} ${i.nombre}`).join(' · ')}</p>
-            {r.motivo_rechazo && <p className="mt-1 text-xs text-crit">{r.motivo_rechazo}</p>}
-            <Mono className="mt-1 block text-[11px] text-ink-faint">{formatFechaHora(r.fecha)}</Mono>
+            <p className="mt-1 text-sm text-ink-soft">{r.obra_nombre}</p>
+            <p className="mt-1 text-sm">{r.items.map((i) => `${i.cantidad} ${i.unidad} ${i.nombre}`).join(' · ')}</p>
+            {r.motivo_rechazo && <p className="mt-1 text-sm text-crit">{r.motivo_rechazo}</p>}
+            <Mono className="mt-1 block text-sm text-ink-faint">{formatFechaHora(r.fecha)}</Mono>
           </div>
         ))}
       </section>

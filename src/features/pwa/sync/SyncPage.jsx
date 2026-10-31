@@ -15,30 +15,23 @@ export function SyncPage() {
 
   const sincronizar = async () => {
     const res = await procesarCola()
-    if (res.enviados) toast.success(`${res.enviados} registro(s) sincronizado(s)`)
+    if (res.enviados) toast.success(`${res.enviados} registro(s) enviado(s)`)
     if (res.errores) toast.error(`${res.errores} registro(s) rechazado(s) por el servidor`)
-    if (!res.enviados && !res.errores) toast.info(res.pendientes ? 'No se pudo conectar. Se reintentará.' : 'Todo está sincronizado.')
+    if (!res.enviados && !res.errores) toast.info(res.pendientes ? 'No se pudo conectar. Se reintentará.' : 'Todo está enviado.')
   }
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-bold">Sincronización</h1>
-
-      <section className="card p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className={`flex h-10 w-10 items-center justify-center rounded-full ${online ? 'bg-ok-bg text-ok' : 'bg-warn-bg text-warn'}`}>{online ? <Wifi className="h-5 w-5" /> : <CloudOff className="h-5 w-5" />}</span>
-            <div><p className="text-sm font-semibold">{online ? 'En línea' : 'Modo sin señal'}</p><p className="text-xs text-ink-soft">{ultimoSync ? <>Último sync: <Mono>{formatFechaHora(ultimoSync)}</Mono></> : 'Sin sincronizaciones aún'}</p></div>
-          </div>
-          <Badge tone={r.pendientes ? 'warn' : 'ok'}>{r.pendientes} pendiente(s)</Badge>
-        </div>
-        <Button size="lg" className="mt-4 w-full" icon={RefreshCw} loading={sincronizando} disabled={!online || r.pendientes === 0} onClick={sincronizar}>Sincronizar ahora</Button>
-        {!online && <p className="mt-2 text-center text-xs text-warn">Sin señal: se enviará automáticamente al reconectar.</p>}
+      <section className={`rounded-3xl p-5 text-center ${r.pendientes ? 'bg-harvest-bg' : 'bg-ok-bg'}`}>
+        <span className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white ${r.pendientes ? 'text-warn' : 'text-ok'}`}>{r.pendientes ? <CloudOff className="h-9 w-9" /> : <CheckCircle2 className="h-9 w-9" />}</span>
+        <p className="t-display mt-3 text-[2rem] leading-none">{r.pendientes ? `${r.pendientes} por enviar` : 'Todo enviado'}</p>
+        <p className="mt-2 text-base text-ink-soft">{online ? (ultimoSync ? <>Último envío: <Mono>{formatFechaHora(ultimoSync)}</Mono></> : 'Aún no se ha enviado nada') : 'Sin señal: se enviará solo cuando vuelva.'}</p>
+        <Button size="lg" className="mt-4 !h-16 w-full !text-xl font-bold" icon={RefreshCw} loading={sincronizando} disabled={!online || r.pendientes === 0} onClick={sincronizar}>Enviar ahora</Button>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Cola de envío</h2>
-        {pendientes.length === 0 && <div className="card"><EmptyState icon={CheckCircle2} title="Nada pendiente" hint="Los registros creados sin señal aparecerán aquí hasta enviarse." /></div>}
+        <h2 className="t-display text-[1.5rem] text-ink">Lo que falta enviar</h2>
+        {pendientes.length === 0 && <div className="card"><EmptyState icon={CheckCircle2} title="No falta nada" hint="Lo que guardes sin señal aparecerá aquí hasta que se envíe." /></div>}
         {pendientes.map((it) => {
           const Icono = ICONO[it.tipo]
           return (
@@ -46,15 +39,15 @@ export function SyncPage() {
               <div className="flex items-start gap-3">
                 <Icono className="mt-0.5 h-5 w-5 shrink-0 text-ink-soft" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{TITULO[it.tipo]}</p>
-                  <p className="truncate text-xs text-ink-soft">{it.obra_nombre}</p>
-                  <Mono className="text-[11px] text-ink-faint">{formatFechaHora(it.creadoEn)}{it.intentos > 0 && ` · ${it.intentos} intento(s)`}</Mono>
+                  <p className="text-base font-medium">{TITULO[it.tipo]}</p>
+                  <p className="truncate text-sm text-ink-soft">{it.obra_nombre}</p>
+                  <Mono className="text-sm text-ink-faint">{formatFechaHora(it.creadoEn)}{it.intentos > 0 && ` · ${it.intentos} intento(s)`}</Mono>
                 </div>
                 <Badge tone={it.estado === 'ERROR' ? 'crit' : 'warn'} icon={it.estado === 'ERROR' ? AlertCircle : CloudOff}>{it.estado === 'ERROR' ? 'Rechazado' : 'Pendiente'}</Badge>
               </div>
               {it.estado === 'ERROR' && (
                 <div className="mt-3 space-y-2">
-                  <p className="rounded-lg bg-crit-bg p-2 text-xs text-crit">{it.error}</p>
+                  <p className="rounded-lg bg-crit-bg p-2 text-sm text-crit">{it.error}</p>
                   <div className="flex gap-2">
                     <Button size="md" variant="secondary" className="flex-1" onClick={() => reintentarItem(it.id)}>Reintentar</Button>
                     <Button size="md" variant="ghost" className="flex-1" onClick={() => descartarDeCola(it.id)}>Descartar</Button>
@@ -67,7 +60,7 @@ export function SyncPage() {
       </section>
 
       <section className="card space-y-3 p-4">
-        <h2 className="text-sm font-semibold">Opciones de demostración</h2>
+        <h2 className="text-base font-semibold text-ink-soft">Solo para la demostración</h2>
         <Button variant="secondary" size="lg" className="w-full" icon={online ? CloudOff : Wifi} onClick={() => setOnline(!online)}>{online ? 'Simular modo sin señal' : 'Recuperar señal'}</Button>
         <Select label="Posición GPS" value={gpsModo} onChange={(e) => setGpsModo(e.target.value)}
           options={[{ value: 'REAL', label: 'Dispositivo (si no hay GPS, simulada en obra)' }, { value: 'DENTRO', label: 'Simular dentro de la geocerca' }, { value: 'FUERA', label: 'Simular fuera de la geocerca' }]} />
