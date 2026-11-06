@@ -7,13 +7,13 @@
 
 | Rol | Código | Qué hace | Lectura | Aprobación | Operativas | Sistema |
 | --- | --- | --- | :-: | :-: | :-: | :-: |
-| **Administrador General** | `ADMIN_GENERAL` | Autoriza y supervisa: aprueba presupuestos con margen bajo, cierra obras, ve toda la gestión y administra los accesos. No ejecuta tareas operativas. | 16 | 2 | 0 | 2 |
-| **Administración** | `ADMINISTRACION` | Presupuestos, compras, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 14 | 1 | 4 | 0 |
-| **Bodega** | `BODEGA` | Artículos, Cardex, compras y solicitudes de retiro. | 8 | 0 | 5 | 0 |
-| **Supervisor de Obras** | `SUPERVISOR` | Obras, CU30, auditoría de hojas de terreno y presupuestos. | 8 | 1 | 4 | 0 |
-| **Técnico de Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio y retiro de materiales. | 0 | 0 | 2 | 0 |
+| **Administrador** | `ADMIN_GENERAL` | Autoriza y supervisa: aprueba presupuestos con margen bajo, cierra obras, ve toda la gestión y administra los accesos. No ejecuta tareas operativas. | 18 | 3 | 0 | 2 |
+| **Finanzas** | `ADMINISTRACION` | Presupuestos, compras, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 15 | 2 | 5 | 0 |
+| **Bodega** | `BODEGA` | Artículos, Cardex, compras y solicitudes de retiro. | 8 | 0 | 6 | 0 |
+| **Operaciones** | `SUPERVISOR` | Obras, CU30, auditoría de hojas de terreno y presupuestos. | 11 | 1 | 10 | 0 |
+| **Técnico** | `TECNICO` | Solo la app de terreno: hojas de servicio y retiro de materiales. | 0 | 0 | 2 | 0 |
 | **Consulta (Gerencia)** | `CONSULTA` | Solo lectura de la información de gestión. No puede modificar nada. | 14 | 0 | 0 | 0 |
-| **Recursos Humanos** | `RRHH` | Único rol que modifica personal y flota: fichas, tarifas, vehículos y vencimientos. | 3 | 0 | 1 | 0 |
+| **Recursos Humanos** | `RRHH` | Único rol que modifica personal y flota: fichas, tarifas, vehículos y vencimientos. | 4 | 0 | 2 | 0 |
 
 Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 
@@ -32,24 +32,30 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Obras | `obras.emergencia` | Operativa | Abrir obras de emergencia o garantía sin presupuesto previo (CU30) | — | — | — | ✅ | — | — | — |
 | Obras | `obras.cerrar` | Aprobación | Finalizar una obra que cumple los 6 requisitos de cierre | ✅ | — | — | ✅ | — | — | — |
 | Bodega | `bodega.ver` | Lectura | Ver artículos, stock, Cardex y solicitudes de retiro | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
-| Bodega | `articulos.gestionar` | Operativa | Crear, editar y desactivar artículos | — | — | ✅ | — | — | — | — |
-| Bodega | `cardex.crear` | Operativa | Registrar salidas a obra y entregar solicitudes de retiro | — | — | ✅ | — | — | — | — |
-| Bodega | `cardex.reversar` | Operativa | Reversar un movimiento del Cardex (contra-asiento auditado) | — | — | ✅ | — | — | — | — |
-| Bodega | `cardex.reingresar` | Operativa | Reingresar sobrantes y conciliarlos | — | — | ✅ | — | — | — | — |
-| Compras | `compras.ver` | Lectura | Ver facturas de compra y notas de crédito | ✅ | ✅ | ✅ | — | — | ✅ | — |
-| Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | — | — | — | — |
+| Bodega | `articulos.gestionar` | Operativa | Crear, editar y desactivar artículos | — | — | ✅ | ✅ | — | — | — |
+| Bodega | `cardex.crear` | Operativa | Registrar salidas a obra y entregar solicitudes de retiro | — | — | ✅ | ✅ | — | — | — |
+| Bodega | `cardex.reversar` | Operativa | Reversar un movimiento del Cardex (contra-asiento auditado) | — | — | ✅ | ✅ | — | — | — |
+| Bodega | `cardex.reingresar` | Operativa | Reingresar sobrantes y conciliarlos | — | — | ✅ | ✅ | — | — | — |
+| Bodega | `conteo.registrar` | Operativa | Registrar conteos físicos de inventario (conteo ciego) | — | — | ✅ | ✅ | — | — | — |
+| Bodega | `conteo.aprobar` | Aprobación | Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó) | ✅ | ✅ | — | — | — | — | — |
+| Compras | `compras.ver` | Lectura | Ver facturas de compra y notas de crédito | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
+| Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | ✅ | — | — | — |
 | Auditoría de terreno | `terreno.ver` | Lectura | Ver las hojas de servicio enviadas desde la app móvil | ✅ | ✅ | — | ✅ | — | ✅ | — |
 | Auditoría de terreno | `hojas.auditar` | Operativa | Aprobar o devolver hojas de servicio | — | — | — | ✅ | — | — | — |
 | Personal y Flota | `personal.ver` | Lectura | Ver fichas, tarifas, vehículos y vencimientos | ✅ | ✅ | — | — | — | ✅ | ✅ |
 | Personal y Flota | `personal.editar` | Operativa | Modificar fichas, tarifas hora-hombre y estado de vehículos | — | — | — | — | — | — | ✅ |
 | Personal y Flota | `asistencia.ver` | Lectura | Ver la asistencia diaria de los técnicos (hora de entrada, salida y ubicación) | ✅ | — | — | — | — | — | ✅ |
+| Contratos y Finiquitos | `rrhh.ver` | Lectura | Ver contratos, documentos laborales y finiquitos del personal | ✅ | — | — | — | — | — | ✅ |
+| Contratos y Finiquitos | `rrhh.gestionar` | Operativa | Crear contratos, subir amonestaciones y anexos, y generar finiquitos (no puede registrar su pago) | — | — | — | — | — | — | ✅ |
+| Contratos y Finiquitos | `finiquitos.ver` | Lectura | Ver los finiquitos por pagar y los ya pagados | ✅ | ✅ | — | — | — | — | — |
+| Contratos y Finiquitos | `finiquitos.pagar` | Operativa | Adjuntar el comprobante de transferencia y marcar un finiquito como pagado | — | ✅ | — | — | — | — | — |
 | Clientes y Proveedores | `maestros.ver` | Lectura | Ver el módulo de clientes y proveedores | ✅ | ✅ | — | — | — | ✅ | — |
 | Clientes y Proveedores | `clientes.ver` | Lectura | Consultar clientes (para presupuestos y obras) | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
-| Clientes y Proveedores | `proveedores.ver` | Lectura | Consultar proveedores (para compras y artículos) | ✅ | ✅ | ✅ | — | — | ✅ | — |
+| Clientes y Proveedores | `proveedores.ver` | Lectura | Consultar proveedores (para compras y artículos) | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | Clientes y Proveedores | `maestros.gestionar` | Operativa | Crear, editar y desactivar clientes y proveedores | — | ✅ | — | — | — | — | — |
 | Auditoría | `auditoria.ver` | Lectura | Ver el Log de Auditoría de todo el sistema | ✅ | ✅ | — | — | — | ✅ | — |
 | Costos | `costos.ver` | Lectura | Ver costos de obras, mano de obra y tarifas hora-hombre | ✅ | ✅ | — | ✅ | — | ✅ | — |
-| Costos | `costos_compra.ver` | Lectura | Ver costos de compra de artículos y valor del inventario | ✅ | ✅ | ✅ | — | — | ✅ | — |
+| Costos | `costos_compra.ver` | Lectura | Ver costos de compra de artículos y valor del inventario | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | Exportación | `exportar` | Lectura | Exportar listados a Excel y PDF | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | Accesos y Usuarios | `usuarios.ver` | Lectura | Ver los usuarios con acceso al sistema | ✅ | — | — | — | — | — | — |
 | Accesos y Usuarios | `usuarios.crear` | Sistema | Crear accesos y asignar roles y contraseña inicial | ✅ | — | — | — | — | — | — |
@@ -66,10 +72,11 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | El Administrador General no ejecuta tareas operativas | Tiene 0 acciones operativas: solo lectura, aprobación y sistema |
 | ✅ | El Administrador General conserva la autorización (margen < 20 % y cierre de obras) | Puede aprobar presupuestos y finalizar obras |
 | ✅ | Consulta es estrictamente solo lectura | 14 permisos y todos son de lectura |
-| ✅ | RRHH controla únicamente Personal y Flota | Solo asistencia.ver, dashboard.ver, personal.editar, personal.ver |
+| ✅ | RRHH controla únicamente Personal y Flota, contratos y finiquitos | Solo asistencia.ver, dashboard.ver, personal.editar, personal.ver, rrhh.gestionar, rrhh.ver |
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Administración (Finanzas) y el Administrador General ya no lo modifican |
+| ✅ | Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera | rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración |
 | ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 33 acciones catalogadas |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 39 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)
