@@ -7,7 +7,9 @@
  */
 import { useServerStore, MENSAJE_SIN_CONEXION } from '@/stores/serverStore'
 
-export const API_URL = (import.meta.env?.VITE_API_URL ?? 'http://localhost:8000/api').replace(/\/$/, '')
+// En producción el navegador habla con su propio dominio (`/api`): Vercel reenvía esas rutas al servidor (ver vercel.json),
+// así la cookie de sesión es del mismo sitio y no hace falta CORS. En desarrollo apunta al Django local.
+export const API_URL = (import.meta.env?.VITE_API_URL ?? (import.meta.env?.PROD ? '/api' : 'http://localhost:8000/api')).replace(/\/$/, '')
 
 /** Error de la API con la forma { status, code, message, data }. */
 export class ApiError extends Error {

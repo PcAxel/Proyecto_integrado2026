@@ -1,0 +1,34 @@
+# HTTPS automático (Let's Encrypt) para {$API_HOST}. Solo se expone /api/*: el panel /admin de Django NO es accesible desde internet.
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_HOST} {
+	encode zstd gzip
+
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+
+	handle /api/* {
+		# Las peticiones llegan por el reenvío de Vercel. Vercel entrega la IP real del cliente en X-Vercel-Forwarded-For;
+		# se pasa a Django como X-Forwarded-For (con PROXIES_DE_CONFIANZA=1 Django toma la última dirección).
+		@desde_vercel header X-Vercel-Forwarded-For *
+		reverse_proxy @desde_vercel backend:8000 {
+			header_up X-Forwarded-For {http.request.header.X-Vercel-Forwarded-For}
+		}
+		# Sin esa cabecera Caddy reemplaza X-Forwarded-For por la dirección real de quien conecta (no se puede falsificar).
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		respond "No encontrado" 404
+	}
+}

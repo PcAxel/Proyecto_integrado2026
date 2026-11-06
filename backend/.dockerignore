@@ -1,0 +1,10 @@
+.venv
+.env
+.env.*
+.datos
+db.sqlite3
+__pycache__
+*.pyc
+staticfiles
+.git
+tests_tmp

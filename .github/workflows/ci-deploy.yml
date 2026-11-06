@@ -1,0 +1,93 @@
+name: CI y despliegue
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx vitest run
+      - run: npx vite build
+      # Los permisos del servidor se generan desde el frontend: si alguien edita uno sin regenerar, falla aquí.
+      - run: node scripts/generar-permisos-servidor.mjs --check
+
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env: { MYSQL_ROOT_PASSWORD: ci-root, MYSQL_DATABASE: fyag_erp }
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-root" --health-interval=5s --health-timeout=5s --health-retries=20
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+    env:
+      DJANGO_SECRET_KEY: clave-solo-para-ci
+      DJANGO_DEBUG: "True"
+      DB_ENGINE: mysql
+      DB_NAME: fyag_erp
+      DB_USER: root
+      DB_PASSWORD: ci-root
+      DB_HOST: 127.0.0.1
+      MONGO_URI: mongodb://127.0.0.1:27017
+      MONGO_DB_NAME: fyag_evidencias_ci
+      ARCHIVOS_PRIVADOS: ${{ runner.temp }}/archivos
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip, cache-dependency-path: backend/requirements.txt }
+      - run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
+        working-directory: .
+      - run: pip install -r requirements.txt
+      - run: python manage.py makemigrations --check --dry-run   # el código no puede tener cambios de modelo sin migración
+      - run: python manage.py test
+
+  desplegar:
+    # Solo al hacer push a main, y solo si pasaron las pruebas. El frontend lo despliega Vercel por su cuenta.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+    concurrency: { group: despliegue-oracle, cancel-in-progress: false }
+    env:
+      SERVIDOR: ${{ secrets.ORACLE_HOST }}
+      USUARIO: ${{ secrets.ORACLE_USER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar SSH con la huella del servidor fijada en un secreto
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.ORACLE_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Subir backend y configuración sin tocar el .env.prod del servidor
+        run: |
+          RSH="ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -az --delete -e "$RSH" --exclude '.venv' --exclude '.env*' --exclude '.datos' --exclude '__pycache__' --exclude 'db.sqlite3' \
+            backend/ "$USUARIO@$SERVIDOR:/opt/fyag/backend/"
+          rsync -az --delete -e "$RSH" --exclude '.env.prod' deploy/ "$USUARIO@$SERVIDOR:/opt/fyag/deploy/"
+      - name: Reconstruir y reiniciar
+        run: |
+          ssh -i ~/.ssh/id_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "$USUARIO@$SERVIDOR" \
+            'cd /opt/fyag/deploy && docker compose --env-file .env.prod up -d --build --remove-orphans && docker image prune -f'
+      - name: Comprobar que responde
+        run: |
+          for i in $(seq 1 24); do
+            curl -fsS "https://${{ vars.API_HOST }}/api/health/" && exit 0
+            sleep 5
+          done
+          echo "El backend no respondió tras el despliegue" >&2; exit 1

@@ -1,0 +1,88 @@
+# Todo el backend de FYAG en una sola máquina: Django (Gunicorn) + MySQL + MongoDB + Caddy (HTTPS automático).
+# Uso:  cd deploy && cp .env.prod.example .env.prod && (editar) && docker compose --env-file .env.prod up -d --build
+name: fyag
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--innodb-buffer-pool-size=256M"]
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes: [mysql_datos:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks: [interna]   # sin `ports`: la base NO es accesible desde internet
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    command: ["--wiredTigerCacheSizeGB", "0.5"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes: [mongo_datos:/data/db]
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin | grep -q 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks: [interna]
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      DJANGO_DEBUG: "False"
+      DB_ENGINE: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/?authSource=admin
+      ARCHIVOS_PRIVADOS: /data/archivos
+      DJANGO_PROXY_SSL: "True"
+      PROXIES_DE_CONFIANZA: "1"     # solo Caddy; la IP real del cliente la entrega Vercel (ver Caddyfile)
+    volumes: [archivos:/data/archivos]   # contratos, firmas y comprobantes viven en el disco de esta máquina
+    depends_on:
+      mysql: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+    healthcheck:
+      # Se envía X-Forwarded-Proto para no ser redirigido a HTTPS, y el Host permitido.
+      test: ["CMD", "python", "-c", "import os,urllib.request as u; r=u.Request('http://127.0.0.1:8000/api/health/', headers={'Host': os.environ['API_HOST'], 'X-Forwarded-Proto': 'https'}); u.urlopen(r, timeout=4)"]
+      interval: 15s
+      timeout: 6s
+      retries: 6
+      start_period: 40s
+    networks: [interna]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      API_HOST: ${API_HOST}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+    depends_on: [backend]
+    networks: [interna]
+
+networks:
+  interna: {}
+
+volumes:
+  mysql_datos:
+  mongo_datos:
+  archivos:
+  caddy_datos:
+  caddy_config:

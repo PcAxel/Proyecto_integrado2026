@@ -7,8 +7,14 @@ además el dataset de ejemplo completo (16 técnicos con asistencia, historial d
 
 Idempotente: se puede ejecutar varias veces sin duplicar. Nunca corre con DEBUG=False salvo --force.
 Los usuarios nacen sin 2FA: en su primer ingreso ven el QR para vincular su autenticador.
+
+Contraseñas: en desarrollo (DEBUG=True) son las conocidas de la lista de abajo. Con --force (servidor público) NO se usan: salen de
+FYAG_SEED_PASSWORD, o se generan al azar y se muestran una sola vez, porque quien conozca la contraseña y entre primero
+podría vincular SU autenticador a la cuenta.
 """
 import json
+import os
+import secrets
 from pathlib import Path
 
 from django.conf import settings
@@ -103,9 +109,16 @@ class Command(BaseCommand):
         if not settings.DEBUG and not opts['force']:
             raise CommandError('seed_fyag usa contraseñas conocidas: solo se ejecuta con DJANGO_DEBUG=True.')
         ahora = timezone.now()
+        publico = not settings.DEBUG  # servidor accesible desde internet: nada de contraseñas conocidas
+        unica = os.getenv('FYAG_SEED_PASSWORD', '')
+        if publico and unica and len(unica) < 12:
+            raise CommandError('FYAG_SEED_PASSWORD debe tener al menos 12 caracteres.')
+        generadas = {}
 
         reales = {}
         for email, password, role, first, last in USUARIOS:
+            if publico:
+                password = unica or generadas.setdefault(email, secrets.token_urlsafe(12))
             u, _ = CustomUser.objects.get_or_create(email=email, defaults={'role': role})
             u.first_name, u.last_name, u.role, u.is_active = first, last, role, True
             u.is_staff = u.is_superuser = role == Role.ADMIN
@@ -140,7 +153,19 @@ class Command(BaseCommand):
         if not opts['demo'] and Registro.objects.filter(tabla='articulos').exists() and not Registro.objects.filter(tabla='cardex').exists():
             facturas, movs = abrir_inventario(reales['operaciones@fyag.cl'])
             self.stdout.write(f'Inventario de apertura: {facturas} facturas y {movs} entradas de bodega.')
+        if opts['demo']:
+            from rrhh.demo import cargar_demo_rrhh
+            n = cargar_demo_rrhh()
+            self.stdout.write(f'RR. HH. de demostración: {n} registros (contratos, finiquitos y un anexo por firmar).' if n else 'RR. HH. de demostración: ya cargado.')
         self.stdout.write(self.style.SUCCESS(f'Semilla lista ({creados} registros nuevos).'))
         self.stdout.write('\nUsuarios de prueba (sin 2FA: el primer ingreso muestra el QR para vincular el autenticador):')
         for email, password, role, *_ in USUARIOS:
-            self.stdout.write(f'  {role:<12} {email:<22} {password}')
+            if publico and unica:
+                shown = '(la de FYAG_SEED_PASSWORD)'
+            elif publico:
+                shown = generadas[email]
+            else:
+                shown = password
+            self.stdout.write(f'  {role:<12} {email:<22} {shown}')
+        if publico and not unica:
+            self.stdout.write(self.style.WARNING('Guarda estas contraseñas ahora: no se vuelven a mostrar.'))

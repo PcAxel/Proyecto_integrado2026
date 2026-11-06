@@ -133,6 +133,10 @@ REST_FRAMEWORK = {
     },
 }
 
+if not DEBUG:
+    # Producción: solo JSON (sin la interfaz navegable de DRF, que necesita archivos estáticos y expone el esquema).
+    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = ['rest_framework.renderers.JSONRenderer']
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
