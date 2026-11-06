@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useEffect } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { PageHeader, Tabs, Card, DataTable, Button, Badge, Mono, ExportMenu } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
@@ -15,8 +18,14 @@ export function ComprasPage() {
   const rol = useAuthStore((s) => s.user.rol)
   const puede = can(rol, 'compras.registrar')
   const [tab, setTab] = useState('facturas')
-  const [nueva, setNueva] = useState(false)
+  const [params] = useSearchParams()
+  const ubicacion = useLocation()
+  const desdeIA = ubicacion.state?.facturaIA // datos que dejó el asistente de IA
+  const [nueva, setNueva] = useState(params.get('nueva') === '1' || Boolean(desdeIA)) // llega desde «Sumar stock» del escáner de Bodega
   const [nuevaNC, setNuevaNC] = useState(false)
+  useEffect(() => {
+    if (desdeIA) { setNueva(true); toast.info('Cargamos los datos que leyó el asistente. Revísalos y agrega los ítems de la factura.') }
+  }, [ubicacion.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const [detalleId, setDetalleId] = useState(null)
 
   const facturas = useResource(() => comprasService.listFacturas(), [])
@@ -70,7 +79,7 @@ export function ComprasPage() {
           : <DataTable columns={colsNotas} rows={notas.data ?? []} rowKey={(n) => n.id} loading={notas.loading && !notas.data} emptyTitle="Sin notas de crédito" />}
       </Card>
 
-      {nueva && <FacturaDrawer open onClose={() => setNueva(false)} onSaved={recargar} />}
+      {nueva && <FacturaDrawer key={ubicacion.key} open onClose={() => setNueva(false)} onSaved={recargar} inicial={desdeIA} />}
       {nuevaNC && <NotaCreditoModal open onClose={() => setNuevaNC(false)} facturas={facturas.data ?? []} proveedores={proveedores} onSaved={recargar} />}
       <FacturaDetalle factura={detalleId ? detalle.data : null} proveedor={prov(detalle.data?.proveedor_id)} articulos={articulos} onClose={() => setDetalleId(null)} />
     </div>

@@ -47,6 +47,16 @@ describe('principios de arquitectura', () => {
     expect(malos.map(rel)).toEqual([])
   })
 
+  it('toda comunicación con el servidor pasa por services/api.js (único lugar con fetch)', () => {
+    const conFetch = codigo.filter((p) => /\bfetch\(/.test(leer(p)))
+    expect(conFetch.map(rel).sort()).toEqual(['services/api.js'])
+  })
+
+  it('no hay sesión ni usuarios simulados fuera de las pruebas: el login es el del servidor', () => {
+    const malos = codigo.filter((p) => !/^(mocks|test-support)\//.test(rel(p)) && /USUARIOS_DEMO|fakeJwt|switchRole/.test(leer(p)))
+    expect(malos.map(rel)).toEqual([])
+  })
+
   it('P5: toda acción RBAC usada en rutas y componentes existe en PERMISOS', () => {
     const usadas = new Set()
     for (const p of codigo) {

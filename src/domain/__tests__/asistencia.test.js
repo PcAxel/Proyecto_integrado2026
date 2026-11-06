@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  validarMarca, siguienteMarca, estadoDelDia, marcasDelDia, horasTrabajadas, llegoTarde, resumenAsistencia, horaDe, ESTADOS_ASISTENCIA as E,
+  validarMarca, siguienteMarca, estadoDelDia, marcasDelDia, horasTrabajadas, horasEnCurso, jornadaSinSalida, llegoTarde, resumenAsistencia, horaDe, ESTADOS_ASISTENCIA as E,
 } from '../asistencia'
 
 const m = (tipo, hora, tecnico_id = 'T-01', dia = '2026-10-30') => ({ tipo, tecnico_id, fecha: `${dia}T${hora}:00` })
@@ -45,8 +45,22 @@ describe('asistencia: estado del día', () => {
 })
 
 describe('asistencia: horas, atrasos y resumen', () => {
-  it('suma pares y cuenta la jornada abierta hasta ahora', () => {
-    expect(horasTrabajadas([m('ENTRADA', '08:00'), m('SALIDA', '13:00'), m('ENTRADA', '14:00')], '16:30')).toBe(7.5)
+  it('solo cuentan los tramos con entrada Y salida', () => {
+    expect(horasTrabajadas([m('ENTRADA', '08:00'), m('SALIDA', '13:00')])).toBe(5)
+    expect(horasTrabajadas([m('ENTRADA', '08:00'), m('SALIDA', '13:00'), m('ENTRADA', '14:00')])).toBe(5) // la entrada abierta no suma
+    expect(horasTrabajadas([m('ENTRADA', '08:00')])).toBe(0)
+    expect(horasTrabajadas([])).toBe(0)
+  })
+  it('una entrada sin salida solo muestra el tiempo en curso, sin contarlo como trabajado', () => {
+    expect(horasEnCurso([m('ENTRADA', '08:00')], '10:30')).toBe(2.5)
+    expect(horasEnCurso([m('ENTRADA', '08:00'), m('SALIDA', '13:00')], '16:00')).toBe(0)
+    expect(horasEnCurso([], '16:00')).toBe(0)
+  })
+  it('detecta la jornada de un día anterior que quedó sin salida', () => {
+    const marcas = [m('ENTRADA', '08:00', 'T-01', '2026-10-29'), m('SALIDA', '17:00', 'T-01', '2026-10-29'), m('ENTRADA', '08:00', 'T-01', '2026-10-30')]
+    expect(jornadaSinSalida(marcas, 'T-01', '2026-10-31')?.fecha).toBe('2026-10-30T08:00:00')
+    expect(jornadaSinSalida(marcas, 'T-01', '2026-10-30')).toBeNull() // el día anterior (29) quedó cerrado
+    expect(jornadaSinSalida(marcas, 'T-02', '2026-10-31')).toBeNull()
   })
   it('atraso después de la tolerancia de 15 min', () => {
     expect(llegoTarde('08:15')).toBe(false)

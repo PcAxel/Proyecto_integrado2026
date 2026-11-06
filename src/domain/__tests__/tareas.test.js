@@ -72,3 +72,17 @@ describe('orden y límite', () => {
     expect(construirTareas({ rol: 'ADMIN_GENERAL', fuentes: {} })).toEqual([])
   })
 })
+
+describe('conteos por aprobar', () => {
+  const conteosPendientes = [{ id: 'CNT-0001', articulo_sku: 'CU-12', diferencia: -3, unidad: 'm', creado_por: 'U-003' }]
+  const tareas = (rol, usuarioId) => construirTareas({ rol, usuarioId, fuentes: { conteosPendientes } }).map((t) => t.id)
+  it('lo ven quienes aprueban ajustes, no quienes cuentan', () => {
+    expect(tareas('ADMINISTRACION', 'U-002')).toEqual(['cnt-CNT-0001'])
+    expect(tareas('ADMIN_GENERAL', 'U-001')).toEqual(['cnt-CNT-0001'])
+    expect(tareas('SUPERVISOR', 'U-004')).toEqual([])
+    expect(tareas('BODEGA', 'U-003')).toEqual([])
+  })
+  it('nadie aprueba su propio conteo', () => {
+    expect(tareas('ADMINISTRACION', 'U-003')).toEqual([])
+  })
+})

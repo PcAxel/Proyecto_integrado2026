@@ -6,6 +6,7 @@ import { registrarAuditoria } from './auditoria.service'
 const vista = (m, rol) => ({
   ...sinCostos(rol, 'costos_compra.ver', m, ['costo_unitario']),
   usuario_nombre: db.find('usuarios', m.usuario_id)?.nombre ?? m.usuario_id,
+  lote_codigo: m.lote_id ? db.find('lotes', m.lote_id)?.codigo ?? m.lote_id : null,
   reversado: estaReversado(db.all('cardex'), m.id),
   reingresable: cantidadReingresable(db.all('cardex'), m.id),
 })
@@ -43,14 +44,16 @@ export const cardexService = {
     })
   },
   /** Entrada manual o salida a obra. Las salidas valoran al costo vigente del artículo. */
-  create({ tipo, articulo_id, cantidad, obra_id = null, costo_unitario, referencia = '' }) {
+  create({ tipo, articulo_id, cantidad, obra_id = null, costo_unitario, referencia = '', lote_id = null }) {
     return respond(() => {
       const u = requirePermiso('cardex.crear')
       const articulo = db.find('articulos', articulo_id)
       if (!articulo || !articulo.activo) throw new ApiError(422, 'Artículo inexistente o inactivo.')
       if (obra_id && !db.find('obras', obra_id)) throw new ApiError(422, 'Obra inexistente.')
+      const lote = lote_id ? db.find('lotes', lote_id) : null
+      if (lote_id && !lote) throw new ApiError(422, 'Lote inexistente.')
       const r = crearMovimiento(db.all('cardex'), {
-        tipo, articulo_id, cantidad, obra_id, referencia,
+        tipo, articulo_id, cantidad, obra_id, referencia, lote,
         costo_unitario: costo_unitario ?? articulo.costo_unitario,
         usuario_id: u.id, fecha: ahora(),
       })

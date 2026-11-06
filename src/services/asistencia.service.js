@@ -1,7 +1,7 @@
 import { db } from '@/mocks/db'
 import { dentroDeGeocerca } from '@/domain/geo'
 import {
-  TIPOS_MARCA, ESTADOS_ASISTENCIA, marcasDelDia, validarMarca, estadoDelDia, horasTrabajadas, horaDe, llegoTarde,
+  TIPOS_MARCA, ESTADOS_ASISTENCIA, marcasDelDia, validarMarca, estadoDelDia, horasTrabajadas, horasEnCurso, jornadaSinSalida, horaDe, llegoTarde,
 } from '@/domain/asistencia'
 import { fechaLocal } from '@/domain/format'
 import { respond, requirePermiso, ApiError, ahora } from './http'
@@ -31,15 +31,16 @@ export const asistenciaService = {
       const ficha = fichaDe(u.id)
       if (!ficha) throw new ApiError(403, 'El usuario no tiene ficha de personal.')
       const marcas = marcasDelDia(db.all('asistencia'), ficha.id, fechaLocal()).map(vistaMarca)
-      return { tecnico_id: ficha.id, marcas }
+      return { tecnico_id: ficha.id, marcas, sin_salida_previa: jornadaSinSalida(db.all('asistencia'), ficha.id, fechaLocal()) }
     })
   },
 
   /**
    * Registra una entrada o salida. Idempotente por `client_id`: un reintento de la cola no duplica la marca.
+   * La hora la fija el servidor; solo una marca `diferida` (hecha sin conexión y enviada después) conserva la hora del dispositivo.
    * @param {{tipo:'ENTRADA'|'SALIDA', lat:number, lng:number, capturado_en?:string, obra_id?:string|null, gps_simulado?:boolean, client_id?:string}} data
    */
-  marcar({ tipo, lat, lng, capturado_en, obra_id = null, gps_simulado = true, client_id }) {
+  marcar({ tipo, lat, lng, precision_m = null, capturado_en, diferida = false, obra_id = null, gps_simulado = false, client_id }) {
     return respond(() => {
       const u = requirePermiso('asistencia.marcar')
       const ficha = fichaDe(u.id)
@@ -47,12 +48,13 @@ export const asistenciaService = {
       const previa = client_id && db.all('asistencia').find((m) => m.client_id === client_id)
       if (previa) return vistaMarca(previa)
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new ApiError(422, 'No se pudo obtener la ubicación para marcar.')
-      const fecha = capturado_en ?? ahora()
+      const fecha = diferida && capturado_en ? capturado_en : ahora()
       if (fecha > ahora()) throw new ApiError(422, 'La hora de la marca no puede ser futura.')
       const v = validarMarca(tipo, marcasDelDia(db.all('asistencia'), ficha.id, fecha.slice(0, 10)))
       if (!v.ok) throw new ApiError(409, v.error)
       if (obra_id && !db.find('obras', obra_id)?.tecnicos.includes(ficha.id)) throw new ApiError(403, 'No estás asignado a esa obra.')
-      const marca = db.insert('asistencia', { id: db.nextId('asistencia'), tecnico_id: ficha.id, tipo, fecha, obra_id, lat, lng, gps_simulado, client_id: client_id ?? null })
+      const marca = db.insert('asistencia', { id: db.nextId('asistencia'), tecnico_id: ficha.id, tipo, fecha, obra_id, lat, lng, precision_m, gps_simulado, client_id: client_id ?? null,
+        diferida, ...(diferida && { capturado_en }) })
       registrarAuditoria({ entidad: 'Asistencia', entidad_id: marca.id, accion: tipo === TIPOS_MARCA.ENTRADA ? 'MARCAR_ENTRADA' : 'MARCAR_SALIDA', nuevo: { tecnico_id: ficha.id, fecha, obra_id } })
       return vistaMarca(marca)
     })
@@ -73,10 +75,14 @@ export const asistenciaService = {
         return {
           tecnico_id: p.id, nombre: p.nombre, cargo: p.cargo, estado,
           entrada: entrada?.fecha ?? null, salida: estado === ESTADOS_ASISTENCIA.FINALIZADA ? salida?.fecha ?? null : null,
-          horas: delDia.length ? horasTrabajadas(delDia, hora) : 0,
+          horas: horasTrabajadas(delDia),
+          horas_en_curso: horasEnCurso(delDia, hora),
+          sin_salida_previa: jornadaSinSalida(marcas, p.id, dia),
+          diferida: delDia.some((m) => m.diferida),
           atrasado: entrada ? llegoTarde(horaDe(entrada.fecha)) : false,
           obra_nombre: entrada?.obra_nombre ?? null,
           geocerca: entrada?.geocerca ?? null,
+          precision_m: entrada?.precision_m ?? null,
           fuera_geocerca: entrada?.geocerca ? !entrada.geocerca.dentro : false,
         }
       }).sort((a, b) => ORDEN[a.estado] - ORDEN[b.estado] || a.nombre.localeCompare(b.nombre))

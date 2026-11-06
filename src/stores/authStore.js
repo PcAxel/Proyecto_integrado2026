@@ -1,57 +1,77 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { almacenamiento } from './storage'
-import { USUARIOS_DEMO } from '@/mocks/usuarios'
+import { configurarSesion } from '@/services/api'
+import { authService } from '@/services/auth.service'
+import { usuarioDesdeApi } from '@/domain/rolesApi'
 
 /** Minutos de inactividad antes del cierre de sesión automático. */
 export const INACTIVITY_MINUTES = 15
 
-/**
- * Token JWT simulado (header.payload.firma) con la misma forma que SimpleJWT.
- * @param {{id:string, rol:string}} user
- */
-function fakeJwt(user) {
-  const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '')
-  const exp = Math.floor(Date.now() / 1000) + INACTIVITY_MINUTES * 60
-  return `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: user.id, rol: user.rol, exp })}.demo`
-}
+// Versiones anteriores guardaban los tokens en localStorage: se borran para que no queden credenciales en el navegador.
+try { globalThis.localStorage?.removeItem('fyag-auth') } catch { /* sin almacenamiento */ }
 
 /**
- * @typedef {{id:string, nombre:string, rol:import('@/domain/rbac').Rol, cargo:string, email:string}} Usuario
+ * Sesión real. NADA de la sesión se guarda en el navegador:
+ *  - el access token (15 min) vive solo en memoria;
+ *  - el token de renovación va en una cookie HttpOnly que JavaScript no puede leer (ni robar con un XSS);
+ *  - el perfil se vuelve a pedir al servidor al abrir la app (`restaurarSesion`).
  */
+export const useAuthStore = create((set, get) => ({
+  access: null,
+  /** @type {ReturnType<typeof usuarioDesdeApi>|null} */
+  user: null,
+  lastActivity: Date.now(),
+  /** Motivo del último cierre de sesión forzado, para mostrarlo en /login. */
+  aviso: null,
 
-export const useAuthStore = create(
-  persist(
-    (set, get) => ({
-      /** @type {Usuario|null} */
-      user: null,
-      token: null,
-      lastActivity: Date.now(),
-      /** IP simulada que se registra en LogAuditoria. */
-      ip: '192.168.10.24',
+  /** Guarda la sesión entregada por el paso 2 (código 2FA) o por la renovación. */
+  iniciarSesion: ({ access, user }) => set({ access, user: usuarioDesdeApi(user), lastActivity: Date.now(), aviso: null }),
 
-      /** @param {string} userId */
-      /** @param {string} userId @param {Usuario} [perfil] perfil devuelto por usuariosService.perfiles() */
-      login: (userId, perfil) => {
-        const user = perfil ?? USUARIOS_DEMO.find((u) => u.id === userId)
-        if (!user) return null
-        set({ user, token: fakeJwt(user), lastActivity: Date.now() })
-        return user
-      },
-      logout: () => set({ user: null, token: null }),
-      /** Modo demo: cambia de rol sin pasar por el login. */
-      switchRole: (userId, perfil) => get().login(userId, perfil),
-      touch: () => set({ lastActivity: Date.now() }),
-      /** Cierra sesión si superó el umbral de inactividad. @returns {boolean} true si cerró. */
-      checkInactivity: () => {
-        const { user, lastActivity } = get()
-        if (user && Date.now() - lastActivity > INACTIVITY_MINUTES * 60_000) {
-          set({ user: null, token: null })
-          return true
-        }
-        return false
-      },
-    }),
-    { name: 'fyag-auth', storage: almacenamiento, partialize: (s) => ({ user: s.user, token: s.token, lastActivity: s.lastActivity }) },
-  ),
-)
+  /** Al abrir la app: intenta recuperar la sesión con la cookie. @returns {Promise<boolean>} */
+  async restaurarSesion() {
+    try {
+      get().iniciarSesion(await authService.refresh())
+      return true
+    } catch (e) {
+      if (e.status === 0) throw e // sin servidor: lo maneja el bloqueo de conexión
+      return false
+    }
+  },
+
+  /** Cierra la sesión también en el servidor (invalida el refresh y borra la cookie). */
+  logout: (aviso = null) => {
+    if (get().access || get().user) authService.logout().catch(() => {})
+    set({ access: null, user: null, aviso })
+  },
+
+  /** Re-lee el perfil real desde Django. 401 cierra la sesión; un fallo de red se propaga. */
+  async sincronizar() {
+    const user = usuarioDesdeApi(await authService.me())
+    set({ user })
+    return user
+  },
+  /** Registra la aceptación en el backend; el estado local cambia solo si el servidor confirma. */
+  async aceptarTerminos(version) {
+    const user = usuarioDesdeApi(await authService.acceptTerms(version))
+    set({ user })
+    return user
+  },
+
+  touch: () => set({ lastActivity: Date.now() }),
+  /** Cierra sesión si superó el umbral de inactividad. @returns {boolean} true si cerró. */
+  checkInactivity: () => {
+    const { user, lastActivity } = get()
+    if (user && Date.now() - lastActivity > INACTIVITY_MINUTES * 60_000) {
+      get().logout('Cerramos tu sesión por inactividad.')
+      return true
+    }
+    return false
+  },
+}))
+
+configurarSesion({
+  access: () => useAuthStore.getState().access,
+  guardarSesion: (s) => useAuthStore.getState().iniciarSesion(s),
+  expirar: (aviso) => useAuthStore.getState().logout(aviso),
+  // Falta aceptar los términos: se re-lee el perfil y el guard de rutas redirige a la pantalla de términos.
+  terminosPendientes: () => useAuthStore.getState().sincronizar().catch(() => {}),
+})

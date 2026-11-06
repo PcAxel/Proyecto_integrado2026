@@ -16,23 +16,3 @@ export function reducirImagen(file, maxLado = 480, calidad = 0.7) {
     img.src = url
   })
 }
-
-/** Foto de ejemplo para demos sin cámara. @param {string} etiqueta */
-export function fotoDeEjemplo(etiqueta) {
-  const c = document.createElement('canvas')
-  c.width = 480
-  c.height = 360
-  const g = c.getContext('2d')
-  const grad = g.createLinearGradient(0, 0, 480, 360)
-  grad.addColorStop(0, '#CBD5E1')
-  grad.addColorStop(1, '#94A3B8')
-  g.fillStyle = grad
-  g.fillRect(0, 0, 480, 360)
-  g.fillStyle = 'rgba(255,255,255,0.6)'
-  g.fillRect(90, 110, 300, 150)
-  g.fillStyle = '#475569'
-  g.font = '600 28px Inter, sans-serif'
-  g.textAlign = 'center'
-  g.fillText(`Foto de ejemplo · ${etiqueta}`, 240, 195)
-  return c.toDataURL('image/jpeg', 0.7)
-}

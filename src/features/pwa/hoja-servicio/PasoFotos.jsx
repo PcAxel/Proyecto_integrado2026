@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Camera, ImagePlus, X, Loader2 } from 'lucide-react'
+import { Camera, X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, IconButton } from '@/components/ui'
 import { GpsStamp } from '@/components/domain'
@@ -7,20 +7,18 @@ import { dentroDeGeocerca } from '@/domain/geo'
 import { isoLocal } from '@/domain/format'
 import { FOTOS_MIN } from '@/domain/hojas'
 import { obtenerPosicion } from '@/lib/gps'
-import { reducirImagen, fotoDeEjemplo } from '@/lib/imagen'
-import { useSyncStore } from '@/stores/syncStore'
+import { reducirImagen } from '@/lib/imagen'
 
 export function PasoFotos({ obra, draft, setDraft }) {
-  const gpsModo = useSyncStore((s) => s.gpsModo)
   const [capturando, setCapturando] = useState(false)
   const inputs = { Antes: useRef(null), Después: useRef(null) }
 
   const agregar = async (etiqueta, file) => {
     setCapturando(true)
     try {
-      const pos = await obtenerPosicion(obra.ubicacion, gpsModo)
-      const thumb = file ? await reducirImagen(file) : fotoDeEjemplo(etiqueta)
-      const foto = { id: `F-${Date.now()}`, etiqueta, lat: pos.lat, lng: pos.lng, simulado: pos.simulado, ts: isoLocal(), thumb }
+      const pos = await obtenerPosicion()
+      const thumb = await reducirImagen(file)
+      const foto = { id: `F-${Date.now()}`, etiqueta, lat: pos.lat, lng: pos.lng, precision_m: pos.precision_m, simulado: false, ts: isoLocal(), thumb }
       setDraft({ ...draft, fotos: [...draft.fotos, foto] })
       const g = dentroDeGeocerca(pos, obra.ubicacion, obra.ubicacion.radio_m)
       if (!g.dentro) toast.warning(`Foto fuera de la geocerca (${g.distanciaM} m). Quedará marcada en la auditoría.`)
@@ -47,9 +45,6 @@ export function PasoFotos({ obra, draft, setDraft }) {
           </div>
         ))}
       </div>
-      <Button type="button" variant="ghost" icon={ImagePlus} className="w-full" disabled={capturando} onClick={() => agregar(draft.fotos.length % 2 === 0 ? 'Antes' : 'Después')}>
-        Agregar foto de ejemplo (demo)
-      </Button>
 
       <div className="grid grid-cols-2 gap-3">
         {draft.fotos.map((f) => {

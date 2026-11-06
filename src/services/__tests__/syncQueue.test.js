@@ -1,3 +1,4 @@
+import { entrarComo } from '@/test-support/sesion'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
@@ -12,7 +13,7 @@ const hoja = (extra = {}) => ({
 beforeEach(async () => {
   configureHttp({ minMs: 0, maxMs: 0, failRate: 0 })
   await db.reset()
-  useAuthStore.getState().login('U-005')
+  entrarComo('U-005')
   useSyncStore.setState({ online: true, pendientes: [], sincronizando: false })
   await procesarCola()
 })

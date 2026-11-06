@@ -6,6 +6,7 @@ import { asistenciaService } from '@/services'
 import { useResource } from '@/hooks/useResource'
 import { ESTADOS_ASISTENCIA as E, ESTADO_ASISTENCIA_LABEL, resumenAsistencia, horaDe, INICIO_JORNADA, TOLERANCIA_MIN, HORA_LIMITE_AUSENTE } from '@/domain/asistencia'
 import { formatFecha, fechaLocal } from '@/domain/format'
+import { PRECISION_CONFIABLE_M } from '@/lib/gps'
 
 const TONO = { [E.EN_JORNADA]: 'ok', [E.FINALIZADA]: 'info', [E.PENDIENTE]: 'warn', [E.AUSENTE]: 'crit' }
 const hora = (iso) => (iso ? <Mono className="font-semibold">{horaDe(iso)}</Mono> : <span className="text-ink-faint">—</span>)
@@ -30,12 +31,21 @@ export function AsistenciaHoy() {
       <div className="flex flex-wrap gap-1.5">
         <Badge tone={TONO[f.estado]}>{ESTADO_ASISTENCIA_LABEL[f.estado]}</Badge>
         {f.atrasado && <Badge tone="warn">Atraso</Badge>}
+        {f.diferida && <Badge tone="info">Marcada sin conexión</Badge>}
+        {f.sin_salida_previa && <Badge tone="crit">Sin salida el {formatFecha(f.sin_salida_previa.fecha)}</Badge>}
       </div>
     ) },
     { key: 'entrada', header: 'Entrada', render: (f) => hora(f.entrada) },
     { key: 'salida', header: 'Salida', render: (f) => hora(f.salida) },
-    { key: 'horas', header: 'Horas', align: 'right', render: (f) => (f.horas ? <Mono>{f.horas} h</Mono> : <span className="text-ink-faint">—</span>) },
-    { key: 'ubicacion', header: 'Ubicación de la entrada', render: (f) => (!f.geocerca
+    { key: 'horas', header: 'Horas trabajadas', align: 'right', render: (f) => (
+      <div>
+        {f.horas ? <Mono>{f.horas} h</Mono> : <span className="text-ink-faint">—</span>}
+        {f.estado === E.EN_JORNADA && <p className="text-xs text-ink-soft">en curso {f.horas_en_curso} h · suma al marcar salida</p>}
+      </div>
+    ) },
+    { key: 'ubicacion', header: 'Ubicación de la entrada', render: (f) => (f.precision_m > PRECISION_CONFIABLE_M
+      ? <span className="flex items-center gap-1.5 text-warn"><MapPinOff className="h-4 w-4" />Imprecisa (±{f.precision_m} m)</span>
+      : !f.geocerca
       ? <span className="text-ink-faint">{f.entrada ? 'Sin obra de referencia' : '—'}</span>
       : f.geocerca.dentro
         ? <span className="flex items-center gap-1.5 text-ok"><MapPin className="h-4 w-4" />En la obra</span>

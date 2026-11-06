@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Plus, ScanLine, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { Drawer, Button, IconButton, Input, Select, NumberField, Mono, cn } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
 import { comprasService, articulosService, proveedoresService } from '@/services'
 import { fechaLocal } from '@/domain/format'
 import { calcularFactura, calcularNeto, formatCLP } from '@/domain/money'
+import { resolverCodigo } from '@/domain/etiquetas'
+import { EscanerQr } from '../bodega/EscanerQr'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 
@@ -12,11 +15,13 @@ const ITEM_VACIO = { articulo_id: '', cantidad: 1, precio_lista: null }
 const hoy = () => fechaLocal()
 
 /** Registro de factura con hasta 3 descuentos en cascada y cálculo en vivo. */
-export function FacturaDrawer({ open, onClose, onSaved }) {
-  const [form, setForm] = useState({ proveedor_id: '', numero: '', fecha: hoy() })
+/** `inicial`: datos leídos por el asistente de IA (proveedor, número y fecha) para precargar el formulario; el usuario los revisa. */
+export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
+  const [form, setForm] = useState({ proveedor_id: inicial?.proveedor_id ?? '', numero: inicial?.numero ?? '', fecha: inicial?.fecha || hoy() })
   const [descuentos, setDescuentos] = useState([null, null, null])
   const [items, setItems] = useState([{ ...ITEM_VACIO }])
   const [guardando, setGuardando] = useState(false)
+  const [escaneando, setEscaneando] = useState(false)
   const { data: proveedores } = useResource(() => proveedoresService.list(), [])
   const { data: articulos } = useResource(() => articulosService.list(), [])
 
@@ -26,6 +31,23 @@ export function FacturaDrawer({ open, onClose, onSaved }) {
   const calc = calcularFactura(completos, dscs)
   const valido = form.proveedor_id && form.numero.trim() && completos.length > 0 && completos.length === items.length
   const setItem = (i, campo, v) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, [campo]: v } : x)))
+
+  /** Cada QR escaneado agrega el artículo a la factura (o suma 1 si ya está). El primer escaneo fija el proveedor. */
+  const alEscanear = (texto) => {
+    const r = resolverCodigo(texto, articulos ?? [])
+    if (!r.ok) { toast.error(r.error); return }
+    const a = r.articulo
+    if (form.proveedor_id && a.proveedor_id !== form.proveedor_id) { toast.error(`${a.sku} no es de este proveedor.`); return }
+    if (!form.proveedor_id) setForm((f) => ({ ...f, proveedor_id: a.proveedor_id }))
+    setItems((xs) => {
+      const i = xs.findIndex((x) => x.articulo_id === a.id)
+      if (i >= 0) return xs.map((x, j) => (j === i ? { ...x, cantidad: (x.cantidad || 0) + 1 } : x))
+      const nuevo = { articulo_id: a.id, cantidad: 1, precio_lista: a.costo_unitario ?? null }
+      const vacio = xs.findIndex((x) => !x.articulo_id)
+      return vacio >= 0 ? xs.map((x, j) => (j === vacio ? nuevo : x)) : [...xs, nuevo]
+    })
+    toast.success(`${a.sku} agregado a la factura`)
+  }
 
   const guardar = async () => {
     setGuardando(true)
@@ -61,8 +83,12 @@ export function FacturaDrawer({ open, onClose, onSaved }) {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-semibold">Ítems</p>
-            <Button size="sm" variant="secondary" icon={Plus} onClick={() => setItems((xs) => [...xs, { ...ITEM_VACIO }])}>Agregar ítem</Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" icon={ScanLine} onClick={() => setEscaneando((v) => !v)}>{escaneando ? 'Cerrar escáner' : 'Escanear QR'}</Button>
+              <Button size="sm" variant="secondary" icon={Plus} onClick={() => setItems((xs) => [...xs, { ...ITEM_VACIO }])}>Agregar ítem</Button>
+            </div>
           </div>
+          {escaneando && <div className="mb-3"><EscanerQr onCodigo={alEscanear} /></div>}
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className={cn('grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_9rem_7rem_2rem]', i > 0 && 'sm:[&_label>span.mb-1]:sr-only')}>

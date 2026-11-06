@@ -4,7 +4,6 @@ import { asistenciaService, obrasService, enviarOEncolar } from '@/services'
 import { useSyncStore } from '@/stores/syncStore'
 import { useResource } from '@/hooks/useResource'
 import { obtenerPosicion } from '@/lib/gps'
-import { COMUNAS_NUBLE } from '@/domain/geo'
 import { siguienteMarca, validarMarca, TIPOS_MARCA, horaDe } from '@/domain/asistencia'
 import { fechaLocal, isoLocal } from '@/domain/format'
 import { nuevoClientId } from '@/domain/sync'
@@ -16,7 +15,6 @@ import { nuevoClientId } from '@/domain/sync'
 export function useAsistencia() {
   const dia = useResource(() => asistenciaService.miDia(), [])
   const pendientes = useSyncStore((s) => s.pendientes)
-  const gpsModo = useSyncStore((s) => s.gpsModo)
   const [marcando, setMarcando] = useState(false)
   const enVuelo = useRef(false) // evita que un doble toque dispare dos marcas antes de que el estado se actualice
   const hoy = fechaLocal()
@@ -40,11 +38,10 @@ export function useAsistencia() {
     try {
       const obras = await obrasService.list({ estado: 'EN_CURSO' })
       const obra = obras[0] ?? null
-      const referencia = obra?.ubicacion ?? COMUNAS_NUBLE['Chillán']
-      const pos = await obtenerPosicion(referencia, gpsModo)
+      const pos = await obtenerPosicion()
       const capturado_en = isoLocal()
       const r = await enviarOEncolar('ASISTENCIA', {
-        tipo, lat: pos.lat, lng: pos.lng, capturado_en, obra_id: obra?.id ?? null, gps_simulado: pos.simulado,
+        tipo, lat: pos.lat, lng: pos.lng, precision_m: pos.precision_m, capturado_en, obra_id: obra?.id ?? null, gps_simulado: false,
       }, { obra_nombre: obra ? `${tipo === TIPOS_MARCA.ENTRADA ? 'Entrada' : 'Salida'} · ${obra.nombre}` : 'Reloj control' })
       const etiqueta = tipo === TIPOS_MARCA.ENTRADA ? 'Entrada' : 'Salida'
       if (r.encolado) toast.warning(`${etiqueta} guardada a las ${horaDe(capturado_en)}. Se enviará al recuperar la señal.`)
@@ -58,7 +55,7 @@ export function useAsistencia() {
       enVuelo.current = false
       setMarcando(false)
     }
-  }, [marcas, gpsModo, dia])
+  }, [marcas, dia])
 
-  return { cargando: dia.loading && !dia.data, marcas, siguiente, ultima: marcas.at(-1) ?? null, marcando, marcar }
+  return { cargando: dia.loading && !dia.data, marcas, siguiente, ultima: marcas.at(-1) ?? null, marcando, marcar, sinSalidaPrevia: dia.data?.sin_salida_previa ?? null }
 }

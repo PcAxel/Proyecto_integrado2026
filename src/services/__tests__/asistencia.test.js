@@ -1,9 +1,10 @@
+import { entrarComo } from '@/test-support/sesion'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
 import { configureHttp, asistenciaService, auditoriaService } from '@/services'
 
-const login = (id) => useAuthStore.getState().login(id)
+const login = (id) => entrarComo(id)
 const TECNICO = 'U-005' // Jorge Quezada (T-01)
 const SUPERVISOR = 'U-004'
 const RRHH = 'U-007'
@@ -24,7 +25,7 @@ afterEach(() => vi.useRealTimers())
 describe('reloj control: marcas del técnico', () => {
   it('parte sin marcas y registra entrada con hora y coordenadas', async () => {
     expect((await asistenciaService.miDia()).marcas).toEqual([])
-    const m = await asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2026-10-30T09:00:00', obra_id: 'OB-0004' })
+    const m = await asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2026-10-30T09:00:00', diferida: true, obra_id: 'OB-0004' })
     expect(m).toMatchObject({ tipo: 'ENTRADA', fecha: '2026-10-30T09:00:00', lat: GPS.lat, tecnico_id: 'T-01' })
     expect(m.geocerca.dentro).toBe(true)
     expect((await asistenciaService.miDia()).marcas).toHaveLength(1)
@@ -53,7 +54,7 @@ describe('reloj control: marcas del técnico', () => {
 
   it('exige ubicación, rechaza horas futuras y obras ajenas', async () => {
     await expect(asistenciaService.marcar({ tipo: 'ENTRADA' })).rejects.toMatchObject({ status: 422 })
-    await expect(asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2026-10-30T11:00:00' })).rejects.toMatchObject({ status: 422 })
+    await expect(asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2026-10-30T11:00:00', diferida: true })).rejects.toMatchObject({ status: 422 })
     await expect(asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, obra_id: 'OB-0003' })).rejects.toMatchObject({ status: 403 })
   })
 
@@ -94,7 +95,7 @@ describe('reloj control: asistencia de hoy para RRHH', () => {
   })
 
   it('refleja la entrada y la salida que marca el técnico', async () => {
-    await asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2026-10-30T08:40:00', obra_id: 'OB-0004' })
+    await asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2026-10-30T08:40:00', diferida: true, obra_id: 'OB-0004' })
     login(RRHH)
     expect(fila(await asistenciaService.hoy(), 'T-01')).toMatchObject({ estado: 'EN_JORNADA', entrada: '2026-10-30T08:40:00', atrasado: true, fuera_geocerca: false })
     login(TECNICO)
@@ -111,5 +112,14 @@ describe('reloj control: asistencia de hoy para RRHH', () => {
   it('la Gerencia General también puede verla', async () => {
     login('U-001')
     expect(await asistenciaService.hoy()).toHaveLength(16)
+  })
+})
+
+describe('reloj control: la hora la fija el servidor', () => {
+  beforeEach(() => login(TECNICO))
+  it('una marca directa ignora la hora que mande el dispositivo; la diferida (sin conexión) la conserva', async () => {
+    const directa = await asistenciaService.marcar({ tipo: 'ENTRADA', ...GPS, capturado_en: '2020-01-01T03:00:00', obra_id: 'OB-0004' })
+    expect(directa.fecha.startsWith('2020')).toBe(false)
+    expect(directa.diferida).toBe(false)
   })
 })

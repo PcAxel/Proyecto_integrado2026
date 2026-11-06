@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { cn } from '@/components/ui'
 import { BrandMark } from '@/components/domain'
+import { AsistenteIA } from '@/features/ia/AsistenteIA'
 import { SyncManager } from './SyncManager'
 
 const TITULOS = {
@@ -13,22 +14,20 @@ const TITULOS = {
   '/app/sync': 'Envíos pendientes',
 }
 
-/** Estado de la señal con palabras simples. Tocarlo alterna el modo sin señal (solo demostración). */
+/** Estado real de la señal del dispositivo, con palabras simples. */
 function Senal() {
-  const { online, pendientes, setOnline, sincronizando } = useSyncStore()
+  const { online, pendientes, sincronizando } = useSyncStore()
   return (
-    <button
-      type="button"
-      onClick={() => setOnline(!online)}
+    <div
+      role="status"
       className={cn('flex min-h-11 w-full items-center justify-center gap-2 px-4 py-2 text-center text-[15px] font-semibold', online ? 'bg-ok-bg text-ok' : 'bg-harvest-bg text-warn')}
-      aria-label="Alternar modo sin señal (demostración)"
     >
       {online ? <Wifi className="h-5 w-5 shrink-0" /> : <WifiOff className="h-5 w-5 shrink-0" />}
       <span>
         {sincronizando ? 'Enviando…' : online ? 'Con señal' : 'Sin señal: lo que hagas se guarda y se envía solo'}
         {pendientes.length > 0 && online && !sincronizando && ` · ${pendientes.length} por enviar`}
       </span>
-    </button>
+    </div>
   )
 }
 
@@ -66,6 +65,7 @@ export function PwaLayout() {
           )}
           <Outlet />
         </main>
+        <AsistenteIA posicion="marco" />
       </div>
     </div>
   )

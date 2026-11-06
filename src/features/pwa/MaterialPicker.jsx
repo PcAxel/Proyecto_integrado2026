@@ -3,7 +3,7 @@ import { ScanLine, Plus, Minus, X } from 'lucide-react'
 import { Button, IconButton, Input, Mono, EmptyState } from '@/components/ui'
 
 /**
- * Selector de materiales para la PWA: escáner (lector tipo teclado o botón demo), búsqueda y
+ * Selector de materiales para la PWA: escáner (lector de códigos tipo teclado), búsqueda y
  * cantidades con botones de 56 px. `lineas` = [{articulo:{id,sku,nombre,unidad}, cantidad}].
  */
 export function MaterialPicker({ catalogo, lineas, onChange, vacio = 'Escanea o busca un código para agregarlo.' }) {
@@ -25,10 +25,6 @@ export function MaterialPicker({ catalogo, lineas, onChange, vacio = 'Escanea o 
     if (exacto) agregar(exacto)
     else if (sugerencias.length === 1) agregar(sugerencias[0])
   }
-  const simularEscaneo = () => {
-    const libres = catalogo.filter((a) => !lineas.some((l) => l.articulo.id === a.id))
-    if (libres.length) agregar(libres[Math.floor(Math.random() * libres.length)])
-  }
   const cambiar = (id, delta) => onChange(lineas.map((l) => (l.articulo.id === id ? { ...l, cantidad: Math.max(1, l.cantidad + delta) } : l)))
 
   return (
@@ -36,7 +32,6 @@ export function MaterialPicker({ catalogo, lineas, onChange, vacio = 'Escanea o 
       <div className="flex items-end gap-2">
         <Input size="lg" mono className="flex-1" label="Escanear o buscar" placeholder="SKU o nombre" value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)} onKeyDown={onEnter} autoComplete="off" />
-        <Button type="button" size="lg" variant="secondary" icon={ScanLine} className="shrink-0" onClick={simularEscaneo}>Escanear</Button>
       </div>
       {sugerencias.map((a) => (
         <button key={a.id} type="button" onClick={() => agregar(a)} className="card flex min-h-14 w-full items-center justify-between px-4 py-2 text-left active:bg-slate-50">

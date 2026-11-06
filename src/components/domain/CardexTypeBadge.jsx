@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowUpFromLine, Undo2, PackagePlus } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpFromLine, Undo2, PackagePlus, ClipboardCheck } from 'lucide-react'
 import { Badge } from '@/components/ui'
 
 const TIPOS = {
@@ -6,6 +6,7 @@ const TIPOS = {
   SALIDA_OBRA: { label: 'Salida a obra', tone: 'info', icon: ArrowUpFromLine },
   REVERSA: { label: 'Reversa', tone: 'warn', icon: Undo2 },
   REINGRESO_SOBRANTE: { label: 'Reingreso sobrante', tone: 'ok', icon: PackagePlus },
+  AJUSTE_CONTEO: { label: 'Ajuste por conteo', tone: 'warn', icon: ClipboardCheck },
 }
 
 export const TIPO_MOV_LABEL = Object.fromEntries(Object.entries(TIPOS).map(([k, v]) => [k, v.label]))

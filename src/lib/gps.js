@@ -1,24 +1,30 @@
+/** Precisión (metros) hasta la cual la ubicación se considera confiable. Más allá se registra igual, pero queda marcada como imprecisa. */
+export const PRECISION_CONFIABLE_M = 150
+
+const MENSAJES = {
+  1: 'Activa el permiso de ubicación (GPS) para continuar.',
+  2: 'No se pudo determinar tu ubicación. Revisa que el GPS esté encendido.',
+  3: 'El GPS tardó demasiado en responder. Sal a un lugar abierto e inténtalo de nuevo.',
+}
+
 /**
- * Obtiene la posición del dispositivo. Si no hay GPS (escritorio, permiso denegado, demo),
- * devuelve una posición simulada cerca de la obra o, en modo demo "fuera", ~3 km más allá.
- * @param {{lat:number,lng:number}} obra
- * @param {'REAL'|'DENTRO'|'FUERA'} modo
- * @returns {Promise<{lat:number, lng:number, simulado:boolean}>}
+ * Posición REAL del dispositivo. No existe ubicación de respaldo ni simulada: sin GPS o sin permiso no se puede registrar
+ * la acción. La precisión se guarda junto a la ubicación (una marca imprecisa no se bloquea, pero RRHH la ve señalada).
+ * @returns {Promise<{lat:number, lng:number, precision_m:number, simulado:false}>}
  */
-export function obtenerPosicion(obra, modo = 'REAL') {
-  const simular = (fuera) => ({
-    lat: obra.lat + (fuera ? 0.028 : (Math.random() - 0.5) * 0.0006),
-    lng: obra.lng + (fuera ? 0.024 : (Math.random() - 0.5) * 0.0006),
-    simulado: true,
-  })
-  if (modo === 'DENTRO') return Promise.resolve(simular(false))
-  if (modo === 'FUERA') return Promise.resolve(simular(true))
-  return new Promise((resolve) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(simular(false))
+export function obtenerPosicion() {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(new Error('Este dispositivo no tiene GPS: no se puede registrar la ubicación.'))
+      return
+    }
     navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, simulado: false }),
-      () => resolve(simular(false)),
-      { enableHighAccuracy: true, timeout: 4000, maximumAge: 30_000 },
+      (p) => {
+        const precision_m = Math.round(p.coords.accuracy)
+        resolve({ lat: p.coords.latitude, lng: p.coords.longitude, precision_m, simulado: false })
+      },
+      (e) => reject(new Error(MENSAJES[e.code] ?? MENSAJES[2])),
+      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 },
     )
   })
 }

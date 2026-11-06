@@ -17,7 +17,7 @@ import { respond, requirePermiso, ahora } from './http'
 export const dashboardService = {
   resumen() {
     return respond(() => {
-      const { rol } = requirePermiso('dashboard.ver')
+      const { rol, id: u_id } = requirePermiso('dashboard.ver')
       const hoy = fechaLocal()
       const ve = (accion) => can(rol, accion)
 
@@ -72,11 +72,15 @@ export const dashboardService = {
           id: r.id, obra_nombre: db.find('obras', r.obra_id)?.nombre ?? r.obra_id, items: r.items.length,
           faltaStock: r.items.some((it) => calcularStock(cardex, it.articulo_id) < it.cantidad),
         })),
+        conteosPendientes: ve('bodega.ver') ? db.all('conteos').filter((c) => c.estado === 'PENDIENTE').map((c) => ({
+          id: c.id, articulo_sku: db.find('articulos', c.articulo_id)?.sku ?? c.articulo_id, diferencia: c.diferencia,
+          unidad: db.find('articulos', c.articulo_id)?.unidad ?? '', creado_por: c.creado_por,
+        })) : [],
         articulosEnAlerta: articulos ? { sinStock: articulos.filter((a) => a.activo && a.estado_stock === 'SIN_STOCK').length, bajo: articulos.filter((a) => a.activo && a.estado_stock === 'BAJO').length } : undefined,
         vencimientos,
         vehiculosEnTaller: (flota ?? []).filter((v) => v.activo && v.estado === 'EN_TALLER').map((v) => ({ patente: v.patente })),
       }
-      const tareas = construirTareas({ rol, fuentes })
+      const tareas = construirTareas({ rol, fuentes, usuarioId: u_id })
       return { kpis, comparativo, alertas, actividad, tareas, generado: ahora() }
     })
   },

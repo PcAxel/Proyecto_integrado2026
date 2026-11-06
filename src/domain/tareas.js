@@ -18,13 +18,14 @@ const ORDEN = { CRITICA: 0, ADVERTENCIA: 1, INFO: 2 }
  *   obrasCU30?: Array<{id:string, nombre:string}>,
  *   hojasPorAuditar?: Array<{id:string, obra_nombre:string, critico:boolean, dias:number}>,
  *   retirosPendientes?: Array<{id:string, obra_nombre:string, items:number, faltaStock:boolean}>,
+ *   conteosPendientes?: Array<{id:string, articulo_sku:string, diferencia:number, unidad:string, creado_por:string}>,
  *   articulosEnAlerta?: {sinStock:number, bajo:number},
  *   vencimientos?: Array<{id:string, titulo:string, detalle:string, severidad:string}>,
  *   vehiculosEnTaller?: Array<{patente:string}>,
  * }}} p
  * @returns {Tarea[]}
  */
-export function construirTareas({ rol, fuentes, limite = 8 }) {
+export function construirTareas({ rol, fuentes, limite = 8, usuarioId }) {
   const f = fuentes
   const t = []
 
@@ -42,6 +43,13 @@ export function construirTareas({ rol, fuentes, limite = 8 }) {
   if (can(rol, 'obras.crear')) {
     for (const o of f.obrasCU30 ?? []) {
       t.push({ id: `cu30-${o.id}`, severidad: 'ADVERTENCIA', titulo: `Regularizar ${o.id}`, detalle: `${o.nombre}. Abierta sin presupuesto (CU30)`, ruta: `/erp/obras/${o.id}`, cta: 'Regularizar' })
+    }
+  }
+  if (can(rol, 'conteo.aprobar')) {
+    for (const c of f.conteosPendientes ?? []) {
+      if (usuarioId && c.creado_por === usuarioId) continue // un ajuste no lo aprueba quien contó
+      const falta = c.diferencia < 0
+      t.push({ id: `cnt-${c.id}`, severidad: 'ADVERTENCIA', titulo: `Aprobar ajuste ${c.id}`, detalle: `${c.articulo_sku}: ${falta ? 'faltan' : 'sobran'} ${Math.abs(c.diferencia)} ${c.unidad} según el conteo`, ruta: '/erp/bodega?tab=conteo', cta: 'Revisar' })
     }
   }
   if (can(rol, 'hojas.auditar')) {

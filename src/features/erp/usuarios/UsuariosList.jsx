@@ -1,114 +1,74 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { UserPlus, Pencil, KeyRound, Power, Lock, UserCheck, UserX, ShieldCheck, KeySquare } from 'lucide-react'
-import { PageHeader, Card, DataTable, KpiTile, Badge, Button, IconButton, Input, Select, ConfirmDialog, Mono } from '@/components/ui'
+import { normalizar } from '@/domain/busqueda'
+import { FiltroBusqueda } from '@/components/FiltroBusqueda'
+import { UserPlus, ShieldCheck, ShieldOff } from 'lucide-react'
+import { PageHeader, Button, Card, DataTable, Modal, Input, Select, Badge, Mono } from '@/components/ui'
+import { RolBadge } from '@/components/domain'
+import { ErrorEstado } from '@/components/ErrorEstado'
 import { usuariosService } from '@/services'
-import { ROLES, ROL_LABEL, can } from '@/domain/rbac'
-import { puedeCambiarEstado, iniciales } from '@/domain/usuarios'
-import { formatFecha } from '@/domain/format'
-import { useAuthStore } from '@/stores/authStore'
+import { formatFechaHora } from '@/domain/format'
 import { useResource } from '@/hooks/useResource'
-import { runAction } from '@/hooks/runAction'
-import { usePersistedFilters } from '@/hooks/usePersistedFilters'
-import { UsuarioFormModal, RestablecerClaveModal } from './UsuarioFormModal'
+import { toast } from 'sonner'
 
-const TONO_ROL = { ADMIN_GENERAL: 'info', TECNICO: 'warn' }
+const ROLES = [{ value: 'ADMIN', label: 'Administrador' }, { value: 'FINANZAS', label: 'Finanzas' }, { value: 'OPERACIONES', label: 'Operaciones' }, { value: 'TECNICO', label: 'Técnico' }, { value: 'RRHH', label: 'Recursos Humanos' }]
 
-/** Gestión de Accesos y Usuarios (solo Gerencia General): quién puede ingresar y con qué rol. */
-export function UsuariosList() {
-  const yo = useAuthStore((s) => s.user)
-  const { data, loading, reload } = useResource(() => usuariosService.list(), [])
-  const [f, setF] = usePersistedFilters('usuarios', { q: '', rol: '', estado: '' })
-  const [params, setParams] = useSearchParams()
-  const buscar = params.get('buscar')
-  const nuevo = params.get('nuevo')
-  // Llegar desde la búsqueda global aplica el texto como filtro, sin arrastrar filtros de rol o estado previos.
-  // «Nuevo acceso» desde la búsqueda global abre directamente el formulario.
-  useEffect(() => {
-    if (!nuevo) return
-    setModal({})
-    setParams((p) => { p.delete('nuevo'); return p }, { replace: true }) // así la acción puede repetirse desde esta misma pantalla
-  }, [nuevo]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (buscar) { setF('q', buscar); setF('rol', ''); setF('estado', '') } }, [buscar]) // eslint-disable-line react-hooks/exhaustive-deps
-  const [modal, setModal] = useState(null) // { usuario? } | null
-  const [clave, setClave] = useState(null)
-  const [toggle, setToggle] = useState(null)
-
-  const todos = data ?? []
-  const filas = useMemo(() => {
-    const q = f.q.trim().toLowerCase()
-    return todos.filter((u) => (!f.rol || u.rol === f.rol)
-      && (!f.estado || (f.estado === 'ACTIVO') === u.activo)
-      && (!q || [u.nombre, u.rut, u.email, u.cargo].some((x) => x.toLowerCase().includes(q))))
-  }, [todos, f])
-  const kpi = (v) => (data ? v : '—')
-
-  const confirmarToggle = async () => {
-    const r = await runAction(usuariosService.setActivo(toggle.id, !toggle.activo), toggle.activo ? 'Acceso desactivado' : 'Acceso activado')
-    if (r) { setToggle(null); reload() }
+function UsuarioModal({ onClose, onSaved }) {
+  const [f, setF] = useState({ email: '', first_name: '', last_name: '', role: 'TECNICO' })
+  const [guardando, setGuardando] = useState(false)
+  const [errores, setErrores] = useState({})
+  const set = (k) => (ev) => setF({ ...f, [k]: ev.target.value })
+  const guardar = async (ev) => {
+    ev.preventDefault()
+    setGuardando(true)
+    setErrores({})
+    try {
+      const r = await usuariosService.create(f)
+      if (r.email_sent) toast.success(`Acceso creado. Enviamos las credenciales a ${r.email}.`)
+      else toast.warning('Acceso creado, pero el correo no pudo enviarse. Revisa la configuración de correo del servidor.')
+      onSaved()
+      onClose()
+    } catch (err) { setErrores(err.data && typeof err.data === 'object' ? err.data : { _: [err.message] }) } finally { setGuardando(false) }
   }
-
-  const columns = [
-    { key: 'nombre', header: 'Usuario', render: (u) => (
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-brand">{iniciales(u.nombre)}</span>
-        <div className="min-w-0"><p className="font-medium">{u.nombre}{u.id === yo.id && <span className="ml-2 text-xs font-normal text-ink-faint">(tú)</span>}</p><p className="truncate text-xs text-ink-soft">{u.email}</p></div>
-      </div>
-    ) },
-    { key: 'rut', header: 'RUT', mono: true },
-    { key: 'cargo', header: 'Cargo' },
-    { key: 'rol', header: 'Rol', render: (u) => <Badge tone={TONO_ROL[u.rol] ?? 'neutral'}>{ROL_LABEL[u.rol]}</Badge> },
-    { key: 'estado', header: 'Estado', render: (u) => (
-      <div className="flex flex-wrap gap-1">
-        <Badge tone={u.activo ? 'ok' : 'neutral'}>{u.activo ? 'Activo' : 'Desactivado'}</Badge>
-        {u.debe_cambiar_password && <Badge tone="warn" icon={KeySquare}>Clave pendiente</Badge>}
-      </div>
-    ) },
-    { key: 'creado_en', header: 'Creado', mono: true, render: (u) => formatFecha(u.creado_en) },
-    { key: 'acc', header: '', align: 'right', render: (u) => {
-      const regla = puedeCambiarEstado({ objetivo: u, activo: !u.activo, usuarios: todos, actorId: yo.id })
-      return (
-        <div className="flex justify-end gap-0.5">
-          <IconButton icon={Pencil} label="Editar usuario" size="sm" onClick={() => setModal({ usuario: u })} />
-          <IconButton icon={KeyRound} label="Restablecer contraseña" size="sm" onClick={() => setClave(u)} />
-          <IconButton icon={Power} size="sm" disabled={!regla.ok} label={regla.ok ? (u.activo ? 'Desactivar acceso' : 'Activar acceso') : regla.motivo} onClick={() => setToggle(u)} />
+  return (
+    <Modal open onClose={onClose} title="Nuevo acceso"
+      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-usuario" loading={guardando}>Crear y enviar correo</Button></>}>
+      <form id="form-usuario" onSubmit={guardar} className="space-y-4">
+        <Input label="Correo" type="email" required value={f.email} onChange={set('email')} error={errores.email?.[0]} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Nombre" value={f.first_name} onChange={set('first_name')} />
+          <Input label="Apellido" value={f.last_name} onChange={set('last_name')} />
         </div>
-      )
-    } },
-  ]
+        <Select label="Rol" value={f.role} onChange={set('role')} options={ROLES} error={errores.role?.[0]} />
+        <p className="text-xs text-ink-soft">El servidor genera una contraseña temporal y la envía por correo junto al link de instalación de la app.</p>
+        {errores._ && <p role="alert" className="text-sm font-medium text-crit">{errores._[0]}</p>}
+      </form>
+    </Modal>
+  )
+}
 
+export function UsuariosList() {
+  const [params, setParams] = useSearchParams()
+  const buscar = params.get('buscar') ?? ''
+  const [modal, setModal] = useState(params.get('nuevo') === '1')
+  const { data, loading, error, reload } = useResource(() => usuariosService.list(), [])
+  const columns = [
+    { key: 'nombre', header: 'Usuario', render: (u) => <div><p className="font-medium">{`${u.first_name} ${u.last_name}`.trim() || '—'}</p><p className="text-xs text-ink-soft">{u.email}</p></div> },
+    { key: 'role', header: 'Rol', render: (u) => <RolBadge rol={u.role} /> },
+    { key: '2fa', header: '2FA', render: (u) => (u.is_2fa_enabled ? <Badge tone="ok" icon={ShieldCheck}>Vinculado</Badge> : <Badge tone="warn" icon={ShieldOff}>Pendiente</Badge>) },
+    { key: 'terms', header: 'Términos', render: (u) => (u.terms_accepted_at ? <Mono className="text-xs">{formatFechaHora(u.terms_accepted_at)}</Mono> : <Badge tone="warn">Sin aceptar</Badge>) },
+  ]
   return (
     <div className="space-y-5">
-      <PageHeader title="Accesos y Usuarios" subtitle="Quién puede ingresar al sistema y con qué rol"
-        actions={can(yo.rol, 'usuarios.crear') && <Button icon={UserPlus} onClick={() => setModal({})}>Nuevo Acceso</Button>} />
-
-      <div className="flex items-start gap-3 rounded-xl border border-line bg-brand-tint p-4 text-sm">
-        <Lock className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-        <p className="text-ink-soft"><span className="font-semibold text-ink">Los accesos no se eliminan: se desactivan.</span> Cada alta, cambio de rol o restablecimiento de clave queda registrado en el Log de Auditoría.</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiTile label="Accesos activos" value={kpi(todos.filter((u) => u.activo).length)} icon={UserCheck} tone="ok" />
-        <KpiTile label="Desactivados" value={kpi(todos.filter((u) => !u.activo).length)} icon={UserX} />
-        <KpiTile label="Administradores generales" value={kpi(todos.filter((u) => u.activo && u.rol === ROLES.ADMIN_GENERAL).length)} icon={ShieldCheck} hint="Debe quedar al menos uno" />
-        <KpiTile label="Con clave por cambiar" value={kpi(todos.filter((u) => u.debe_cambiar_password).length)} icon={KeySquare} tone={todos.some((u) => u.debe_cambiar_password) ? 'warn' : 'neutral'} hint="Aún no ingresan con su clave definitiva" />
-      </div>
-
+      <PageHeader title="Accesos y Usuarios" subtitle="Cuentas del sistema, administradas en el servidor central"
+        actions={<Button icon={UserPlus} onClick={() => setModal(true)}>Nuevo acceso</Button>} />
       <Card padded={false}>
-        <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
-          <Input label="Buscar" placeholder="Nombre, RUT, correo o cargo" value={f.q} onChange={(e) => setF('q', e.target.value)} className="w-full sm:w-72" />
-          <Select label="Rol" value={f.rol} onChange={(e) => setF('rol', e.target.value)} placeholder="Todos" className="w-full sm:w-56" options={Object.values(ROLES).map((r) => ({ value: r, label: ROL_LABEL[r] }))} />
-          <Select label="Estado" value={f.estado} onChange={(e) => setF('estado', e.target.value)} placeholder="Todos" className="w-full sm:w-40" options={[{ value: 'ACTIVO', label: 'Activos' }, { value: 'INACTIVO', label: 'Desactivados' }]} />
-          <Mono className="pb-2 text-xs text-ink-soft sm:ml-auto">{filas.length} de {todos.length} usuarios</Mono>
-        </div>
-        <DataTable columns={columns} rows={filas} rowKey={(u) => u.id} loading={loading && !data} emptyTitle="Sin usuarios" emptyHint="Ajusta los filtros o crea un nuevo acceso." />
+        {buscar && <FiltroBusqueda texto={buscar} onQuitar={() => setParams({})} />}
+        {error ? <ErrorEstado error={error} onReintentar={reload} /> : (
+          <DataTable columns={columns} rows={(data ?? []).filter((u) => !buscar || normalizar(`${u.email} ${u.first_name} ${u.last_name}`).includes(normalizar(buscar)))} rowKey={(u) => u.id} loading={loading && !data} emptyTitle="Sin usuarios" />
+        )}
       </Card>
-
-      {modal && <UsuarioFormModal usuario={modal.usuario} usuarios={todos} actorId={yo.id} onClose={() => setModal(null)} onSaved={reload} />}
-      {clave && <RestablecerClaveModal usuario={clave} onClose={() => setClave(null)} onSaved={reload} />}
-      <ConfirmDialog open={Boolean(toggle)} onClose={() => setToggle(null)} onConfirm={confirmarToggle} tone={toggle?.activo ? 'danger' : 'primary'}
-        confirmLabel={toggle?.activo ? 'Desactivar' : 'Activar'} title={toggle?.activo ? 'Desactivar acceso' : 'Activar acceso'}
-        message={toggle?.activo ? `${toggle?.nombre} ya no podrá ingresar al sistema. Su historial se conserva (no se elimina).` : `${toggle?.nombre} volverá a poder ingresar al sistema.`} />
+      {modal && <UsuarioModal onClose={() => setModal(false)} onSaved={reload} />}
     </div>
   )
 }

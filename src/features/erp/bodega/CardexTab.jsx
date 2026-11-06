@@ -51,6 +51,7 @@ export function CardexTab({ articuloId, onArticuloChange }) {
       <div className="max-w-[16rem]">
         {m.reversado && <Badge tone="warn">Reversado</Badge>}
         {m.reversa_de && <p className="text-xs text-ink-soft">Reversa de <Mono>{m.reversa_de}</Mono></p>}
+        {m.lote_codigo && <p className="text-xs font-medium text-brand-dark">Lote <Mono>{m.lote_codigo}</Mono></p>}
         <p className="truncate text-xs text-ink-soft" title={m.referencia}>{m.referencia}</p>
         <p className="text-xs text-ink-faint">{m.usuario_nombre}</p>
       </div>
@@ -60,7 +61,7 @@ export function CardexTab({ articuloId, onArticuloChange }) {
         {can(rol, 'cardex.reingresar') && m.tipo === 'SALIDA_OBRA' && m.reingresable > 0 && (
           <Button size="sm" variant="secondary" icon={PackagePlus} onClick={() => setModal({ tipo: 'reingreso', mov: m })}>Reingresar</Button>
         )}
-        {can(rol, 'cardex.reversar') && m.tipo !== 'REVERSA' && !m.reversado && (
+        {can(rol, 'cardex.reversar') && m.tipo !== 'REVERSA' && m.tipo !== 'AJUSTE_CONTEO' && !m.reversado && (
           <Button size="sm" variant="secondary" icon={Undo2} onClick={() => setModal({ tipo: 'reversa', mov: m })}>Reversar</Button>
         )}
       </div>

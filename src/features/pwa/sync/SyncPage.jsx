@@ -10,7 +10,7 @@ const ICONO = { HOJA: ClipboardList, RETIRO: PackageOpen, ASISTENCIA: Clock }
 const TITULO = { HOJA: 'Hoja de servicio', RETIRO: 'Solicitud de materiales', ASISTENCIA: 'Marca de asistencia' }
 
 export function SyncPage() {
-  const { online, setOnline, pendientes, ultimoSync, sincronizando, gpsModo, setGpsModo } = useSyncStore()
+  const { online, pendientes, ultimoSync, sincronizando } = useSyncStore()
   const r = resumenCola(pendientes)
 
   const sincronizar = async () => {
@@ -59,12 +59,6 @@ export function SyncPage() {
         })}
       </section>
 
-      <section className="card space-y-3 p-4">
-        <h2 className="text-base font-semibold text-ink-soft">Solo para la demostración</h2>
-        <Button variant="secondary" size="lg" className="w-full" icon={online ? CloudOff : Wifi} onClick={() => setOnline(!online)}>{online ? 'Simular modo sin señal' : 'Recuperar señal'}</Button>
-        <Select label="Posición GPS" value={gpsModo} onChange={(e) => setGpsModo(e.target.value)}
-          options={[{ value: 'REAL', label: 'Dispositivo (si no hay GPS, simulada en obra)' }, { value: 'DENTRO', label: 'Simular dentro de la geocerca' }, { value: 'FUERA', label: 'Simular fuera de la geocerca' }]} />
-      </section>
     </div>
   )
 }

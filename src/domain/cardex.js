@@ -16,6 +16,7 @@ export const TIPOS_MOV = {
   SALIDA_OBRA: 'SALIDA_OBRA',
   REVERSA: 'REVERSA',
   REINGRESO_SOBRANTE: 'REINGRESO_SOBRANTE',
+  AJUSTE_CONTEO: 'AJUSTE_CONTEO', // contra-asiento de un conteo físico aprobado
 }
 
 const SIGNO_POR_TIPO = { ENTRADA_COMPRA: 1, SALIDA_OBRA: -1, REINGRESO_SOBRANTE: 1 }
@@ -58,6 +59,11 @@ export function crearMovimiento(movs, input) {
     if (!input.obra_id) return { ok: false, error: 'Una salida debe imputarse a una obra.' }
     const stock = calcularStock(movs, articulo_id)
     if (cantidad > stock) return { ok: false, error: `Stock insuficiente: disponible ${stock}, solicitado ${cantidad}.` }
+    if (input.lote) {
+      const restante = restanteLote(input.lote, movs)
+      if (input.lote.articulo_id !== articulo_id) return { ok: false, error: 'El lote no corresponde a este artículo.' }
+      if (cantidad > restante) return { ok: false, error: `El lote ${input.lote.codigo} solo tiene ${restante} disponible(s).` }
+    }
   }
   return {
     ok: true,
@@ -74,6 +80,7 @@ export function crearMovimiento(movs, input) {
       referencia: input.referencia ?? '',
       reversa_de: null,
       salida_origen_id: null,
+      lote_id: tipo === TIPOS_MOV.SALIDA_OBRA ? input.lote?.id ?? null : null,
     },
   }
 }
@@ -104,6 +111,7 @@ export function crearReversa(movs, movId, { usuario_id, motivo, fecha }) {
   if (!orig) return { ok: false, error: 'Movimiento no encontrado.' }
   if (!motivo || motivo.trim().length < 5) return { ok: false, error: 'Debe indicar un motivo (mín. 5 caracteres).' }
   if (orig.tipo === TIPOS_MOV.REVERSA) return { ok: false, error: 'Una reversa no puede reversarse.' }
+  if (orig.tipo === TIPOS_MOV.AJUSTE_CONTEO) return { ok: false, error: 'Un ajuste de conteo no se reversa: se corrige con un nuevo conteo.' }
   if (estaReversado(movs, movId)) return { ok: false, error: 'El movimiento ya fue reversado.' }
   if (orig.tipo === TIPOS_MOV.SALIDA_OBRA && cantidadReingresable(movs, movId) !== orig.cantidad) {
     return { ok: false, error: 'La salida tiene reingresos activos; reverse primero los reingresos.' }
@@ -127,6 +135,7 @@ export function crearReversa(movs, movId, { usuario_id, motivo, fecha }) {
       referencia: motivo.trim(),
       reversa_de: orig.id,
       salida_origen_id: null,
+      lote_id: orig.lote_id ?? null,
     },
   }
 }
@@ -159,6 +168,7 @@ export function crearReingresoSobrante(movs, { salida_id, cantidad, usuario_id, 
       referencia: motivo?.trim() || `Sobrante de ${salida.id}`,
       reversa_de: null,
       salida_origen_id: salida.id,
+      lote_id: salida.lote_id ?? null,
     },
   }
 }
@@ -187,4 +197,30 @@ export function estadoStock(stock, minimo) {
 export function valorInventario(articulos) {
   if (articulos.some((a) => a.costo_unitario === undefined)) return null
   return Math.round(articulos.reduce((s, a) => s + a.stock * a.costo_unitario, 0))
+}
+
+/**
+ * Unidades que quedan de un lote o cilindro: lo ingresado más el efecto de los movimientos que lo nombran.
+ * @param {{id:string, cantidad:number}} lote @param {MovimientoCardex[]} movs
+ */
+export const restanteLote = (lote, movs) => lote.cantidad + movs.filter((m) => m.lote_id === lote.id).reduce((a, m) => a + m.signo * m.cantidad, 0)
+
+/**
+ * Contra-asiento de un conteo físico aprobado: lleva el stock del sistema al stock contado. Solo lo genera la aprobación.
+ * @param {MovimientoCardex[]} movs
+ * @param {{conteo:{id:string, articulo_id:string, diferencia:number, stock_sistema:number}, costo_unitario:number, usuario_id:string, fecha:string}} p
+ * @returns {Resultado}
+ */
+export function crearAjusteConteo(movs, { conteo, costo_unitario, usuario_id, fecha }) {
+  if (!conteo.diferencia) return { ok: false, error: 'El conteo coincide con el sistema: no hay nada que ajustar.' }
+  if (calcularStock(movs, conteo.articulo_id) !== conteo.stock_sistema) return { ok: false, error: 'El stock cambió desde el conteo: vuelve a contar el artículo.' }
+  if (!(costo_unitario > 0)) return { ok: false, error: 'El artículo no tiene costo para valorar el ajuste.' }
+  return {
+    ok: true,
+    movimiento: {
+      id: siguienteId(movs), tipo: TIPOS_MOV.AJUSTE_CONTEO, fecha, articulo_id: conteo.articulo_id, cantidad: Math.abs(conteo.diferencia),
+      costo_unitario, signo: conteo.diferencia > 0 ? 1 : -1, obra_id: null, usuario_id, referencia: conteo.id,
+      reversa_de: null, salida_origen_id: null, lote_id: null,
+    },
+  }
 }

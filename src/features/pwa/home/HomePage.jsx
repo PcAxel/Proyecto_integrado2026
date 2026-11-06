@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
-import { MapPin, ClipboardList, PackageOpen, CheckCircle2, CloudOff, LogIn, LogOut, Send, HardHat } from 'lucide-react'
+import { FileSignature, ChevronRight, MapPin, ClipboardList, PackageOpen, CheckCircle2, CloudOff, LogIn, LogOut, Send, HardHat } from 'lucide-react'
 import { Skeleton, cn } from '@/components/ui'
 import { obrasService, hojasService } from '@/services'
 import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { useResource } from '@/hooks/useResource'
 import { fechaLocal } from '@/domain/format'
+import { rrhhService } from '@/services'
+import { hayPendientes, textoAvisoPendientes } from '@/domain/firma'
 import { horaDe, TIPOS_MARCA } from '@/domain/asistencia'
 import { useAsistencia } from '../asistencia/useAsistencia'
 
@@ -34,6 +36,7 @@ export function HomePage() {
   const pendientes = useSyncStore((s) => s.pendientes)
   const obras = useResource(() => obrasService.list({ estado: 'EN_CURSO' }), [])
   const hojas = useResource(() => hojasService.list(), [])
+  const docs = useResource(() => rrhhService.misDocumentos('PENDIENTE'), [])
   const { cargando, siguiente, ultima } = useAsistencia()
   const hoy = fechaLocal()
   const enviadaHoy = (obraId) => (hojas.data ?? []).some((h) => h.obra_id === obraId && h.fecha.startsWith(hoy))
@@ -46,6 +49,15 @@ export function HomePage() {
         <p className="text-lg text-ink-soft">{saludo()},</p>
         <h1 className="t-display text-[2.4rem] leading-none text-ink">{user.nombre.split(' ')[0]}</h1>
       </div>
+
+      {hayPendientes(docs.data) && (
+        <Link to={docs.data.length === 1 ? `/app/documentos/${docs.data[0].id}` : '/app/documentos'} role="alert"
+          className="flex items-center gap-3 rounded-3xl border-2 border-warn bg-warn-bg p-4 active:scale-[0.98]">
+          <FileSignature className="h-9 w-9 shrink-0 text-warn" />
+          <span className="min-w-0 flex-1 text-lg font-bold leading-snug text-ink">{textoAvisoPendientes()}<span className="block text-base font-medium text-ink-soft">Toca para leerlos y firmarlos</span></span>
+          <ChevronRight className="h-6 w-6 shrink-0 text-warn" />
+        </Link>
+      )}
 
       <div className="space-y-3.5">
         <Opcion

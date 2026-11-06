@@ -1,3 +1,4 @@
+import { entrarComo } from '@/test-support/sesion'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
@@ -6,7 +7,7 @@ import {
   hojasService, comprasService, auditoriaService, personalService, retirosService, proveedoresService, clientesService, dashboardService, usuariosService, busquedaService,
 } from '@/services'
 
-const login = (id) => useAuthStore.getState().login(id)
+const login = (id) => entrarComo(id)
 const BODEGA = 'U-003'
 const SUPERVISOR = 'U-004'
 const ADMIN = 'U-002'
@@ -203,7 +204,7 @@ describe('presupuestos y obras (Fase 4)', () => {
 })
 
 describe('dashboard por rol', () => {
-  it('Gerencia ve todo; Bodega solo lo suyo; Supervisor no ve el valor del inventario; Técnico no entra', async () => {
+  it('Gerencia ve todo; Bodega solo lo suyo; Operaciones (supervisor + bodega) ve el valor del inventario; Técnico no entra', async () => {
     login(GERENCIA)
     const g = await dashboardService.resumen()
     expect(g.kpis.ventaAprobada).toBeGreaterThan(0)
@@ -221,7 +222,7 @@ describe('dashboard por rol', () => {
 
     login(SUPERVISOR)
     const s = await dashboardService.resumen()
-    expect(s.kpis.valorInventario).toBeNull()
+    expect(s.kpis.valorInventario).toBeGreaterThan(0) // Operaciones absorbe a Bodega: valoriza sus propios movimientos
     expect(s.kpis.costoRealObrasActivas).toBeGreaterThan(0)
 
     login(TECNICO)
@@ -312,7 +313,7 @@ describe('kilometraje en la hoja de servicio', () => {
   })
 })
 
-describe('gestión de accesos y usuarios', () => {
+describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
   const nuevo = (extra = {}) => ({ nombre: 'Andrea Poblete', rut: '760864285', cargo: 'Asistente administrativa', rol: 'ADMINISTRACION', email: 'apoblete@fyag.cl', password: 'Inicial-2026', ...extra })
 
   it('solo la Gerencia General entra al módulo; el resto recibe 403', async () => {
@@ -471,7 +472,7 @@ describe('segregación de funciones en los servicios', () => {
       () => hojasService.aprobar('HS-0006'),
       () => personalService.actualizarTarifa('T-02', 12000),
       () => personalService.setEstadoVehiculo('VH-01', 'EN_TALLER'),
-      () => usuariosService.setActivo('U-003', false),
+      () => articulosService.setActivo('ART-001', false),
       () => clientesService.setActivo('CLI-001', false),
       () => retirosService.entregar('SR-0001'),
     ]

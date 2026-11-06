@@ -18,7 +18,7 @@ export function verificarSegregacion() {
   const consulta = permisosDe(ROLES.CONSULTA)
   const noLectura = consulta.filter((a) => CATALOGO_PERMISOS[a]?.tipo !== 'lectura')
   const rrhh = permisosDe(ROLES.RRHH)
-  const rrhhEsperado = ['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver']
+  const rrhhEsperado = ['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver']
   const sinCatalogo = Object.keys(PERMISOS).filter((a) => !CATALOGO_PERMISOS[a])
   const rolesInvalidos = Object.entries(PERMISOS).flatMap(([a, roles]) => roles.filter((r) => !ROLES_ORDEN.includes(r)).map((r) => `${a}:${r}`))
   const borrado = Object.keys(PERMISOS).filter((a) => /eliminar|borrar|delete|remove|destroy/i.test(a))
@@ -35,10 +35,13 @@ export function verificarSegregacion() {
       ['presupuestos.aprobar', 'obras.cerrar'].every((a) => PERMISOS[a].includes(ROLES.ADMIN_GENERAL)), 'Puede aprobar presupuestos y finalizar obras', 'Perdió una aprobación que exige la regla de negocio'),
     r('consulta-lectura', 'Consulta es estrictamente solo lectura', consulta.length > 0 && noLectura.length === 0,
       `${consulta.length} permisos y todos son de lectura`, `Tiene permisos que no son de lectura: ${noLectura.join(', ')}`),
-    r('rrhh-solo-personal', 'RRHH controla únicamente Personal y Flota', iguales(rrhh, rrhhEsperado),
+    r('rrhh-solo-personal', 'RRHH controla únicamente Personal y Flota, contratos y finiquitos', iguales(rrhh, rrhhEsperado),
       `Solo ${rrhhEsperado.join(', ')}`, `Permisos de RRHH: ${rrhh.join(', ')}`),
     r('personal-exclusivo', 'Solo RRHH modifica el personal y la flota (personal.editar)', iguales(PERMISOS['personal.editar'], ['RRHH']),
       'Administración (Finanzas) y el Administrador General ya no lo modifican', `personal.editar tiene: ${PERMISOS['personal.editar'].join(', ')}`),
+    r('finiquito-segregado', 'Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera',
+      iguales(PERMISOS['rrhh.gestionar'], ['RRHH']) && iguales(PERMISOS['finiquitos.pagar'], ['ADMINISTRACION']),
+      'rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración', `rrhh.gestionar: ${PERMISOS['rrhh.gestionar'].join(', ')} · finiquitos.pagar: ${PERMISOS['finiquitos.pagar'].join(', ')}`),
     r('tecnico-solo-app', 'El Técnico solo usa la app de terreno', iguales(permisosDe(ROLES.TECNICO), ['asistencia.marcar', 'pwa.usar']), 'Solo pwa.usar y asistencia.marcar (reloj control)', `Permisos del Técnico: ${permisosDe(ROLES.TECNICO).join(', ')}`),
     r('catalogo-completo', 'Toda acción está catalogada y solo nombra roles existentes', sinCatalogo.length === 0 && rolesInvalidos.length === 0,
       `${Object.keys(PERMISOS).length} acciones catalogadas`, `Sin catálogo: ${sinCatalogo.join(', ')} · roles inválidos: ${rolesInvalidos.join(', ')}`),

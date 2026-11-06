@@ -79,16 +79,48 @@ export function estadoDelDia(marcasDia, horaActual) {
   return aMinutos(horaActual) >= aMinutos(HORA_LIMITE_AUSENTE) ? ESTADOS_ASISTENCIA.AUSENTE : ESTADOS_ASISTENCIA.PENDIENTE
 }
 
-/** Horas trabajadas en el día: suma de cada par entrada→salida (una jornada abierta cuenta hasta `horaActual`). */
-export function horasTrabajadas(marcasDia, horaActual) {
+/**
+ * Horas TRABAJADAS: solo cuentan los tramos cerrados (una entrada seguida de su salida).
+ * Una entrada sin salida no suma nada: el reloj necesita la marca de salida para dar por trabajado el tiempo.
+ */
+export function horasTrabajadas(marcasDia) {
   let min = 0
   let abierta = null
   for (const m of marcasDia) {
     if (m.tipo === TIPOS_MARCA.ENTRADA) abierta = aMinutos(horaDe(m.fecha))
     else if (abierta !== null) { min += aMinutos(horaDe(m.fecha)) - abierta; abierta = null }
   }
-  if (abierta !== null) min += Math.max(0, aMinutos(horaActual) - abierta)
   return Math.round((min / 60) * 10) / 10
+}
+
+/** Segundos de los tramos cerrados (entrada + salida), con la precisión de las marcas. Para el cronómetro de la jornada. */
+export function segundosCerrados(marcasDia) {
+  let seg = 0
+  let abierta = null
+  for (const m of marcasDia) {
+    const t = new Date(m.fecha).getTime()
+    if (m.tipo === TIPOS_MARCA.ENTRADA) abierta = t
+    else if (abierta !== null) { seg += Math.max(0, (t - abierta) / 1000); abierta = null }
+  }
+  return Math.round(seg)
+}
+
+/** Tiempo transcurrido desde una entrada que aún no tiene salida. Es informativo: NO cuenta como trabajado hasta marcar salida. */
+export function horasEnCurso(marcasDia, horaActual) {
+  const ultima = marcasDia.at(-1)
+  if (ultima?.tipo !== TIPOS_MARCA.ENTRADA) return 0
+  return Math.round((Math.max(0, aMinutos(horaActual) - aMinutos(horaDe(ultima.fecha))) / 60) * 10) / 10
+}
+
+/**
+ * Jornada de un día anterior que quedó con entrada y sin salida (la última marca previa a `dia` es una ENTRADA).
+ * Esas horas no se cuentan y RRHH debe regularizarlas.
+ * @returns {{fecha:string}|null}
+ */
+export function jornadaSinSalida(marcas, tecnicoId, dia) {
+  const previas = marcas.filter((m) => m.tecnico_id === tecnicoId && m.fecha.slice(0, 10) < dia).sort(porFecha)
+  const ultima = previas.at(-1)
+  return ultima?.tipo === TIPOS_MARCA.ENTRADA ? { fecha: ultima.fecha } : null
 }
 
 /** Conteo por estado para la franja del ERP. @param {Array<{estado:string}>} filas */

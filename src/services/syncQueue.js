@@ -7,7 +7,7 @@ import { retirosService } from './retiros.service'
 import { asistenciaService } from './asistencia.service'
 
 const KEY = 'fyag-cola'
-const ENVIAR = { HOJA: (p) => hojasService.enviar({ ...p, desde_cola: true }), RETIRO: (p) => retirosService.create(p), ASISTENCIA: (p) => asistenciaService.marcar(p) }
+const ENVIAR = { HOJA: (p) => hojasService.enviar({ ...p, desde_cola: true }), RETIRO: (p) => retirosService.create(p), ASISTENCIA: (p) => asistenciaService.marcar({ ...p, diferida: p.desde_cola !== false }) }
 
 // Respaldo en memoria cuando IndexedDB no existe (tests, modo privado).
 let memoria = []

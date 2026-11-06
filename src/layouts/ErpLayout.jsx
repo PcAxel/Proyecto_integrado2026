@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, UserCog, X } from 'lucide-react'
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
-import { can, ROL_LABEL, rutaInicial } from '@/domain/rbac'
-import { usuariosService } from '@/services'
-import { useResource } from '@/hooks/useResource'
+import { can } from '@/domain/rbac'
+import { ROL_API_LABEL } from '@/components/domain'
 import { cn } from '@/components/ui'
 import { Avatar, BrandMark } from '@/components/domain'
 import { ERP_NAV } from './nav'
 import { GlobalSearch } from './GlobalSearch'
+import { AsistenteIA } from '@/features/ia/AsistenteIA'
 
 const esMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform ?? navigator.userAgent)
 
@@ -104,7 +104,7 @@ function PieUsuario({ collapsed, modo = 'riel', onSalir, onToggle }) {
         <Avatar nombre={user.nombre} rol={user.rol} size="md" />
         <div className={cn('min-w-0 flex-1', texto)}>
           <p className="truncate text-sm font-semibold leading-tight">{user.nombre}</p>
-          <p className="truncate text-xs text-white/55">{ROL_LABEL[user.rol]}</p>
+          <p className="truncate text-xs text-white/55">{ROL_API_LABEL[user.rolApi]}</p>
         </div>
       </div>
       <div className={cn('mt-1 flex gap-1', modo === 'riel' && (collapsed ? 'flex-col' : 'flex-col xl:flex-row'))}>
@@ -119,28 +119,6 @@ function PieUsuario({ collapsed, modo = 'riel', onSalir, onToggle }) {
         )}
       </div>
     </div>
-  )
-}
-
-/** Selector de rol para modo demo: cambia de usuario sin pasar por el login. */
-function RoleSwitcher({ className = 'hidden sm:flex' }) {
-  const { user, switchRole } = useAuthStore()
-  const navigate = useNavigate()
-  const perfiles = useResource(() => usuariosService.perfiles(), [])
-  const onChange = (e) => {
-    const next = switchRole(e.target.value, perfiles.data?.find((p) => p.id === e.target.value))
-    if (next) navigate(rutaInicial(next.rol), { replace: true })
-  }
-  return (
-    <label className={cn('items-center gap-2 rounded-lg border border-dashed border-harvest/70 bg-harvest-bg/60 px-2.5 py-1.5 text-xs text-warn', className)}>
-      <UserCog className="h-4 w-4 shrink-0" />
-      <span className="whitespace-nowrap font-medium">Vista demo</span>
-      <select value={user.id} onChange={onChange} className="max-w-[15rem] cursor-pointer truncate bg-transparent font-semibold text-ink focus:outline-none" aria-label="Cambiar rol (demo)">
-        {(perfiles.data ?? [user]).map((u) => (
-          <option key={u.id} value={u.id}>{ROL_LABEL[u.rol]} · {u.nombre.split(' ')[0]}</option>
-        ))}
-      </select>
-    </label>
   )
 }
 
@@ -183,7 +161,6 @@ export function ErpLayout() {
             <div className="absolute right-3 top-3"><button type="button" aria-label="Cerrar menú" onClick={() => setMobileSidebar(false)} className="flex h-9 w-9 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"><X className="h-5 w-5" /></button></div>
             <MarcaLateral modo="menu" />
             <Navegacion modo="menu" onNavigate={() => setMobileSidebar(false)} />
-            <div className="border-t border-white/10 p-3"><RoleSwitcher className="flex w-full" /></div>
             <PieUsuario modo="menu" onSalir={salir} />
           </aside>
         </div>
@@ -194,7 +171,6 @@ export function ErpLayout() {
           <button type="button" aria-label="Abrir menú" onClick={() => setMobileSidebar(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-soft hover:bg-white hover:text-ink sm:hidden"><Menu className="h-5 w-5" /></button>
           <BotonBuscar onClick={() => setBuscando(true)} />
           <div className="ml-auto flex items-center gap-3">
-            <RoleSwitcher />
             <div className="flex items-center gap-2 sm:hidden"><Avatar nombre={user.nombre} rol={user.rol} size="sm" /></div>
           </div>
         </header>
@@ -203,6 +179,7 @@ export function ErpLayout() {
         </main>
       </div>
       <GlobalSearch open={buscando} onClose={() => setBuscando(false)} />
+      <AsistenteIA />
     </div>
   )
 }

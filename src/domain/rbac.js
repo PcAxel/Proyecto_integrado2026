@@ -11,11 +11,11 @@ export const ROLES = {
 }
 
 export const ROL_LABEL = {
-  ADMIN_GENERAL: 'Administrador General',
-  ADMINISTRACION: 'Administración',
+  ADMIN_GENERAL: 'Administrador',
+  ADMINISTRACION: 'Finanzas',
   BODEGA: 'Bodega',
-  SUPERVISOR: 'Supervisor de Obras',
-  TECNICO: 'Técnico de Terreno',
+  SUPERVISOR: 'Operaciones',
+  TECNICO: 'Técnico',
   CONSULTA: 'Consulta (Gerencia)',
   RRHH: 'Recursos Humanos',
 }
@@ -59,12 +59,18 @@ export const CATALOGO_PERMISOS = {
   'cardex.crear': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Registrar salidas a obra y entregar solicitudes de retiro' },
   'cardex.reversar': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Reversar un movimiento del Cardex (contra-asiento auditado)' },
   'cardex.reingresar': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Reingresar sobrantes y conciliarlos' },
+  'conteo.registrar': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Registrar conteos físicos de inventario (conteo ciego)' },
+  'conteo.aprobar': { tipo: 'aprobacion', modulo: 'Bodega', descripcion: 'Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó)' },
   'compras.ver': { tipo: 'lectura', modulo: 'Compras', descripcion: 'Ver facturas de compra y notas de crédito' },
   'compras.registrar': { tipo: 'operativa', modulo: 'Compras', descripcion: 'Registrar facturas (hasta 3 descuentos) y notas de crédito' },
   'terreno.ver': { tipo: 'lectura', modulo: 'Auditoría de terreno', descripcion: 'Ver las hojas de servicio enviadas desde la app móvil' },
   'hojas.auditar': { tipo: 'operativa', modulo: 'Auditoría de terreno', descripcion: 'Aprobar o devolver hojas de servicio' },
   'personal.ver': { tipo: 'lectura', modulo: 'Personal y Flota', descripcion: 'Ver fichas, tarifas, vehículos y vencimientos' },
   'personal.editar': { tipo: 'operativa', modulo: 'Personal y Flota', descripcion: 'Modificar fichas, tarifas hora-hombre y estado de vehículos' },
+  'rrhh.ver': { tipo: 'lectura', modulo: 'Contratos y Finiquitos', descripcion: 'Ver contratos, documentos laborales y finiquitos del personal' },
+  'rrhh.gestionar': { tipo: 'operativa', modulo: 'Contratos y Finiquitos', descripcion: 'Crear contratos, subir amonestaciones y anexos, y generar finiquitos (no puede registrar su pago)' },
+  'finiquitos.ver': { tipo: 'lectura', modulo: 'Contratos y Finiquitos', descripcion: 'Ver los finiquitos por pagar y los ya pagados' },
+  'finiquitos.pagar': { tipo: 'operativa', modulo: 'Contratos y Finiquitos', descripcion: 'Adjuntar el comprobante de transferencia y marcar un finiquito como pagado' },
   'maestros.ver': { tipo: 'lectura', modulo: 'Clientes y Proveedores', descripcion: 'Ver el módulo de clientes y proveedores' },
   'clientes.ver': { tipo: 'lectura', modulo: 'Clientes y Proveedores', descripcion: 'Consultar clientes (para presupuestos y obras)' },
   'proveedores.ver': { tipo: 'lectura', modulo: 'Clientes y Proveedores', descripcion: 'Consultar proveedores (para compras y artículos)' },
@@ -89,7 +95,7 @@ export const CATALOGO_PERMISOS = {
  * Segregación de funciones:
  * - ADMIN_GENERAL autoriza y administra accesos, pero no ejecuta tareas operativas.
  * - CONSULTA solo tiene acciones de lectura.
- * - RRHH es el único que modifica personal y flota.
+ * - RRHH es el único que modifica personal y flota, y quien genera contratos y finiquitos; Administración (Finanzas) solo registra su pago.
  * @type {Record<string, Rol[]>}
  */
 export const PERMISOS = {
@@ -98,35 +104,41 @@ export const PERMISOS = {
   'presupuestos.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'SUPERVISOR', 'CONSULTA'],
   'obras.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   'bodega.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
-  'compras.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'CONSULTA'],
+  'compras.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   'terreno.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'SUPERVISOR', 'CONSULTA'],
   'personal.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'CONSULTA', 'RRHH'],
   'maestros.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'CONSULTA'],
   'clientes.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   // Bodega necesita leer proveedores para registrar compras y artículos.
-  'proveedores.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'CONSULTA'],
+  'proveedores.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   'auditoria.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'CONSULTA'],
   'costos.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'SUPERVISOR', 'CONSULTA'],
-  'costos_compra.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'CONSULTA'],
+  'costos_compra.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   'exportar': ['ADMIN_GENERAL', 'ADMINISTRACION', 'BODEGA', 'SUPERVISOR', 'CONSULTA'],
   'usuarios.ver': ['ADMIN_GENERAL'],
   'asistencia.ver': ['ADMIN_GENERAL', 'RRHH'],
+  'rrhh.ver': ['ADMIN_GENERAL', 'RRHH'],
+  'finiquitos.ver': ['ADMIN_GENERAL', 'ADMINISTRACION'],
 
   // ── Aprobación ──
   'presupuestos.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'obras.cerrar': ['ADMIN_GENERAL', 'SUPERVISOR'],
+  'conteo.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
 
   // ── Operativas ──
   'presupuestos.crear': ['ADMINISTRACION', 'SUPERVISOR'],
   'obras.crear': ['ADMINISTRACION', 'SUPERVISOR'],
   'obras.emergencia': ['SUPERVISOR'],
-  'articulos.gestionar': ['BODEGA'],
-  'cardex.crear': ['BODEGA'],
-  'cardex.reversar': ['BODEGA'],
-  'cardex.reingresar': ['BODEGA'],
-  'compras.registrar': ['ADMINISTRACION', 'BODEGA'],
+  'articulos.gestionar': ['BODEGA', 'SUPERVISOR'],
+  'cardex.crear': ['BODEGA', 'SUPERVISOR'],
+  'cardex.reversar': ['BODEGA', 'SUPERVISOR'],
+  'cardex.reingresar': ['BODEGA', 'SUPERVISOR'],
+  'conteo.registrar': ['BODEGA', 'SUPERVISOR'],
+  'compras.registrar': ['ADMINISTRACION', 'BODEGA', 'SUPERVISOR'],
   'hojas.auditar': ['SUPERVISOR'],
   'personal.editar': ['RRHH'],
+  'rrhh.gestionar': ['RRHH'],
+  'finiquitos.pagar': ['ADMINISTRACION'],
   'maestros.gestionar': ['ADMINISTRACION'],
   'pwa.usar': ['TECNICO'],
   'asistencia.marcar': ['TECNICO'],

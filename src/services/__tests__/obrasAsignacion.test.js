@@ -1,9 +1,10 @@
+import { entrarComo } from '@/test-support/sesion'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@/mocks/db'
 import { useAuthStore } from '@/stores/authStore'
 import { configureHttp, obrasService } from '@/services'
 
-const login = (id) => useAuthStore.getState().login(id)
+const login = (id) => entrarComo(id)
 const TECNICO = 'U-005' // Jorge Quezada (T-01)
 const SUPERVISOR = 'U-004'
 
