@@ -1,0 +1,3782 @@
+{
+ "clientes": [
+  {
+   "id": "CLI-001",
+   "rut": "76.115.402-8",
+   "razon_social": "Packing Cordillera S.A.",
+   "giro": "Embalaje de fruta fresca",
+   "comuna": "Chillán Viejo",
+   "contacto": "Andrea Poblete",
+   "telefono": "+56 9 8421 3307",
+   "email": "contacto@packing.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-002",
+   "rut": "77.248.913-7",
+   "razon_social": "Frutícola Río Ñuble SpA",
+   "giro": "Producción y exportación de fruta",
+   "comuna": "San Carlos",
+   "contacto": "Héctor Navarrete",
+   "telefono": "+56 9 7712 4550",
+   "email": "contacto@fruticola.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-003",
+   "rut": "76.903.158-8",
+   "razon_social": "Agrícola Los Maitenes Ltda.",
+   "giro": "Cultivo de berries",
+   "comuna": "Quillón",
+   "contacto": "Marcela Rebolledo",
+   "telefono": "+56 9 9034 1182",
+   "email": "contacto@agricola.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-004",
+   "rut": "78.054.267-5",
+   "razon_social": "Lácteos Valle del Itata Ltda.",
+   "giro": "Elaboración de productos lácteos",
+   "comuna": "Yungay",
+   "contacto": "Iván Carrasco",
+   "telefono": "+56 9 6650 2941",
+   "email": "contacto@lacteos.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-005",
+   "rut": "76.420.835-8",
+   "razon_social": "Carnes Selectas Chillán SpA",
+   "giro": "Faenamiento y distribución de carnes",
+   "comuna": "Chillán",
+   "contacto": "Paulina Ortiz",
+   "telefono": "+56 9 8890 7716",
+   "email": "contacto@carnes.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-006",
+   "rut": "77.613.092-3",
+   "razon_social": "Viñedos San Carlos Ltda.",
+   "giro": "Producción vitivinícola",
+   "comuna": "San Carlos",
+   "contacto": "Ricardo Alarcón",
+   "telefono": "+56 9 5521 0834",
+   "email": "contacto@vinedos.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-007",
+   "rut": "76.298.744-9",
+   "razon_social": "Congelados Bulnes SpA",
+   "giro": "Procesamiento de vegetales congelados",
+   "comuna": "Bulnes",
+   "contacto": "Soledad Henríquez",
+   "telefono": "+56 9 7340 9925",
+   "email": "contacto@congelados.cl",
+   "activo": true
+  },
+  {
+   "id": "CLI-008",
+   "rut": "78.337.581-8",
+   "razon_social": "Hortalizas Pinto Ltda.",
+   "giro": "Producción hortícola",
+   "comuna": "Pinto",
+   "contacto": "Claudio Vergara",
+   "telefono": "+56 9 6218 4473",
+   "email": "contacto@hortalizas.cl",
+   "activo": true
+  }
+ ],
+ "proveedores": [
+  {
+   "id": "PRV-001",
+   "rut": "76.554.120-4",
+   "razon_social": "Distribuidora Frigotec Ltda.",
+   "comuna": "Concepción",
+   "contacto": "Sergio Bravo",
+   "condicion_pago": "30 días",
+   "descuentos_habituales": [
+    10,
+    5,
+    0
+   ],
+   "activo": true
+  },
+  {
+   "id": "PRV-002",
+   "rut": "77.019.384-2",
+   "razon_social": "Repuestos Refrigeración Biobío SpA",
+   "comuna": "Los Ángeles",
+   "contacto": "Natalia Pino",
+   "condicion_pago": "30 días",
+   "descuentos_habituales": [
+    8,
+    0,
+    0
+   ],
+   "activo": true
+  },
+  {
+   "id": "PRV-003",
+   "rut": "76.730.915-5",
+   "razon_social": "Eléctrica Industrial Chillán Ltda.",
+   "comuna": "Chillán",
+   "contacto": "Mauricio Soto",
+   "condicion_pago": "45 días",
+   "descuentos_habituales": [
+    5,
+    3,
+    2
+   ],
+   "activo": true
+  },
+  {
+   "id": "PRV-004",
+   "rut": "78.112.640-3",
+   "razon_social": "Cobres y Metales del Sur S.A.",
+   "comuna": "Talcahuano",
+   "contacto": "Daniela Muñoz",
+   "condicion_pago": "Contado",
+   "descuentos_habituales": [
+    4,
+    0,
+    0
+   ],
+   "activo": true
+  },
+  {
+   "id": "PRV-005",
+   "rut": "76.845.277-6",
+   "razon_social": "Aislantes Térmicos Ñuble SpA",
+   "comuna": "Chillán",
+   "contacto": "Felipe Araya",
+   "condicion_pago": "30 días",
+   "descuentos_habituales": [
+    6,
+    2,
+    0
+   ],
+   "activo": true
+  }
+ ],
+ "articulos": [
+  {
+   "id": "ART-001",
+   "sku": "REF-404A",
+   "nombre": "Refrigerante R404A cilindro 10,9 kg",
+   "categoria": "Refrigerantes",
+   "unidad": "cil",
+   "costo_unitario": 109440,
+   "stock_minimo": 4,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-002",
+   "sku": "REF-134A",
+   "nombre": "Refrigerante R134a cilindro 13,6 kg",
+   "categoria": "Refrigerantes",
+   "unidad": "cil",
+   "costo_unitario": 82080,
+   "stock_minimo": 3,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-003",
+   "sku": "REF-448A",
+   "nombre": "Refrigerante R448A cilindro 11,3 kg",
+   "categoria": "Refrigerantes",
+   "unidad": "cil",
+   "costo_unitario": 141075,
+   "stock_minimo": 2,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-004",
+   "sku": "REF-507",
+   "nombre": "Refrigerante R507 cilindro 11,3 kg",
+   "categoria": "Refrigerantes",
+   "unidad": "cil",
+   "costo_unitario": 121410,
+   "stock_minimo": 2,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-005",
+   "sku": "LUB-POE",
+   "nombre": "Aceite POE 1 L",
+   "categoria": "Refrigerantes",
+   "unidad": "lt",
+   "costo_unitario": 13340,
+   "stock_minimo": 12,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  },
+  {
+   "id": "ART-006",
+   "sku": "CMP-5HP",
+   "nombre": "Compresor semihermético 5 HP",
+   "categoria": "Compresores",
+   "unidad": "un",
+   "costo_unitario": 1150000,
+   "stock_minimo": 1,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  },
+  {
+   "id": "ART-007",
+   "sku": "CMP-SCR3",
+   "nombre": "Compresor scroll 3 HP",
+   "categoria": "Compresores",
+   "unidad": "un",
+   "costo_unitario": 717600,
+   "stock_minimo": 1,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  },
+  {
+   "id": "ART-008",
+   "sku": "CMP-HER1",
+   "nombre": "Compresor hermético 1 HP",
+   "categoria": "Compresores",
+   "unidad": "un",
+   "costo_unitario": 211600,
+   "stock_minimo": 2,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  },
+  {
+   "id": "ART-009",
+   "sku": "EVA-2500",
+   "nombre": "Evaporador de cámara 2.500 W",
+   "categoria": "Evaporación y condensación",
+   "unidad": "un",
+   "costo_unitario": 359100,
+   "stock_minimo": 2,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-010",
+   "sku": "MOT-VEN",
+   "nombre": "Motor ventilador evaporador 1/15 HP",
+   "categoria": "Evaporación y condensación",
+   "unidad": "un",
+   "costo_unitario": 44620,
+   "stock_minimo": 4,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  },
+  {
+   "id": "ART-011",
+   "sku": "HEL-300",
+   "nombre": "Hélice ventilador 300 mm",
+   "categoria": "Evaporación y condensación",
+   "unidad": "un",
+   "costo_unitario": 11868,
+   "stock_minimo": 6,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  },
+  {
+   "id": "ART-012",
+   "sku": "CND-5HP",
+   "nombre": "Condensador enfriado por aire 5 HP",
+   "categoria": "Evaporación y condensación",
+   "unidad": "un",
+   "costo_unitario": 461700,
+   "stock_minimo": 1,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-013",
+   "sku": "CTL-DIG",
+   "nombre": "Controlador digital de temperatura",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 70439,
+   "stock_minimo": 3,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-014",
+   "sku": "CTL-NTC",
+   "nombre": "Sonda NTC 3 m",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 8850,
+   "stock_minimo": 8,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-015",
+   "sku": "CTL-TDF",
+   "nombre": "Termostato diferencial",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 24834,
+   "stock_minimo": 3,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-016",
+   "sku": "CTL-PRE",
+   "nombre": "Presostato dual alta/baja",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 31550,
+   "stock_minimo": 4,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-017",
+   "sku": "VAL-TXV",
+   "nombre": "Válvula de expansión termostática",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 76095,
+   "stock_minimo": 3,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-018",
+   "sku": "VAL-SOL",
+   "nombre": "Válvula solenoide 3/8\"",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 44460,
+   "stock_minimo": 3,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-019",
+   "sku": "FIL-SEC",
+   "nombre": "Filtro secador 3/8\"",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 12654,
+   "stock_minimo": 8,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-020",
+   "sku": "VIS-LIQ",
+   "nombre": "Visor de líquido 3/8\"",
+   "categoria": "Control",
+   "unidad": "un",
+   "costo_unitario": 9576,
+   "stock_minimo": 6,
+   "proveedor_id": "PRV-001",
+   "activo": true
+  },
+  {
+   "id": "ART-021",
+   "sku": "ELE-CON25",
+   "nombre": "Contactor 25 A",
+   "categoria": "Eléctrico",
+   "unidad": "un",
+   "costo_unitario": 17068,
+   "stock_minimo": 6,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-022",
+   "sku": "ELE-RTM",
+   "nombre": "Relé térmico 12–18 A",
+   "categoria": "Eléctrico",
+   "unidad": "un",
+   "costo_unitario": 22125,
+   "stock_minimo": 4,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-023",
+   "sku": "ELE-CAB",
+   "nombre": "Cable 3×2,5 mm²",
+   "categoria": "Eléctrico",
+   "unidad": "m",
+   "costo_unitario": 1671,
+   "stock_minimo": 100,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-024",
+   "sku": "ELE-CAP40",
+   "nombre": "Capacitor de marcha 40 µF",
+   "categoria": "Eléctrico",
+   "unidad": "un",
+   "costo_unitario": 6863,
+   "stock_minimo": 6,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-025",
+   "sku": "ELE-GRD",
+   "nombre": "Guardamotor 20 A",
+   "categoria": "Eléctrico",
+   "unidad": "un",
+   "costo_unitario": 18784,
+   "stock_minimo": 3,
+   "proveedor_id": "PRV-003",
+   "activo": true
+  },
+  {
+   "id": "ART-026",
+   "sku": "CU-38",
+   "nombre": "Cañería de cobre 3/8\"",
+   "categoria": "Cobre y soldadura",
+   "unidad": "m",
+   "costo_unitario": 5664,
+   "stock_minimo": 60,
+   "proveedor_id": "PRV-004",
+   "activo": true
+  },
+  {
+   "id": "ART-027",
+   "sku": "CU-12",
+   "nombre": "Cañería de cobre 1/2\"",
+   "categoria": "Cobre y soldadura",
+   "unidad": "m",
+   "costo_unitario": 7488,
+   "stock_minimo": 60,
+   "proveedor_id": "PRV-004",
+   "activo": true
+  },
+  {
+   "id": "ART-028",
+   "sku": "CU-58",
+   "nombre": "Cañería de cobre 5/8\"",
+   "categoria": "Cobre y soldadura",
+   "unidad": "m",
+   "costo_unitario": 9984,
+   "stock_minimo": 50,
+   "proveedor_id": "PRV-004",
+   "activo": true
+  },
+  {
+   "id": "ART-029",
+   "sku": "SOL-AG15",
+   "nombre": "Varilla de soldadura plata 15 %",
+   "categoria": "Cobre y soldadura",
+   "unidad": "un",
+   "costo_unitario": 4032,
+   "stock_minimo": 20,
+   "proveedor_id": "PRV-004",
+   "activo": true
+  },
+  {
+   "id": "ART-030",
+   "sku": "AIS-C38",
+   "nombre": "Coquilla aislante 3/8\"",
+   "categoria": "Aislación",
+   "unidad": "m",
+   "costo_unitario": 1336,
+   "stock_minimo": 80,
+   "proveedor_id": "PRV-005",
+   "activo": true
+  },
+  {
+   "id": "ART-031",
+   "sku": "AIS-C58",
+   "nombre": "Coquilla aislante 5/8\"",
+   "categoria": "Aislación",
+   "unidad": "m",
+   "costo_unitario": 1824,
+   "stock_minimo": 80,
+   "proveedor_id": "PRV-005",
+   "activo": true
+  },
+  {
+   "id": "ART-032",
+   "sku": "AIS-PU100",
+   "nombre": "Panel poliuretano 100 mm",
+   "categoria": "Aislación",
+   "unidad": "m²",
+   "costo_unitario": 26623,
+   "stock_minimo": 20,
+   "proveedor_id": "PRV-005",
+   "activo": true
+  },
+  {
+   "id": "ART-033",
+   "sku": "AIS-CIN",
+   "nombre": "Cinta vulcanizante aislante",
+   "categoria": "Aislación",
+   "unidad": "un",
+   "costo_unitario": 6172,
+   "stock_minimo": 10,
+   "proveedor_id": "PRV-005",
+   "activo": true
+  },
+  {
+   "id": "ART-034",
+   "sku": "AIS-ESP",
+   "nombre": "Espuma de poliuretano 750 ml",
+   "categoria": "Aislación",
+   "unidad": "un",
+   "costo_unitario": 7277,
+   "stock_minimo": 12,
+   "proveedor_id": "PRV-005",
+   "activo": true
+  },
+  {
+   "id": "ART-035",
+   "sku": "INS-DES",
+   "nombre": "Desengrasante de serpentines 5 L",
+   "categoria": "Insumos",
+   "unidad": "un",
+   "costo_unitario": 15456,
+   "stock_minimo": 4,
+   "proveedor_id": "PRV-002",
+   "activo": true
+  }
+ ],
+ "cardex": [
+  {
+   "id": "MOV-000001",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-001",
+   "cantidad": 20,
+   "costo_unitario": 109440,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000002",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-002",
+   "cantidad": 15,
+   "costo_unitario": 82080,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000003",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-003",
+   "cantidad": 10,
+   "costo_unitario": 141075,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000004",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-004",
+   "cantidad": 10,
+   "costo_unitario": 121410,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000005",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-009",
+   "cantidad": 10,
+   "costo_unitario": 359100,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000006",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-012",
+   "cantidad": 6,
+   "costo_unitario": 461700,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000007",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-016",
+   "cantidad": 20,
+   "costo_unitario": 31550,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000008",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-017",
+   "cantidad": 15,
+   "costo_unitario": 76095,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000009",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-018",
+   "cantidad": 15,
+   "costo_unitario": 44460,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000010",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-019",
+   "cantidad": 40,
+   "costo_unitario": 12654,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000011",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-09T10:30:00",
+   "articulo_id": "ART-020",
+   "cantidad": 30,
+   "costo_unitario": 9576,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000012",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-005",
+   "cantidad": 60,
+   "costo_unitario": 13340,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000013",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-006",
+   "cantidad": 6,
+   "costo_unitario": 1150000,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000014",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-007",
+   "cantidad": 6,
+   "costo_unitario": 717600,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000015",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-008",
+   "cantidad": 10,
+   "costo_unitario": 211600,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000016",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-010",
+   "cantidad": 20,
+   "costo_unitario": 44620,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000017",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-011",
+   "cantidad": 30,
+   "costo_unitario": 11868,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000018",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-10T10:30:00",
+   "articulo_id": "ART-035",
+   "cantidad": 20,
+   "costo_unitario": 15456,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000019",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-013",
+   "cantidad": 15,
+   "costo_unitario": 70439,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000020",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-014",
+   "cantidad": 40,
+   "costo_unitario": 8850,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000021",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-015",
+   "cantidad": 15,
+   "costo_unitario": 24834,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000022",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-021",
+   "cantidad": 30,
+   "costo_unitario": 17068,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000023",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-022",
+   "cantidad": 20,
+   "costo_unitario": 22125,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000024",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-023",
+   "cantidad": 500,
+   "costo_unitario": 1671,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000025",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-024",
+   "cantidad": 30,
+   "costo_unitario": 6863,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000026",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-11T10:30:00",
+   "articulo_id": "ART-025",
+   "cantidad": 15,
+   "costo_unitario": 18784,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000027",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-12T10:30:00",
+   "articulo_id": "ART-026",
+   "cantidad": 300,
+   "costo_unitario": 5664,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000028",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-12T10:30:00",
+   "articulo_id": "ART-027",
+   "cantidad": 300,
+   "costo_unitario": 7488,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000029",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-12T10:30:00",
+   "articulo_id": "ART-028",
+   "cantidad": 250,
+   "costo_unitario": 9984,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000030",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-12T10:30:00",
+   "articulo_id": "ART-029",
+   "cantidad": 100,
+   "costo_unitario": 4032,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000031",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-13T10:30:00",
+   "articulo_id": "ART-030",
+   "cantidad": 400,
+   "costo_unitario": 1336,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000032",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-13T10:30:00",
+   "articulo_id": "ART-031",
+   "cantidad": 400,
+   "costo_unitario": 1824,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000033",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-13T10:30:00",
+   "articulo_id": "ART-032",
+   "cantidad": 100,
+   "costo_unitario": 26623,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000034",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-13T10:30:00",
+   "articulo_id": "ART-033",
+   "cantidad": 50,
+   "costo_unitario": 6172,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000035",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-08-13T10:30:00",
+   "articulo_id": "ART-034",
+   "cantidad": 60,
+   "costo_unitario": 7277,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000036",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-10-01T10:30:00",
+   "articulo_id": "ART-001",
+   "cantidad": 20,
+   "costo_unitario": 109440,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0006",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000037",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-10-01T10:30:00",
+   "articulo_id": "ART-002",
+   "cantidad": 15,
+   "costo_unitario": 82080,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0006",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000038",
+   "tipo": "ENTRADA_COMPRA",
+   "fecha": "2026-10-01T10:30:00",
+   "articulo_id": "ART-019",
+   "cantidad": 40,
+   "costo_unitario": 12654,
+   "signo": 1,
+   "obra_id": null,
+   "usuario_id": "U-003",
+   "referencia": "FC-0006",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000039",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-08-18T08:30:00",
+   "articulo_id": "ART-002",
+   "cantidad": 2,
+   "costo_unitario": 82080,
+   "signo": -1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000040",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-08-18T08:30:00",
+   "articulo_id": "ART-007",
+   "cantidad": 1,
+   "costo_unitario": 717600,
+   "signo": -1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000041",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-08-20T08:30:00",
+   "articulo_id": "ART-009",
+   "cantidad": 1,
+   "costo_unitario": 359100,
+   "signo": -1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000042",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-08-21T08:30:00",
+   "articulo_id": "ART-032",
+   "cantidad": 24,
+   "costo_unitario": 26623,
+   "signo": -1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000043",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-08-22T08:30:00",
+   "articulo_id": "ART-026",
+   "cantidad": 30,
+   "costo_unitario": 5664,
+   "signo": -1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000044",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-08-22T08:30:00",
+   "articulo_id": "ART-030",
+   "cantidad": 40,
+   "costo_unitario": 1336,
+   "signo": -1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0003",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000045",
+   "tipo": "REINGRESO_SOBRANTE",
+   "fecha": "2026-10-13T16:00:00",
+   "articulo_id": "ART-030",
+   "cantidad": 10,
+   "costo_unitario": 1336,
+   "signo": 1,
+   "obra_id": "OB-0003",
+   "usuario_id": "U-003",
+   "referencia": "Sobrante de MOV-000044",
+   "reversa_de": null,
+   "salida_origen_id": "MOV-000044"
+  },
+  {
+   "id": "MOV-000046",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-09-23T08:30:00",
+   "articulo_id": "ART-001",
+   "cantidad": 2,
+   "costo_unitario": 109440,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000047",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-09-23T08:30:00",
+   "articulo_id": "ART-006",
+   "cantidad": 1,
+   "costo_unitario": 1150000,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000048",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-09-24T08:30:00",
+   "articulo_id": "ART-009",
+   "cantidad": 2,
+   "costo_unitario": 359100,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000049",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-09-25T08:30:00",
+   "articulo_id": "ART-027",
+   "cantidad": 40,
+   "costo_unitario": 7488,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000050",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-09-25T08:30:00",
+   "articulo_id": "ART-031",
+   "cantidad": 40,
+   "costo_unitario": 1824,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000051",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-09-26T08:30:00",
+   "articulo_id": "ART-021",
+   "cantidad": 3,
+   "costo_unitario": 17068,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000052",
+   "tipo": "REINGRESO_SOBRANTE",
+   "fecha": "2026-10-18T15:20:00",
+   "articulo_id": "ART-027",
+   "cantidad": 6,
+   "costo_unitario": 7488,
+   "signo": 1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Sobrante de cañería devuelto a bodega",
+   "reversa_de": null,
+   "salida_origen_id": "MOV-000049"
+  },
+  {
+   "id": "MOV-000053",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-12T08:30:00",
+   "articulo_id": "ART-013",
+   "cantidad": 2,
+   "costo_unitario": 70439,
+   "signo": -1,
+   "obra_id": "OB-0002",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000054",
+   "tipo": "REVERSA",
+   "fecha": "2026-10-12T11:05:00",
+   "articulo_id": "ART-013",
+   "cantidad": 2,
+   "costo_unitario": 70439,
+   "signo": 1,
+   "obra_id": "OB-0002",
+   "usuario_id": "U-003",
+   "referencia": "Artículo equivocado: se solicitó sonda NTC",
+   "reversa_de": "MOV-000053",
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000055",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-12T11:20:00",
+   "articulo_id": "ART-014",
+   "cantidad": 2,
+   "costo_unitario": 8850,
+   "signo": -1,
+   "obra_id": "OB-0002",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000056",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-13T08:30:00",
+   "articulo_id": "ART-005",
+   "cantidad": 4,
+   "costo_unitario": 13340,
+   "signo": -1,
+   "obra_id": "OB-0002",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000057",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-13T08:30:00",
+   "articulo_id": "ART-019",
+   "cantidad": 2,
+   "costo_unitario": 12654,
+   "signo": -1,
+   "obra_id": "OB-0002",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000058",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-14T08:30:00",
+   "articulo_id": "ART-024",
+   "cantidad": 3,
+   "costo_unitario": 6863,
+   "signo": -1,
+   "obra_id": "OB-0002",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0002",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000059",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-20T07:40:00",
+   "articulo_id": "ART-007",
+   "cantidad": 1,
+   "costo_unitario": 717600,
+   "signo": -1,
+   "obra_id": "OB-0004",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000060",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-20T07:45:00",
+   "articulo_id": "ART-001",
+   "cantidad": 1,
+   "costo_unitario": 109440,
+   "signo": -1,
+   "obra_id": "OB-0004",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000061",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-20T07:50:00",
+   "articulo_id": "ART-021",
+   "cantidad": 1,
+   "costo_unitario": 17068,
+   "signo": -1,
+   "obra_id": "OB-0004",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0004",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000062",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-21T08:30:00",
+   "articulo_id": "ART-010",
+   "cantidad": 2,
+   "costo_unitario": 44620,
+   "signo": -1,
+   "obra_id": "OB-0005",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000063",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-21T08:30:00",
+   "articulo_id": "ART-011",
+   "cantidad": 2,
+   "costo_unitario": 11868,
+   "signo": -1,
+   "obra_id": "OB-0005",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000064",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-03T08:30:00",
+   "articulo_id": "ART-022",
+   "cantidad": 17,
+   "costo_unitario": 22125,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000065",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-08T08:30:00",
+   "articulo_id": "ART-011",
+   "cantidad": 25,
+   "costo_unitario": 11868,
+   "signo": -1,
+   "obra_id": "OB-0005",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000066",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-05T08:30:00",
+   "articulo_id": "ART-008",
+   "cantidad": 5,
+   "costo_unitario": 211600,
+   "signo": -1,
+   "obra_id": "OB-0001",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0001",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000067",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-11T08:30:00",
+   "articulo_id": "ART-008",
+   "cantidad": 5,
+   "costo_unitario": 211600,
+   "signo": -1,
+   "obra_id": "OB-0005",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0005",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000068",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-15T08:30:00",
+   "articulo_id": "ART-012",
+   "cantidad": 1,
+   "costo_unitario": 461700,
+   "signo": -1,
+   "obra_id": "OB-0007",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0007",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000069",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-15T08:30:00",
+   "articulo_id": "ART-028",
+   "cantidad": 25,
+   "costo_unitario": 9984,
+   "signo": -1,
+   "obra_id": "OB-0007",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0007",
+   "reversa_de": null,
+   "salida_origen_id": null
+  },
+  {
+   "id": "MOV-000070",
+   "tipo": "SALIDA_OBRA",
+   "fecha": "2026-10-15T08:30:00",
+   "articulo_id": "ART-029",
+   "cantidad": 6,
+   "costo_unitario": 4032,
+   "signo": -1,
+   "obra_id": "OB-0007",
+   "usuario_id": "U-003",
+   "referencia": "Retiro para OB-0007",
+   "reversa_de": null,
+   "salida_origen_id": null
+  }
+ ],
+ "facturas": [
+  {
+   "id": "FC-0001",
+   "numero": "48200",
+   "proveedor_id": "PRV-001",
+   "fecha": "2026-08-09",
+   "items": [
+    {
+     "articulo_id": "ART-001",
+     "cantidad": 20,
+     "precio_lista": 128000
+    },
+    {
+     "articulo_id": "ART-002",
+     "cantidad": 15,
+     "precio_lista": 96000
+    },
+    {
+     "articulo_id": "ART-003",
+     "cantidad": 10,
+     "precio_lista": 165000
+    },
+    {
+     "articulo_id": "ART-004",
+     "cantidad": 10,
+     "precio_lista": 142000
+    },
+    {
+     "articulo_id": "ART-009",
+     "cantidad": 10,
+     "precio_lista": 420000
+    },
+    {
+     "articulo_id": "ART-012",
+     "cantidad": 6,
+     "precio_lista": 540000
+    },
+    {
+     "articulo_id": "ART-016",
+     "cantidad": 20,
+     "precio_lista": 36900
+    },
+    {
+     "articulo_id": "ART-017",
+     "cantidad": 15,
+     "precio_lista": 89000
+    },
+    {
+     "articulo_id": "ART-018",
+     "cantidad": 15,
+     "precio_lista": 52000
+    },
+    {
+     "articulo_id": "ART-019",
+     "cantidad": 40,
+     "precio_lista": 14800
+    },
+    {
+     "articulo_id": "ART-020",
+     "cantidad": 30,
+     "precio_lista": 11200
+    }
+   ],
+   "descuentos": [
+    10,
+    5,
+    0
+   ],
+   "neto_bruto": 18291000,
+   "neto": 15638805,
+   "iva": 2971373,
+   "total": 18610178,
+   "estado": "REGISTRADA"
+  },
+  {
+   "id": "FC-0002",
+   "numero": "48237",
+   "proveedor_id": "PRV-002",
+   "fecha": "2026-08-10",
+   "items": [
+    {
+     "articulo_id": "ART-005",
+     "cantidad": 60,
+     "precio_lista": 14500
+    },
+    {
+     "articulo_id": "ART-006",
+     "cantidad": 6,
+     "precio_lista": 1250000
+    },
+    {
+     "articulo_id": "ART-007",
+     "cantidad": 6,
+     "precio_lista": 780000
+    },
+    {
+     "articulo_id": "ART-008",
+     "cantidad": 10,
+     "precio_lista": 230000
+    },
+    {
+     "articulo_id": "ART-010",
+     "cantidad": 20,
+     "precio_lista": 48500
+    },
+    {
+     "articulo_id": "ART-011",
+     "cantidad": 30,
+     "precio_lista": 12900
+    },
+    {
+     "articulo_id": "ART-035",
+     "cantidad": 20,
+     "precio_lista": 16800
+    }
+   ],
+   "descuentos": [
+    8,
+    0,
+    0
+   ],
+   "neto_bruto": 17043000,
+   "neto": 15679560,
+   "iva": 2979116,
+   "total": 18658676,
+   "estado": "REGISTRADA"
+  },
+  {
+   "id": "FC-0003",
+   "numero": "48274",
+   "proveedor_id": "PRV-003",
+   "fecha": "2026-08-11",
+   "items": [
+    {
+     "articulo_id": "ART-013",
+     "cantidad": 15,
+     "precio_lista": 78000
+    },
+    {
+     "articulo_id": "ART-014",
+     "cantidad": 40,
+     "precio_lista": 9800
+    },
+    {
+     "articulo_id": "ART-015",
+     "cantidad": 15,
+     "precio_lista": 27500
+    },
+    {
+     "articulo_id": "ART-021",
+     "cantidad": 30,
+     "precio_lista": 18900
+    },
+    {
+     "articulo_id": "ART-022",
+     "cantidad": 20,
+     "precio_lista": 24500
+    },
+    {
+     "articulo_id": "ART-023",
+     "cantidad": 500,
+     "precio_lista": 1850
+    },
+    {
+     "articulo_id": "ART-024",
+     "cantidad": 30,
+     "precio_lista": 7600
+    },
+    {
+     "articulo_id": "ART-025",
+     "cantidad": 15,
+     "precio_lista": 20800
+    }
+   ],
+   "descuentos": [
+    5,
+    3,
+    2
+   ],
+   "neto_bruto": 4496500,
+   "neto": 4060654,
+   "iva": 771524,
+   "total": 4832178,
+   "estado": "REGISTRADA"
+  },
+  {
+   "id": "FC-0004",
+   "numero": "48311",
+   "proveedor_id": "PRV-004",
+   "fecha": "2026-08-12",
+   "items": [
+    {
+     "articulo_id": "ART-026",
+     "cantidad": 300,
+     "precio_lista": 5900
+    },
+    {
+     "articulo_id": "ART-027",
+     "cantidad": 300,
+     "precio_lista": 7800
+    },
+    {
+     "articulo_id": "ART-028",
+     "cantidad": 250,
+     "precio_lista": 10400
+    },
+    {
+     "articulo_id": "ART-029",
+     "cantidad": 100,
+     "precio_lista": 4200
+    }
+   ],
+   "descuentos": [
+    4,
+    0,
+    0
+   ],
+   "neto_bruto": 7130000,
+   "neto": 6844800,
+   "iva": 1300512,
+   "total": 8145312,
+   "estado": "REGISTRADA"
+  },
+  {
+   "id": "FC-0005",
+   "numero": "48348",
+   "proveedor_id": "PRV-005",
+   "fecha": "2026-08-13",
+   "items": [
+    {
+     "articulo_id": "ART-030",
+     "cantidad": 400,
+     "precio_lista": 1450
+    },
+    {
+     "articulo_id": "ART-031",
+     "cantidad": 400,
+     "precio_lista": 1980
+    },
+    {
+     "articulo_id": "ART-032",
+     "cantidad": 100,
+     "precio_lista": 28900
+    },
+    {
+     "articulo_id": "ART-033",
+     "cantidad": 50,
+     "precio_lista": 6700
+    },
+    {
+     "articulo_id": "ART-034",
+     "cantidad": 60,
+     "precio_lista": 7900
+    }
+   ],
+   "descuentos": [
+    6,
+    2,
+    0
+   ],
+   "neto_bruto": 5071000,
+   "neto": 4671405,
+   "iva": 887567,
+   "total": 5558972,
+   "estado": "REGISTRADA"
+  },
+  {
+   "id": "FC-0006",
+   "numero": "48385",
+   "proveedor_id": "PRV-001",
+   "fecha": "2026-10-01",
+   "items": [
+    {
+     "articulo_id": "ART-001",
+     "cantidad": 20,
+     "precio_lista": 128000
+    },
+    {
+     "articulo_id": "ART-002",
+     "cantidad": 15,
+     "precio_lista": 96000
+    },
+    {
+     "articulo_id": "ART-019",
+     "cantidad": 40,
+     "precio_lista": 14800
+    }
+   ],
+   "descuentos": [
+    10,
+    5,
+    0
+   ],
+   "neto_bruto": 4592000,
+   "neto": 3926160,
+   "iva": 745970,
+   "total": 4672130,
+   "estado": "REGISTRADA"
+  }
+ ],
+ "notas_credito": [
+  {
+   "id": "NC-0001",
+   "factura_id": "FC-0002",
+   "numero": "3310",
+   "fecha": "2026-08-24",
+   "motivo": "Bonificación por retraso en la entrega",
+   "neto": 85000,
+   "iva": 16150,
+   "total": 101150
+  }
+ ],
+ "presupuestos": [
+  {
+   "id": "PRE-0001",
+   "titulo": "Cámara de frío N°3 – Packing Cordillera",
+   "cliente_id": "CLI-001",
+   "tipo_obra": "INSTALACION",
+   "estado": "APROBADO",
+   "fecha": "2026-09-08",
+   "materiales": [
+    {
+     "articulo_id": "ART-001",
+     "cantidad": 2,
+     "costo_unitario": 128000
+    },
+    {
+     "articulo_id": "ART-006",
+     "cantidad": 1,
+     "costo_unitario": 1250000
+    },
+    {
+     "articulo_id": "ART-009",
+     "cantidad": 2,
+     "costo_unitario": 420000
+    },
+    {
+     "articulo_id": "ART-027",
+     "cantidad": 40,
+     "costo_unitario": 7800
+    },
+    {
+     "articulo_id": "ART-031",
+     "cantidad": 40,
+     "costo_unitario": 1980
+    },
+    {
+     "articulo_id": "ART-021",
+     "cantidad": 3,
+     "costo_unitario": 18900
+    },
+    {
+     "articulo_id": "ART-013",
+     "cantidad": 1,
+     "costo_unitario": 78000
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Instalación y montaje",
+     "horas": 120,
+     "costo_hora_hombre": 9800
+    },
+    {
+     "descripcion": "Puesta en marcha",
+     "horas": 16,
+     "costo_hora_hombre": 10400
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Flete y viáticos",
+     "monto": 180000
+    }
+   ],
+   "precio_venta_neto": 6463000,
+   "aprobado_por": "U-002"
+  },
+  {
+   "id": "PRE-0002",
+   "titulo": "Mantención túnel de congelado – Congelados Bulnes",
+   "cliente_id": "CLI-007",
+   "tipo_obra": "MANTENCION",
+   "estado": "APROBADO",
+   "fecha": "2026-10-03",
+   "materiales": [
+    {
+     "articulo_id": "ART-005",
+     "cantidad": 4,
+     "costo_unitario": 14500
+    },
+    {
+     "articulo_id": "ART-019",
+     "cantidad": 2,
+     "costo_unitario": 14800
+    },
+    {
+     "articulo_id": "ART-024",
+     "cantidad": 3,
+     "costo_unitario": 7600
+    },
+    {
+     "articulo_id": "ART-035",
+     "cantidad": 2,
+     "costo_unitario": 16800
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Mantención preventiva",
+     "horas": 48,
+     "costo_hora_hombre": 9800
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Viáticos",
+     "monto": 60000
+    }
+   ],
+   "precio_venta_neto": 937000,
+   "aprobado_por": "U-002"
+  },
+  {
+   "id": "PRE-0003",
+   "titulo": "Sala refrigerada – Lácteos Valle del Itata",
+   "cliente_id": "CLI-004",
+   "tipo_obra": "INSTALACION",
+   "estado": "APROBADO",
+   "fecha": "2026-08-14",
+   "materiales": [
+    {
+     "articulo_id": "ART-002",
+     "cantidad": 2,
+     "costo_unitario": 96000
+    },
+    {
+     "articulo_id": "ART-007",
+     "cantidad": 1,
+     "costo_unitario": 780000
+    },
+    {
+     "articulo_id": "ART-009",
+     "cantidad": 1,
+     "costo_unitario": 420000
+    },
+    {
+     "articulo_id": "ART-032",
+     "cantidad": 24,
+     "costo_unitario": 28900
+    },
+    {
+     "articulo_id": "ART-026",
+     "cantidad": 30,
+     "costo_unitario": 5900
+    },
+    {
+     "articulo_id": "ART-030",
+     "cantidad": 30,
+     "costo_unitario": 1450
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Montaje de paneles",
+     "horas": 90,
+     "costo_hora_hombre": 9800
+    },
+    {
+     "descripcion": "Instalación frigorífica",
+     "horas": 70,
+     "costo_hora_hombre": 10400
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Flete",
+     "monto": 150000
+    }
+   ],
+   "precio_venta_neto": 6256000,
+   "aprobado_por": "U-002"
+  },
+  {
+   "id": "PRE-0004",
+   "titulo": "Cámara de maduración – Agrícola Los Maitenes",
+   "cliente_id": "CLI-003",
+   "tipo_obra": "INSTALACION",
+   "estado": "APROBADO",
+   "fecha": "2026-10-13",
+   "materiales": [
+    {
+     "articulo_id": "ART-003",
+     "cantidad": 1,
+     "costo_unitario": 165000
+    },
+    {
+     "articulo_id": "ART-007",
+     "cantidad": 1,
+     "costo_unitario": 780000
+    },
+    {
+     "articulo_id": "ART-009",
+     "cantidad": 1,
+     "costo_unitario": 420000
+    },
+    {
+     "articulo_id": "ART-013",
+     "cantidad": 2,
+     "costo_unitario": 78000
+    },
+    {
+     "articulo_id": "ART-032",
+     "cantidad": 36,
+     "costo_unitario": 28900
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Montaje de paneles",
+     "horas": 110,
+     "costo_hora_hombre": 9800
+    },
+    {
+     "descripcion": "Instalación frigorífica",
+     "horas": 80,
+     "costo_hora_hombre": 10400
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Flete",
+     "monto": 120000
+    }
+   ],
+   "precio_venta_neto": 6205000,
+   "aprobado_por": "U-002"
+  },
+  {
+   "id": "PRE-0005",
+   "titulo": "Reparación condensación – Viñedos San Carlos",
+   "cliente_id": "CLI-006",
+   "tipo_obra": "REPARACION",
+   "estado": "APROBADO",
+   "fecha": "2026-09-28",
+   "materiales": [
+    {
+     "articulo_id": "ART-012",
+     "cantidad": 1,
+     "costo_unitario": 540000
+    },
+    {
+     "articulo_id": "ART-028",
+     "cantidad": 25,
+     "costo_unitario": 10400
+    },
+    {
+     "articulo_id": "ART-029",
+     "cantidad": 6,
+     "costo_unitario": 4200
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Reparación y soldadura",
+     "horas": 40,
+     "costo_hora_hombre": 9800
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Viáticos",
+     "monto": 40000
+    }
+   ],
+   "precio_venta_neto": 1796000,
+   "aprobado_por": "U-002"
+  },
+  {
+   "id": "PRE-0006",
+   "titulo": "Ampliación cámara de hortalizas – Hortalizas Pinto",
+   "cliente_id": "CLI-008",
+   "tipo_obra": "INSTALACION",
+   "estado": "BORRADOR",
+   "fecha": "2026-10-20",
+   "materiales": [
+    {
+     "articulo_id": "ART-008",
+     "cantidad": 2,
+     "costo_unitario": 230000
+    },
+    {
+     "articulo_id": "ART-009",
+     "cantidad": 1,
+     "costo_unitario": 420000
+    },
+    {
+     "articulo_id": "ART-032",
+     "cantidad": 18,
+     "costo_unitario": 28900
+    },
+    {
+     "articulo_id": "ART-017",
+     "cantidad": 2,
+     "costo_unitario": 89000
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Montaje",
+     "horas": 60,
+     "costo_hora_hombre": 9800
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Flete",
+     "monto": 90000
+    }
+   ],
+   "precio_venta_neto": 2624000,
+   "aprobado_por": null
+  },
+  {
+   "id": "PRE-0007",
+   "titulo": "Reemplazo de evaporadores – Carnes Selectas",
+   "cliente_id": "CLI-005",
+   "tipo_obra": "INSTALACION",
+   "estado": "ENVIADO",
+   "fecha": "2026-10-17",
+   "materiales": [
+    {
+     "articulo_id": "ART-009",
+     "cantidad": 2,
+     "costo_unitario": 420000
+    },
+    {
+     "articulo_id": "ART-010",
+     "cantidad": 4,
+     "costo_unitario": 48500
+    },
+    {
+     "articulo_id": "ART-018",
+     "cantidad": 2,
+     "costo_unitario": 52000
+    },
+    {
+     "articulo_id": "ART-026",
+     "cantidad": 20,
+     "costo_unitario": 5900
+    }
+   ],
+   "mano_obra": [
+    {
+     "descripcion": "Instalación",
+     "horas": 56,
+     "costo_hora_hombre": 9800
+    }
+   ],
+   "adicionales": [
+    {
+     "descripcion": "Flete",
+     "monto": 70000
+    }
+   ],
+   "precio_venta_neto": 2467000,
+   "aprobado_por": null
+  }
+ ],
+ "obras": [
+  {
+   "id": "OB-0001",
+   "nombre": "Cámara de frío N°3 – línea de packing",
+   "cliente_id": "CLI-001",
+   "tipo": "INSTALACION",
+   "estado": "EN_CURSO",
+   "presupuesto_id": "PRE-0001",
+   "es_emergencia_sin_presupuesto": false,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-01",
+    "T-03",
+    "T-09",
+    "T-15"
+   ],
+   "ubicacion": {
+    "comuna": "Chillán Viejo",
+    "direccion": "Camino a Las Mariposas km 4",
+    "lat": -36.6285,
+    "lng": -72.1331,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-09-19",
+   "fecha_fin_estimada": "2026-11-06",
+   "fecha_cierre": null,
+   "sobrantes_conciliados": false,
+   "pendientes_sync": 2
+  },
+  {
+   "id": "OB-0002",
+   "nombre": "Mantención preventiva túnel de congelado",
+   "cliente_id": "CLI-007",
+   "tipo": "MANTENCION",
+   "estado": "EN_CURSO",
+   "presupuesto_id": "PRE-0002",
+   "es_emergencia_sin_presupuesto": false,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-02",
+    "T-06"
+   ],
+   "ubicacion": {
+    "comuna": "Bulnes",
+    "direccion": "Ruta Q-50 km 2",
+    "lat": -36.7425,
+    "lng": -72.2994,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-10-11",
+   "fecha_fin_estimada": "2026-10-29",
+   "fecha_cierre": null,
+   "sobrantes_conciliados": false,
+   "pendientes_sync": 1
+  },
+  {
+   "id": "OB-0003",
+   "nombre": "Sala de proceso refrigerada – planta láctea",
+   "cliente_id": "CLI-004",
+   "tipo": "INSTALACION",
+   "estado": "FINALIZADA",
+   "presupuesto_id": "PRE-0003",
+   "es_emergencia_sin_presupuesto": false,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-04",
+    "T-07",
+    "T-16"
+   ],
+   "ubicacion": {
+    "comuna": "Yungay",
+    "direccion": "Av. Ricardo Lagos 410",
+    "lat": -37.1167,
+    "lng": -72.0167,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-08-26",
+   "fecha_fin_estimada": "2026-10-14",
+   "fecha_cierre": "2026-10-14",
+   "sobrantes_conciliados": true,
+   "pendientes_sync": 0
+  },
+  {
+   "id": "OB-0004",
+   "nombre": "Emergencia: falla de compresor en cámara de fruta",
+   "cliente_id": "CLI-002",
+   "tipo": "EMERGENCIA",
+   "estado": "EN_CURSO",
+   "presupuesto_id": null,
+   "es_emergencia_sin_presupuesto": true,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-01",
+    "T-02",
+    "T-05"
+   ],
+   "ubicacion": {
+    "comuna": "San Carlos",
+    "direccion": "Fundo El Roble s/n",
+    "lat": -36.4243,
+    "lng": -71.9582,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-10-20",
+   "fecha_fin_estimada": "2026-10-25",
+   "fecha_cierre": null,
+   "sobrantes_conciliados": false,
+   "pendientes_sync": 0
+  },
+  {
+   "id": "OB-0005",
+   "nombre": "Garantía: evaporador con ruido anormal",
+   "cliente_id": "CLI-005",
+   "tipo": "GARANTIA",
+   "estado": "EN_CURSO",
+   "presupuesto_id": null,
+   "es_emergencia_sin_presupuesto": true,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-08"
+   ],
+   "ubicacion": {
+    "comuna": "Chillán",
+    "direccion": "Av. Collín 1280",
+    "lat": -36.5987,
+    "lng": -72.0894,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-10-21",
+   "fecha_fin_estimada": "2026-10-26",
+   "fecha_cierre": null,
+   "sobrantes_conciliados": false,
+   "pendientes_sync": 0
+  },
+  {
+   "id": "OB-0006",
+   "nombre": "Cámara de maduración N°1",
+   "cliente_id": "CLI-003",
+   "tipo": "INSTALACION",
+   "estado": "PLANIFICADA",
+   "presupuesto_id": "PRE-0004",
+   "es_emergencia_sin_presupuesto": false,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-03",
+    "T-10",
+    "T-15"
+   ],
+   "ubicacion": {
+    "comuna": "Quillón",
+    "direccion": "Camino a Ránquil km 6",
+    "lat": -36.7436,
+    "lng": -72.465,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-10-29",
+   "fecha_fin_estimada": "2026-11-22",
+   "fecha_cierre": null,
+   "sobrantes_conciliados": false,
+   "pendientes_sync": 0
+  },
+  {
+   "id": "OB-0007",
+   "nombre": "Reparación sistema de condensación bodega de vino",
+   "cliente_id": "CLI-006",
+   "tipo": "REPARACION",
+   "estado": "EN_CURSO",
+   "presupuesto_id": "PRE-0005",
+   "es_emergencia_sin_presupuesto": false,
+   "supervisor_id": "U-004",
+   "tecnicos": [
+    "T-04",
+    "T-09"
+   ],
+   "ubicacion": {
+    "comuna": "San Carlos",
+    "direccion": "Ruta N-59 km 12",
+    "lat": -36.4372,
+    "lng": -71.9421,
+    "radio_m": 150
+   },
+   "fecha_inicio": "2026-10-14",
+   "fecha_fin_estimada": "2026-10-24",
+   "fecha_cierre": null,
+   "sobrantes_conciliados": true,
+   "pendientes_sync": 0
+  }
+ ],
+ "hojas": [
+  {
+   "id": "HS-0001",
+   "obra_id": "OB-0003",
+   "tecnico_id": "T-04",
+   "fecha": "2026-08-29T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 8,
+   "costo_hora_hombre": 9600,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-001-1",
+     "etiqueta": "Antes",
+     "lat": -37.1165,
+     "lng": -72.0166,
+     "ts": "2026-08-29T08:15:00"
+    },
+    {
+     "id": "FT-001-2",
+     "etiqueta": "Después",
+     "lat": -37.1165,
+     "lng": -72.0166,
+     "ts": "2026-08-29T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -37.1165,
+    "lng": -72.0166
+   },
+   "firma_cliente": true,
+   "observaciones": "Montaje de paneles sin novedades.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-08-30T09:10:00",
+    "observaciones": "Conforme."
+   },
+   "vehiculo_id": "VH-07",
+   "km_salida": 118303,
+   "km_regreso": 118362
+  },
+  {
+   "id": "HS-0002",
+   "obra_id": "OB-0003",
+   "tecnico_id": "T-07",
+   "fecha": "2026-09-05T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 7.5,
+   "costo_hora_hombre": 9200,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 22,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-002-1",
+     "etiqueta": "Antes",
+     "lat": -37.1166,
+     "lng": -72.0169,
+     "ts": "2026-09-05T08:15:00"
+    },
+    {
+     "id": "FT-002-2",
+     "etiqueta": "Después",
+     "lat": -37.1166,
+     "lng": -72.0169,
+     "ts": "2026-09-05T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -37.1166,
+    "lng": -72.0169
+   },
+   "firma_cliente": true,
+   "observaciones": "Conexión eléctrica de unidad condensadora.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-09-06T09:10:00",
+    "observaciones": "Conforme."
+   }
+  },
+  {
+   "id": "HS-0003",
+   "obra_id": "OB-0003",
+   "tecnico_id": "T-16",
+   "fecha": "2026-09-23T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 6,
+   "costo_hora_hombre": 8100,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-003-1",
+     "etiqueta": "Antes",
+     "lat": -37.116800000000005,
+     "lng": -72.0166,
+     "ts": "2026-09-23T08:15:00"
+    },
+    {
+     "id": "FT-003-2",
+     "etiqueta": "Después",
+     "lat": -37.116800000000005,
+     "lng": -72.0166,
+     "ts": "2026-09-23T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -37.116800000000005,
+    "lng": -72.0166
+   },
+   "firma_cliente": true,
+   "observaciones": "Sellado y pruebas de hermeticidad.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-09-24T09:10:00",
+    "observaciones": "Conforme."
+   }
+  },
+  {
+   "id": "HS-0004",
+   "obra_id": "OB-0001",
+   "tecnico_id": "T-01",
+   "fecha": "2026-09-25T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 9,
+   "costo_hora_hombre": 11500,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-004-1",
+     "etiqueta": "Antes",
+     "lat": -36.6282,
+     "lng": -72.13289999999999,
+     "ts": "2026-09-25T08:15:00"
+    },
+    {
+     "id": "FT-004-2",
+     "etiqueta": "Después",
+     "lat": -36.6282,
+     "lng": -72.13289999999999,
+     "ts": "2026-09-25T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.6282,
+    "lng": -72.13289999999999
+   },
+   "firma_cliente": true,
+   "observaciones": "Montaje de evaporadores.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-09-26T09:10:00",
+    "observaciones": "Conforme."
+   },
+   "vehiculo_id": "VH-01",
+   "km_salida": 48133,
+   "km_regreso": 48199
+  },
+  {
+   "id": "HS-0005",
+   "obra_id": "OB-0001",
+   "tecnico_id": "T-09",
+   "fecha": "2026-09-29T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 8,
+   "costo_hora_hombre": 10400,
+   "checklist_json": {
+    "presion_psi": 104,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-005-1",
+     "etiqueta": "Antes",
+     "lat": -36.6284,
+     "lng": -72.133,
+     "ts": "2026-09-29T08:15:00"
+    },
+    {
+     "id": "FT-005-2",
+     "etiqueta": "Después",
+     "lat": -36.6284,
+     "lng": -72.133,
+     "ts": "2026-09-29T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.6284,
+    "lng": -72.133
+   },
+   "firma_cliente": true,
+   "observaciones": "Soldadura de líneas de succión.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-09-30T09:10:00",
+    "observaciones": "Conforme."
+   },
+   "vehiculo_id": "VH-05",
+   "km_salida": 73938,
+   "km_regreso": 74033
+  },
+  {
+   "id": "HS-0006",
+   "obra_id": "OB-0001",
+   "tecnico_id": "T-03",
+   "fecha": "2026-10-21T17:40:00",
+   "estado": "ENVIADA",
+   "horas_trabajadas": 7,
+   "costo_hora_hombre": 9800,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "PARCIAL"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-006-1",
+     "etiqueta": "Antes",
+     "lat": -36.6283,
+     "lng": -72.1332,
+     "ts": "2026-10-21T08:15:00"
+    },
+    {
+     "id": "FT-006-2",
+     "etiqueta": "Después",
+     "lat": -36.6283,
+     "lng": -72.1332,
+     "ts": "2026-10-21T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.6283,
+    "lng": -72.1332
+   },
+   "firma_cliente": true,
+   "observaciones": "Pendiente limpieza final de sala.",
+   "auditoria": null,
+   "vehiculo_id": "VH-03",
+   "km_salida": 91296,
+   "km_regreso": 91340
+  },
+  {
+   "id": "HS-0007",
+   "obra_id": "OB-0002",
+   "tecnico_id": "T-02",
+   "fecha": "2026-10-13T17:40:00",
+   "estado": "ENVIADA",
+   "horas_trabajadas": 6,
+   "costo_hora_hombre": 11200,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -22,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-007-1",
+     "etiqueta": "Antes",
+     "lat": -36.742399999999996,
+     "lng": -72.2992,
+     "ts": "2026-10-13T08:15:00"
+    },
+    {
+     "id": "FT-007-2",
+     "etiqueta": "Después",
+     "lat": -36.742399999999996,
+     "lng": -72.2992,
+     "ts": "2026-10-13T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.742399999999996,
+    "lng": -72.2992
+   },
+   "firma_cliente": true,
+   "observaciones": "Revisión de ciclo de descarche.",
+   "auditoria": null,
+   "vehiculo_id": "VH-02",
+   "km_salida": 62837,
+   "km_regreso": 62910
+  },
+  {
+   "id": "HS-0008",
+   "obra_id": "OB-0002",
+   "tecnico_id": "T-06",
+   "fecha": "2026-10-15T17:40:00",
+   "estado": "DEVUELTA",
+   "horas_trabajadas": 5,
+   "costo_hora_hombre": 9900,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 52,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-008-1",
+     "etiqueta": "Antes",
+     "lat": -36.7423,
+     "lng": -72.2992,
+     "ts": "2026-10-15T08:15:00"
+    },
+    {
+     "id": "FT-008-2",
+     "etiqueta": "Después",
+     "lat": -36.7423,
+     "lng": -72.2992,
+     "ts": "2026-10-15T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.7423,
+    "lng": -72.2992
+   },
+   "firma_cliente": true,
+   "observaciones": "Amperaje alto en motor de evaporador.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-10-16T09:10:00",
+    "observaciones": "Corregir amperaje y adjuntar nueva medición."
+   },
+   "vehiculo_id": "VH-06",
+   "km_salida": 27458,
+   "km_regreso": 27560
+  },
+  {
+   "id": "HS-0009",
+   "obra_id": "OB-0004",
+   "tecnico_id": "T-01",
+   "fecha": "2026-10-21T17:40:00",
+   "estado": "ENVIADA",
+   "horas_trabajadas": 10,
+   "costo_hora_hombre": 11500,
+   "checklist_json": {
+    "presion_psi": 188,
+    "amperaje_a": 31,
+    "fugas": "FUGA_MENOR",
+    "temperatura_c": 4,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-009-1",
+     "etiqueta": "Antes",
+     "lat": -36.4241,
+     "lng": -71.9581,
+     "ts": "2026-10-21T08:15:00"
+    },
+    {
+     "id": "FT-009-2",
+     "etiqueta": "Después",
+     "lat": -36.4241,
+     "lng": -71.9581,
+     "ts": "2026-10-21T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.4241,
+    "lng": -71.9581
+   },
+   "firma_cliente": true,
+   "observaciones": "Compresor bloqueado; se reemplaza. Fuga menor en válvula de servicio.",
+   "auditoria": null,
+   "vehiculo_id": "VH-01",
+   "km_salida": 48199,
+   "km_regreso": 48250
+  },
+  {
+   "id": "HS-0010",
+   "obra_id": "OB-0004",
+   "tecnico_id": "T-05",
+   "fecha": "2026-10-22T17:40:00",
+   "estado": "ENVIADA",
+   "horas_trabajadas": 9,
+   "costo_hora_hombre": 9400,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-010-1",
+     "etiqueta": "Antes",
+     "lat": -36.3933,
+     "lng": -71.9312,
+     "ts": "2026-10-22T08:15:00"
+    },
+    {
+     "id": "FT-010-2",
+     "etiqueta": "Después",
+     "lat": -36.3933,
+     "lng": -71.9312,
+     "ts": "2026-10-22T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.3933,
+    "lng": -71.9312
+   },
+   "firma_cliente": true,
+   "observaciones": "Pruebas de funcionamiento tras reemplazo.",
+   "auditoria": null,
+   "vehiculo_id": "VH-04",
+   "km_salida": 35700,
+   "km_regreso": 35780
+  },
+  {
+   "id": "HS-0011",
+   "obra_id": "OB-0005",
+   "tecnico_id": "T-08",
+   "fecha": "2026-10-22T17:40:00",
+   "estado": "ENVIADA",
+   "horas_trabajadas": 4,
+   "costo_hora_hombre": 8800,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -2,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-011-1",
+     "etiqueta": "Antes",
+     "lat": -36.5986,
+     "lng": -72.0893,
+     "ts": "2026-10-22T08:15:00"
+    },
+    {
+     "id": "FT-011-2",
+     "etiqueta": "Después",
+     "lat": -36.5986,
+     "lng": -72.0893,
+     "ts": "2026-10-22T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.5986,
+    "lng": -72.0893
+   },
+   "firma_cliente": true,
+   "observaciones": "Se detecta rodamiento defectuoso en ventilador.",
+   "auditoria": null
+  },
+  {
+   "id": "HS-0012",
+   "obra_id": "OB-0007",
+   "tecnico_id": "T-04",
+   "fecha": "2026-10-16T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 12,
+   "costo_hora_hombre": 9600,
+   "checklist_json": {
+    "presion_psi": 98,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-012-1",
+     "etiqueta": "Antes",
+     "lat": -36.437099999999994,
+     "lng": -71.942,
+     "ts": "2026-10-16T08:15:00"
+    },
+    {
+     "id": "FT-012-2",
+     "etiqueta": "Después",
+     "lat": -36.437099999999994,
+     "lng": -71.942,
+     "ts": "2026-10-16T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.437099999999994,
+    "lng": -71.942
+   },
+   "firma_cliente": true,
+   "observaciones": "Reemplazo de condensador.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-10-17T09:10:00",
+    "observaciones": "Conforme."
+   },
+   "vehiculo_id": "VH-07",
+   "km_salida": 118362,
+   "km_regreso": 118420
+  },
+  {
+   "id": "HS-0013",
+   "obra_id": "OB-0007",
+   "tecnico_id": "T-09",
+   "fecha": "2026-10-17T17:40:00",
+   "estado": "APROBADA",
+   "horas_trabajadas": 9,
+   "costo_hora_hombre": 10400,
+   "checklist_json": {
+    "presion_psi": 112,
+    "amperaje_a": 18,
+    "fugas": "SIN_FUGAS",
+    "temperatura_c": -18,
+    "limpieza": "OK"
+   },
+   "materiales": [],
+   "fotos": [
+    {
+     "id": "FT-013-1",
+     "etiqueta": "Antes",
+     "lat": -36.437,
+     "lng": -71.942,
+     "ts": "2026-10-17T08:15:00"
+    },
+    {
+     "id": "FT-013-2",
+     "etiqueta": "Después",
+     "lat": -36.437,
+     "lng": -71.942,
+     "ts": "2026-10-17T17:20:00"
+    }
+   ],
+   "gps": {
+    "lat": -36.437,
+    "lng": -71.942
+   },
+   "firma_cliente": true,
+   "observaciones": "Soldadura y prueba de presión.",
+   "auditoria": {
+    "usuario_id": "U-004",
+    "fecha": "2026-10-18T09:10:00",
+    "observaciones": "Conforme."
+   },
+   "vehiculo_id": "VH-05",
+   "km_salida": 74033,
+   "km_regreso": 74120
+  }
+ ],
+ "retiros": [
+  {
+   "id": "SR-0001",
+   "obra_id": "OB-0001",
+   "tecnico_id": "T-03",
+   "fecha": "2026-10-22T16:10:00",
+   "estado": "PENDIENTE",
+   "items": [
+    {
+     "articulo_id": "ART-027",
+     "cantidad": 10
+    },
+    {
+     "articulo_id": "ART-029",
+     "cantidad": 4
+    }
+   ],
+   "observaciones": "Para línea de succión sector B",
+   "resuelto_por": null,
+   "resuelto_en": null,
+   "motivo_rechazo": null,
+   "movimientos": []
+  },
+  {
+   "id": "SR-0002",
+   "obra_id": "OB-0004",
+   "tecnico_id": "T-01",
+   "fecha": "2026-10-23T16:10:00",
+   "estado": "PENDIENTE",
+   "items": [
+    {
+     "articulo_id": "ART-022",
+     "cantidad": 1
+    },
+    {
+     "articulo_id": "ART-024",
+     "cantidad": 2
+    }
+   ],
+   "observaciones": "Repuestos para tablero de la cámara",
+   "resuelto_por": null,
+   "resuelto_en": null,
+   "motivo_rechazo": null,
+   "movimientos": []
+  },
+  {
+   "id": "SR-0003",
+   "obra_id": "OB-0002",
+   "tecnico_id": "T-02",
+   "fecha": "2026-10-17T16:10:00",
+   "estado": "RECHAZADA",
+   "items": [
+    {
+     "articulo_id": "ART-005",
+     "cantidad": 6
+    }
+   ],
+   "observaciones": "",
+   "resuelto_por": "U-003",
+   "resuelto_en": "2026-10-18T08:20:00",
+   "motivo_rechazo": "Ya se entregaron 4 L en el retiro del día 10; ajustar cantidad.",
+   "movimientos": []
+  }
+ ],
+ "personal": [
+  {
+   "id": "T-01",
+   "rut": "15.387.421-2",
+   "nombre": "Jorge Quezada",
+   "cargo": "Técnico Frigorista Senior",
+   "costo_hora_hombre": 11500,
+   "fecha_ingreso": "2018-03-12",
+   "usuario_id": "U-005",
+   "vencimiento_licencia": "2026-11-22",
+   "activo": true
+  },
+  {
+   "id": "T-02",
+   "rut": "15.774.842-4",
+   "nombre": "Cristian Medina",
+   "cargo": "Técnico Frigorista Senior",
+   "costo_hora_hombre": 11200,
+   "fecha_ingreso": "2017-08-01",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-01-14",
+   "activo": true
+  },
+  {
+   "id": "T-03",
+   "rut": "16.162.263-K",
+   "nombre": "Luis Parra",
+   "cargo": "Técnico Frigorista",
+   "costo_hora_hombre": 9800,
+   "fecha_ingreso": "2019-05-20",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-03-08",
+   "activo": true
+  },
+  {
+   "id": "T-04",
+   "rut": "16.549.684-1",
+   "nombre": "Marco Riquelme",
+   "cargo": "Técnico Frigorista",
+   "costo_hora_hombre": 9600,
+   "fecha_ingreso": "2020-01-13",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-04-30",
+   "activo": true
+  },
+  {
+   "id": "T-05",
+   "rut": "16.937.105-9",
+   "nombre": "Felipe Cáceres",
+   "cargo": "Técnico Frigorista",
+   "costo_hora_hombre": 9400,
+   "fecha_ingreso": "2020-09-07",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-06-22",
+   "activo": true
+  },
+  {
+   "id": "T-06",
+   "rut": "17.324.526-2",
+   "nombre": "Sebastián Gutiérrez",
+   "cargo": "Técnico Electricista",
+   "costo_hora_hombre": 9900,
+   "fecha_ingreso": "2019-11-04",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-08-14",
+   "activo": true
+  },
+  {
+   "id": "T-07",
+   "rut": "17.711.947-4",
+   "nombre": "Pablo Illanes",
+   "cargo": "Técnico Electricista",
+   "costo_hora_hombre": 9200,
+   "fecha_ingreso": "2021-03-15",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-10-06",
+   "activo": true
+  },
+  {
+   "id": "T-08",
+   "rut": "18.099.368-1",
+   "nombre": "Nicolás Vidal",
+   "cargo": "Técnico Frigorista",
+   "costo_hora_hombre": 8800,
+   "fecha_ingreso": "2021-07-26",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-11-28",
+   "activo": true
+  },
+  {
+   "id": "T-09",
+   "rut": "18.486.789-3",
+   "nombre": "Andrés Torres",
+   "cargo": "Soldador Especialista",
+   "costo_hora_hombre": 10400,
+   "fecha_ingreso": "2018-10-09",
+   "usuario_id": null,
+   "vencimiento_licencia": "2026-12-16",
+   "activo": true
+  },
+  {
+   "id": "T-10",
+   "rut": "18.874.210-6",
+   "nombre": "Gonzalo Fierro",
+   "cargo": "Soldador",
+   "costo_hora_hombre": 8900,
+   "fecha_ingreso": "2022-02-14",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-02-07",
+   "activo": true
+  },
+  {
+   "id": "T-11",
+   "rut": "19.261.631-K",
+   "nombre": "Matías Escobar",
+   "cargo": "Técnico Frigorista Junior",
+   "costo_hora_hombre": 7200,
+   "fecha_ingreso": "2023-04-03",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-04-01",
+   "activo": true
+  },
+  {
+   "id": "T-12",
+   "rut": "19.649.052-3",
+   "nombre": "Diego Lagos",
+   "cargo": "Técnico Frigorista Junior",
+   "costo_hora_hombre": 7000,
+   "fecha_ingreso": "2023-06-19",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-05-24",
+   "activo": true
+  },
+  {
+   "id": "T-13",
+   "rut": "20.036.473-2",
+   "nombre": "Cristóbal Sandoval",
+   "cargo": "Ayudante Técnico",
+   "costo_hora_hombre": 6500,
+   "fecha_ingreso": "2024-01-22",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-07-16",
+   "activo": true
+  },
+  {
+   "id": "T-14",
+   "rut": "20.423.894-4",
+   "nombre": "Ignacio Pereira",
+   "cargo": "Ayudante Técnico",
+   "costo_hora_hombre": 6500,
+   "fecha_ingreso": "2024-03-11",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-09-07",
+   "activo": true
+  },
+  {
+   "id": "T-15",
+   "rut": "20.811.315-1",
+   "nombre": "Rodolfo Zúñiga",
+   "cargo": "Montajista de Paneles",
+   "costo_hora_hombre": 8300,
+   "fecha_ingreso": "2022-09-05",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-10-30",
+   "activo": true
+  },
+  {
+   "id": "T-16",
+   "rut": "21.198.736-7",
+   "nombre": "Hugo Salazar",
+   "cargo": "Montajista de Paneles",
+   "costo_hora_hombre": 8100,
+   "fecha_ingreso": "2022-11-28",
+   "usuario_id": null,
+   "vencimiento_licencia": "2027-12-22",
+   "activo": true
+  }
+ ],
+ "asistencia": [
+  {
+   "id": "ASI-000001",
+   "tecnico_id": "T-02",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T07:52:00",
+   "obra_id": "OB-0002",
+   "lat": -36.7422,
+   "lng": -72.29910000000001,
+   "gps_simulado": true,
+   "client_id": "seed-T-02-2026-11-05"
+  },
+  {
+   "id": "ASI-000002",
+   "tecnico_id": "T-03",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T07:58:00",
+   "obra_id": "OB-0001",
+   "lat": -36.6282,
+   "lng": -72.1328,
+   "gps_simulado": true,
+   "client_id": "seed-T-03-2026-11-05"
+  },
+  {
+   "id": "ASI-000003",
+   "tecnico_id": "T-04",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T08:03:00",
+   "obra_id": "OB-0007",
+   "lat": -36.436899999999994,
+   "lng": -71.9418,
+   "gps_simulado": true,
+   "client_id": "seed-T-04-2026-11-05"
+  },
+  {
+   "id": "ASI-000004",
+   "tecnico_id": "T-05",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T08:07:00",
+   "obra_id": "OB-0004",
+   "lat": -36.4033,
+   "lng": -71.9372,
+   "gps_simulado": true,
+   "client_id": "seed-T-05-2026-11-05"
+  },
+  {
+   "id": "ASI-000005",
+   "tecnico_id": "T-06",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T08:11:00",
+   "obra_id": "OB-0002",
+   "lat": -36.7422,
+   "lng": -72.29910000000001,
+   "gps_simulado": true,
+   "client_id": "seed-T-06-2026-11-05"
+  },
+  {
+   "id": "ASI-000006",
+   "tecnico_id": "T-07",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T08:34:00",
+   "obra_id": null,
+   "lat": -36.6063,
+   "lng": -72.1031,
+   "gps_simulado": true,
+   "client_id": "seed-T-07-2026-11-05"
+  },
+  {
+   "id": "ASI-000007",
+   "tecnico_id": "T-08",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T07:49:00",
+   "obra_id": "OB-0005",
+   "lat": -36.5984,
+   "lng": -72.0891,
+   "gps_simulado": true,
+   "client_id": "seed-T-08-2026-11-05"
+  },
+  {
+   "id": "ASI-000008",
+   "tecnico_id": "T-09",
+   "tipo": "ENTRADA",
+   "fecha": "2026-11-05T08:01:00",
+   "obra_id": "OB-0001",
+   "lat": -36.6282,
+   "lng": -72.1328,
+   "gps_simulado": true,
+   "client_id": "seed-T-09-2026-11-05"
+  }
+ ],
+ "flota": [
+  {
+   "id": "VH-01",
+   "patente": "KLRT-42",
+   "marca": "Toyota",
+   "modelo": "Hilux 2.4 DX",
+   "tecnico_id": "T-01",
+   "km_actual": 48250,
+   "estado": "ACTIVO",
+   "vencimiento_revision": "2026-11-04",
+   "vencimiento_seguro": "2027-01-26",
+   "activo": true
+  },
+  {
+   "id": "VH-02",
+   "patente": "LPXB-18",
+   "marca": "Toyota",
+   "modelo": "Hilux 2.4 DX",
+   "tecnico_id": "T-02",
+   "km_actual": 62910,
+   "estado": "ACTIVO",
+   "vencimiento_revision": "2027-04-01",
+   "vencimiento_seguro": "2027-05-21",
+   "activo": true
+  },
+  {
+   "id": "VH-03",
+   "patente": "JHYS-77",
+   "marca": "Nissan",
+   "modelo": "NP300 Frontier",
+   "tecnico_id": "T-03",
+   "km_actual": 91340,
+   "estado": "ACTIVO",
+   "vencimiento_revision": "2026-10-19",
+   "vencimiento_seguro": "2027-03-22",
+   "activo": true
+  },
+  {
+   "id": "VH-04",
+   "patente": "MNCD-30",
+   "marca": "Chevrolet",
+   "modelo": "N400 Max",
+   "tecnico_id": "T-05",
+   "km_actual": 35780,
+   "estado": "ACTIVO",
+   "vencimiento_revision": "2027-06-20",
+   "vencimiento_seguro": "2026-11-12",
+   "activo": true
+  },
+  {
+   "id": "VH-05",
+   "patente": "KSZV-65",
+   "marca": "Hyundai",
+   "modelo": "H-1 Furgón",
+   "tecnico_id": "T-09",
+   "km_actual": 74120,
+   "estado": "ACTIVO",
+   "vencimiento_revision": "2027-01-06",
+   "vencimiento_seguro": "2027-08-19",
+   "activo": true
+  },
+  {
+   "id": "VH-06",
+   "patente": "LTGA-09",
+   "marca": "Ford",
+   "modelo": "Ranger XL",
+   "tecnico_id": "T-06",
+   "km_actual": 27560,
+   "estado": "ACTIVO",
+   "vencimiento_revision": "2027-05-01",
+   "vencimiento_seguro": "2027-02-20",
+   "activo": true
+  },
+  {
+   "id": "VH-07",
+   "patente": "RTJK-45",
+   "marca": "Mitsubishi",
+   "modelo": "L200 Katana",
+   "tecnico_id": "T-04",
+   "km_actual": 118420,
+   "estado": "EN_TALLER",
+   "vencimiento_revision": "2027-02-20",
+   "vencimiento_seguro": "2027-05-11",
+   "activo": true
+  }
+ ],
+ "auditoria": [
+  {
+   "id": "LOG-000001",
+   "fecha": "2026-08-09T10:30:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "FacturaCompra",
+   "entidad_id": "FC-0001",
+   "accion": "CREAR",
+   "anterior": null,
+   "nuevo": {
+    "total": 18610178
+   },
+   "ip": "192.168.10.20"
+  },
+  {
+   "id": "LOG-000002",
+   "fecha": "2026-08-10T10:30:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "FacturaCompra",
+   "entidad_id": "FC-0002",
+   "accion": "CREAR",
+   "anterior": null,
+   "nuevo": {
+    "total": 18658676
+   },
+   "ip": "192.168.10.21"
+  },
+  {
+   "id": "LOG-000003",
+   "fecha": "2026-08-11T10:30:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "FacturaCompra",
+   "entidad_id": "FC-0003",
+   "accion": "CREAR",
+   "anterior": null,
+   "nuevo": {
+    "total": 4832178
+   },
+   "ip": "192.168.10.22"
+  },
+  {
+   "id": "LOG-000004",
+   "fecha": "2026-08-12T10:30:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "FacturaCompra",
+   "entidad_id": "FC-0004",
+   "accion": "CREAR",
+   "anterior": null,
+   "nuevo": {
+    "total": 8145312
+   },
+   "ip": "192.168.10.23"
+  },
+  {
+   "id": "LOG-000005",
+   "fecha": "2026-08-13T10:30:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "FacturaCompra",
+   "entidad_id": "FC-0005",
+   "accion": "CREAR",
+   "anterior": null,
+   "nuevo": {
+    "total": 5558972
+   },
+   "ip": "192.168.10.24"
+  },
+  {
+   "id": "LOG-000006",
+   "fecha": "2026-08-14T15:00:00",
+   "usuario_id": "U-002",
+   "usuario_nombre": "Matías Contreras",
+   "rol": "ADMINISTRACION",
+   "entidad": "Presupuesto",
+   "entidad_id": "PRE-0003",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADO"
+   },
+   "nuevo": {
+    "estado": "APROBADO"
+   },
+   "ip": "192.168.10.28"
+  },
+  {
+   "id": "LOG-000007",
+   "fecha": "2026-08-30T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0001",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.27"
+  },
+  {
+   "id": "LOG-000008",
+   "fecha": "2026-09-06T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0002",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.28"
+  },
+  {
+   "id": "LOG-000009",
+   "fecha": "2026-09-08T15:00:00",
+   "usuario_id": "U-002",
+   "usuario_nombre": "Matías Contreras",
+   "rol": "ADMINISTRACION",
+   "entidad": "Presupuesto",
+   "entidad_id": "PRE-0001",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADO"
+   },
+   "nuevo": {
+    "estado": "APROBADO"
+   },
+   "ip": "192.168.10.26"
+  },
+  {
+   "id": "LOG-000010",
+   "fecha": "2026-09-24T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0003",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.20"
+  },
+  {
+   "id": "LOG-000011",
+   "fecha": "2026-09-26T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0004",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.21"
+  },
+  {
+   "id": "LOG-000012",
+   "fecha": "2026-09-28T15:00:00",
+   "usuario_id": "U-002",
+   "usuario_nombre": "Matías Contreras",
+   "rol": "ADMINISTRACION",
+   "entidad": "Presupuesto",
+   "entidad_id": "PRE-0005",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADO"
+   },
+   "nuevo": {
+    "estado": "APROBADO"
+   },
+   "ip": "192.168.10.21"
+  },
+  {
+   "id": "LOG-000013",
+   "fecha": "2026-09-30T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0005",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.22"
+  },
+  {
+   "id": "LOG-000014",
+   "fecha": "2026-10-01T10:30:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "FacturaCompra",
+   "entidad_id": "FC-0006",
+   "accion": "CREAR",
+   "anterior": null,
+   "nuevo": {
+    "total": 4672130
+   },
+   "ip": "192.168.10.25"
+  },
+  {
+   "id": "LOG-000015",
+   "fecha": "2026-10-03T15:00:00",
+   "usuario_id": "U-002",
+   "usuario_nombre": "Matías Contreras",
+   "rol": "ADMINISTRACION",
+   "entidad": "Presupuesto",
+   "entidad_id": "PRE-0002",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADO"
+   },
+   "nuevo": {
+    "estado": "APROBADO"
+   },
+   "ip": "192.168.10.27"
+  },
+  {
+   "id": "LOG-000016",
+   "fecha": "2026-10-12T11:05:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "MovimientoCardex",
+   "entidad_id": "MOV-000054",
+   "accion": "REVERSA",
+   "anterior": "MOV-000053",
+   "nuevo": {
+    "cantidad": 2
+   },
+   "ip": "192.168.10.26"
+  },
+  {
+   "id": "LOG-000017",
+   "fecha": "2026-10-13T15:00:00",
+   "usuario_id": "U-002",
+   "usuario_nombre": "Matías Contreras",
+   "rol": "ADMINISTRACION",
+   "entidad": "Presupuesto",
+   "entidad_id": "PRE-0004",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADO"
+   },
+   "nuevo": {
+    "estado": "APROBADO"
+   },
+   "ip": "192.168.10.20"
+  },
+  {
+   "id": "LOG-000018",
+   "fecha": "2026-10-13T16:00:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "MovimientoCardex",
+   "entidad_id": "MOV-000045",
+   "accion": "REINGRESO_SOBRANTE",
+   "anterior": "MOV-000044",
+   "nuevo": {
+    "cantidad": 10
+   },
+   "ip": "192.168.10.24"
+  },
+  {
+   "id": "LOG-000019",
+   "fecha": "2026-10-16T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0008",
+   "accion": "DEVOLVER",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "DEVUELTA"
+   },
+   "ip": "192.168.10.23"
+  },
+  {
+   "id": "LOG-000020",
+   "fecha": "2026-10-17T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0012",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.24"
+  },
+  {
+   "id": "LOG-000021",
+   "fecha": "2026-10-18T09:10:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "HojaServicio",
+   "entidad_id": "HS-0013",
+   "accion": "APROBAR",
+   "anterior": {
+    "estado": "ENVIADA"
+   },
+   "nuevo": {
+    "estado": "APROBADA"
+   },
+   "ip": "192.168.10.25"
+  },
+  {
+   "id": "LOG-000022",
+   "fecha": "2026-10-18T15:20:00",
+   "usuario_id": "U-003",
+   "usuario_nombre": "Rodrigo Sepúlveda",
+   "rol": "BODEGA",
+   "entidad": "MovimientoCardex",
+   "entidad_id": "MOV-000052",
+   "accion": "REINGRESO_SOBRANTE",
+   "anterior": "MOV-000049",
+   "nuevo": {
+    "cantidad": 6
+   },
+   "ip": "192.168.10.25"
+  },
+  {
+   "id": "LOG-000023",
+   "fecha": "2026-10-20T07:30:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "Obra",
+   "entidad_id": "OB-0004",
+   "accion": "CREAR_CU30",
+   "anterior": null,
+   "nuevo": {
+    "tipo": "EMERGENCIA",
+    "es_emergencia_sin_presupuesto": true
+   },
+   "ip": "192.168.10.22"
+  },
+  {
+   "id": "LOG-000024",
+   "fecha": "2026-10-21T07:30:00",
+   "usuario_id": "U-004",
+   "usuario_nombre": "Patricio Mella",
+   "rol": "SUPERVISOR",
+   "entidad": "Obra",
+   "entidad_id": "OB-0005",
+   "accion": "CREAR_CU30",
+   "anterior": null,
+   "nuevo": {
+    "tipo": "GARANTIA",
+    "es_emergencia_sin_presupuesto": true
+   },
+   "ip": "192.168.10.23"
+  }
+ ]
+}
