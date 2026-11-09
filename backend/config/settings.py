@@ -73,7 +73,7 @@ TEMPLATES = [
 if os.getenv('DATABASE_URL'):
     # Hosting gestionado (Render + Aiven PostgreSQL): toda la conexión viene en una sola URL.
     import dj_database_url
-    DATABASES = {'default': dj_database_url.config(env='DATABASE_URL', conn_max_age=600, conn_health_checks=True, ssl_require=True)}
+    DATABASES = {'default': dj_database_url.config(env='DATABASE_URL', conn_max_age=600, conn_health_checks=True, ssl_require=not DEBUG)}  # SSL obligatorio salvo en desarrollo/CI (Postgres local sin certificado)
 elif os.getenv('DB_ENGINE', 'mysql') == 'sqlite':
     DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 else:
