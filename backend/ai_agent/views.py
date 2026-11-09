@@ -47,9 +47,11 @@ class RedactarReporteView(_AgenteView):
 
 
 class ChatView(_AgenteView):
-    """POST /api/ai/chat/ — todos los roles. Conversación abierta con el perfil del rol; el historial lo envía el cliente."""
+    """POST /api/ai/chat/ — todos los roles. Agente de conversación, navegación y búsqueda de SOLO LECTURA; el historial lo envía el cliente."""
     roles_permitidos = ROLES_CON_CHAT
     serializer_class = ChatEntradaSerializer
 
     def ejecutar(self, user, rol, datos):
-        return {'respuesta': conversar(user, rol, datos['mensajes'])}
+        # Solo lectura: la respuesta trae texto y, como mucho, una pantalla a la que ir o un texto a buscar. Nada se modifica aquí.
+        r = conversar(user, rol, datos['mensajes'], datos.get('rutas', []))
+        return {'respuesta': r['respuesta_texto'], **r}

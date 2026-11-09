@@ -52,9 +52,20 @@ class MensajeChatSerializer(serializers.Serializer):
     content = serializers.CharField(trim_whitespace=True, max_length=10_000)
 
 
+class RutaSerializer(serializers.Serializer):
+    """Pantalla a la que el asistente puede llevar al usuario. La arma la interfaz con lo que el rol ya puede abrir."""
+    ruta = serializers.RegexField(r'^/(erp|app)(/[a-z0-9_-]+)*$', max_length=80)
+    label = serializers.CharField(max_length=60)
+    buscable = serializers.BooleanField(required=False, default=False)
+
+    def validate_label(self, v):
+        return ' '.join(v.split())  # sin saltos de línea: el texto entra al prompt
+
+
 class ChatEntradaSerializer(serializers.Serializer):
     """Historial de la conversación (el cliente lo conserva; el servidor no guarda nada). El rol sale del usuario autenticado."""
     mensajes = MensajeChatSerializer(many=True, allow_empty=False)
+    rutas = RutaSerializer(many=True, required=False, max_length=40)
 
     def validate_mensajes(self, msgs):
         if len(msgs) > settings.AI_CHAT_MAX_MENSAJES:

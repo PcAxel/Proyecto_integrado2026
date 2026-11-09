@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
-from .prompts import SYSTEM_PROMPTS, system_prompt, system_prompt_chat  # noqa: F401  (SYSTEM_PROMPTS se expone para pruebas y documentación)
+from .prompts import SYSTEM_PROMPTS, system_prompt, system_prompt_agente, system_prompt_chat  # noqa: F401  (SYSTEM_PROMPTS se expone para pruebas y documentación)
 
 logger = logging.getLogger('ai_agent')
 
@@ -80,11 +80,47 @@ def chat(usuario, rol, tarea, etiqueta, texto, *, json_mode=False, imagen_b64=No
     return _completar(usuario, rol, tarea, construir_mensajes(rol, tarea, etiqueta, texto, imagen_b64), json_mode=json_mode)
 
 
-def conversar(usuario, rol, historial):
-    """Conversación abierta. El system prompt lo elige el servidor según el rol; el cliente solo aporta el historial
-    (turnos `user` y `assistant`, nunca `system`). La conversación no se guarda en el servidor."""
-    mensajes = [{'role': 'system', 'content': system_prompt_chat(rol)}, *({'role': m['role'], 'content': m['content']} for m in historial)]
-    return _completar(usuario, rol, 'chat', mensajes, temperature=0.5, max_tokens=settings.AI_MAX_TOKENS_CHAT)[:settings.AI_MAX_CHARS_RESPUESTA_CHAT]
+ACCIONES_AGENTE = ('navegar', 'buscar', 'ninguna')
+MAX_TERMINO_BUSQUEDA = 80
+
+
+def interpretar_respuesta_agente(crudo, rutas):
+    """Convierte la salida del modelo en una acción segura. Nada de lo que diga el modelo se acepta sin validar:
+    la acción debe ser conocida, la ruta debe estar en la lista que el usuario puede abrir y el término se limpia.
+    Ante cualquier duda la acción queda en «ninguna» y solo se muestra el texto."""
+    permitidas = {r['ruta']: bool(r.get('buscable')) for r in rutas}
+    sin_accion = {'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
+    texto = crudo.strip()
+    if texto.startswith('```'):
+        texto = texto.strip('`').removeprefix('json').strip()
+    try:
+        datos = json.loads(texto)
+    except ValueError:
+        if texto.startswith('{'):  # JSON cortado o roto: no se le muestran llaves al usuario
+            return {'respuesta_texto': 'No pude interpretar mi propia respuesta. ¿Me lo preguntas de nuevo?', **sin_accion}
+        return {'respuesta_texto': crudo[:settings.AI_MAX_CHARS_RESPUESTA_CHAT], **sin_accion}
+    if not isinstance(datos, dict):
+        return {'respuesta_texto': crudo[:settings.AI_MAX_CHARS_RESPUESTA_CHAT], **sin_accion}
+
+    respuesta = str(datos.get('respuesta_texto') or '').strip()[:settings.AI_MAX_CHARS_RESPUESTA_CHAT]
+    accion, ruta = datos.get('accion'), datos.get('ruta')
+    if accion not in ACCIONES_AGENTE or accion == 'ninguna' or ruta not in permitidas:
+        return {'respuesta_texto': respuesta or 'Listo.', **sin_accion}
+    if accion == 'buscar':
+        termino = ''.join(c for c in str(datos.get('termino_busqueda') or '') if c.isprintable()).strip()[:MAX_TERMINO_BUSQUEDA]
+        if permitidas[ruta] and termino:
+            return {'respuesta_texto': respuesta or f'Busco «{termino}».', 'accion': 'buscar', 'ruta': ruta, 'termino_busqueda': termino}
+        accion = 'navegar'  # esa pantalla no filtra por texto (o no hay término): se lleva al usuario sin filtro
+    return {'respuesta_texto': respuesta or 'Te llevo a esa pantalla.', 'accion': 'navegar', 'ruta': ruta, 'termino_busqueda': None}
+
+
+def conversar(usuario, rol, historial, rutas=()):
+    """Conversación abierta con capacidad de NAVEGAR y BUSCAR, estrictamente de solo lectura: el modelo no tiene herramientas
+    ni acceso a la base de datos; solo propone una acción que la interfaz ejecuta. El system prompt lo elige el servidor según el rol;
+    el cliente solo aporta el historial (turnos `user` y `assistant`, nunca `system`). La conversación no se guarda en el servidor."""
+    mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas)}, *({'role': m['role'], 'content': m['content']} for m in historial)]
+    crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=True, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
+    return interpretar_respuesta_agente(crudo, rutas)
 
 
 # ───────────────────────── Facturas ─────────────────────────

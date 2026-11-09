@@ -340,7 +340,7 @@ class ChatConversacionalTests(AgenteBase):
         enviados = fake.llamadas[0]['messages']
         self.assertEqual([m['role'] for m in enviados], ['system', 'user', 'assistant', 'user'])
         self.assertEqual(enviados[-1]['content'], '¿Cómo reparo un compresor?')
-        self.assertNotIn('response_format', fake.llamadas[0])  # la conversación es texto libre, no JSON
+        self.assertEqual(fake.llamadas[0]['response_format'], {'type': 'json_object'})  # el agente responde en JSON estricto
 
     def test_el_cliente_no_puede_inyectar_system_ni_elegir_rol(self):
         fake = self.ia('ok')
@@ -387,3 +387,97 @@ class ChatConversacionalTests(AgenteBase):
         sistema = fake.llamadas[0]['messages'][0]['content']
         self.assertIn('responde ÚNICAMENTE con un objeto JSON', sistema)
         self.assertEqual(fake.llamadas[0]['response_format'], {'type': 'json_object'})
+
+
+RUTAS = [
+    {'ruta': '/erp/obras', 'label': 'Obras', 'buscable': True},
+    {'ruta': '/erp/compras', 'label': 'Compras', 'buscable': False},
+]
+
+
+class AgenteNavegacionTests(AgenteBase):
+    """El agente es de SOLO LECTURA: propone una pantalla o un texto a buscar; el servidor valida todo lo que el modelo diga."""
+
+    def chat(self, como='ADMIN', texto='llévame a obras', rutas=RUTAS):
+        self.as_role(como)
+        return self.client.post('/api/ai/chat/', {'mensajes': [{'role': 'user', 'content': texto}], 'rutas': rutas}, format='json')
+
+    def test_el_prompt_declara_solo_lectura_exige_json_y_lista_las_pantallas(self):
+        fake = self.ia({'respuesta_texto': 'ok', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None})
+        self.chat()
+        sistema = fake.llamadas[0]['messages'][0]['content']
+        self.assertIn('SOLO LECTURA', sistema)
+        self.assertIn('explica paso a paso cómo hacerlo manualmente', sistema)
+        self.assertIn('ÚNICAMENTE UN OBJETO JSON VÁLIDO', sistema)
+        self.assertIn('- /erp/obras: Obras [admite búsqueda]', sistema)
+        self.assertIn('- /erp/compras: Compras\n', sistema + '\n')
+        self.assertEqual(fake.llamadas[0]['response_format'], {'type': 'json_object'})
+
+    def test_navegar_devuelve_la_ruta(self):
+        self.ia({'respuesta_texto': 'Te llevo a Obras.', 'accion': 'navegar', 'ruta': '/erp/obras', 'termino_busqueda': None})
+        r = self.chat()
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual((r.data['accion'], r.data['ruta'], r.data['termino_busqueda']), ('navegar', '/erp/obras', None))
+        self.assertEqual(r.data['respuesta'], 'Te llevo a Obras.')
+        self.assertEqual(r.data['respuesta_texto'], 'Te llevo a Obras.')
+
+    def test_buscar_devuelve_ruta_y_termino(self):
+        self.ia({'respuesta_texto': 'Busco la obra.', 'accion': 'buscar', 'ruta': '/erp/obras', 'termino_busqueda': ' Packing '})
+        r = self.chat()
+        self.assertEqual((r.data['accion'], r.data['ruta'], r.data['termino_busqueda']), ('buscar', '/erp/obras', 'Packing'))
+
+    def test_buscar_en_pantalla_sin_filtro_se_degrada_a_navegar(self):
+        self.ia({'respuesta_texto': 'x', 'accion': 'buscar', 'ruta': '/erp/compras', 'termino_busqueda': 'factura 12'})
+        r = self.chat()
+        self.assertEqual((r.data['accion'], r.data['ruta'], r.data['termino_busqueda']), ('navegar', '/erp/compras', None))
+
+    def test_ruta_que_no_esta_en_la_lista_se_descarta(self):
+        for ruta in ('/erp/usuarios', 'https://malo.example/x', '//malo.example', '/erp/../admin', 'javascript:alert(1)', None):
+            self.ia({'respuesta_texto': 'Claro', 'accion': 'navegar', 'ruta': ruta, 'termino_busqueda': None})
+            r = self.chat()
+            self.assertEqual((r.data['accion'], r.data['ruta']), ('ninguna', None), ruta)
+            self.assertEqual(r.data['respuesta'], 'Claro')
+
+    def test_accion_desconocida_o_de_escritura_se_descarta(self):
+        for accion in ('eliminar', 'crear', 'editar', 'ejecutar', '', None, 5):
+            self.ia({'respuesta_texto': 'Hecho', 'accion': accion, 'ruta': '/erp/obras', 'termino_busqueda': None})
+            r = self.chat(texto='borra la obra OB-0001')
+            self.assertEqual((r.data['accion'], r.data['ruta'], r.data['termino_busqueda']), ('ninguna', None, None), accion)
+
+    def test_termino_de_busqueda_se_limpia_y_se_acota(self):
+        self.ia({'respuesta_texto': 'x', 'accion': 'buscar', 'ruta': '/erp/obras', 'termino_busqueda': 'a\x00b\n' + 'z' * 500})
+        termino = self.chat().data['termino_busqueda']
+        self.assertLessEqual(len(termino), 80)
+        self.assertTrue(termino.isprintable())
+
+    def test_texto_plano_o_json_roto_no_rompen_ni_muestran_llaves(self):
+        self.ia('Hola, esto no es JSON')
+        r = self.chat()
+        self.assertEqual((r.data['respuesta'], r.data['accion']), ('Hola, esto no es JSON', 'ninguna'))
+        self.ia('{"respuesta_texto": "cortado", "accion": "nav')
+        r = self.chat()
+        self.assertEqual(r.data['accion'], 'ninguna')
+        self.assertNotIn('{', r.data['respuesta'])
+
+    def test_acepta_json_envuelto_en_bloque_de_codigo(self):
+        self.ia('```json\n{"respuesta_texto": "ok", "accion": "navegar", "ruta": "/erp/obras", "termino_busqueda": null}\n```')
+        self.assertEqual(self.chat().data['ruta'], '/erp/obras')
+
+    def test_sin_catalogo_de_rutas_nunca_hay_accion(self):
+        self.ia({'respuesta_texto': 'x', 'accion': 'navegar', 'ruta': '/erp/obras', 'termino_busqueda': None})
+        r = self.chat(rutas=[])
+        self.assertEqual(r.data['accion'], 'ninguna')
+
+    def test_catalogo_con_rutas_invalidas_se_rechaza(self):
+        for mala in ({'ruta': 'https://x.cl', 'label': 'x'}, {'ruta': '/erp/obras?x=1', 'label': 'x'}, {'ruta': '/admin', 'label': 'x'}, {'ruta': '/erp/obras', 'label': 'x' * 61}):
+            self.assertEqual(self.chat(rutas=[mala]).status_code, 400, mala)
+
+    def test_el_agente_no_tiene_acceso_a_escritura(self):
+        """Ninguna acción del agente toca la base de datos: crear, aprobar o borrar no cambian ningún registro."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self.ia({'respuesta_texto': 'Hecho', 'accion': 'navegar', 'ruta': '/erp/obras', 'termino_busqueda': None})
+        with CaptureQueriesContext(connection) as q:
+            self.chat(texto='elimina todas las obras')
+        escrituras = [x['sql'] for x in q.captured_queries if x['sql'].lstrip().upper().startswith(('INSERT', 'UPDATE', 'DELETE'))]
+        self.assertEqual([s for s in escrituras if 'django_session' not in s and 'last_login' not in s], [])
