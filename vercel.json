@@ -5,8 +5,8 @@
       "destination": "https://fyag-backend.onrender.com/api/salud/" 
     },
     { 
-      "source": "/api/:path*", 
-      "destination": "https://fyag-backend.onrender.com/api/:path*" 
+      "source": "/api/(.*)", 
+      "destination": "https://fyag-backend.onrender.com/api/$1" 
     },
     { 
       "source": "/((?!api/|sw\\.js|manifest\\.webmanifest|assets/).*)", 
