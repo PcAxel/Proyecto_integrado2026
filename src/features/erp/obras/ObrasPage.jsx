@@ -9,17 +9,21 @@ import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { FiltroBusqueda } from '@/components/FiltroBusqueda'
+import { useBusquedaUrl, coincide } from '@/hooks/useBusquedaUrl'
 
 export function ObrasPage() {
   const navigate = useNavigate()
   const rol = useAuthStore((s) => s.user.rol)
   const [filtros, setFiltro] = usePersistedFilters('obras', { estado: '', tipo: '' })
+  const { buscar, quitar } = useBusquedaUrl()
   const lista = useResource(() => obrasService.list(), [])
   const clientes = useResource(() => clientesService.list({ incluirInactivos: true }), [])
   const nombreCliente = (id) => clientes.data?.find((c) => c.id === id)?.razon_social ?? id
 
   const todas = lista.data ?? []
-  const filas = todas.filter((o) => (!filtros.estado || o.estado === filtros.estado) && (!filtros.tipo || o.tipo === filtros.tipo))
+  const filas = todas.filter((o) => (!filtros.estado || o.estado === filtros.estado) && (!filtros.tipo || o.tipo === filtros.tipo)
+    && coincide(buscar, o.id, o.nombre, nombreCliente(o.cliente_id), TIPO_OBRA_LABEL[o.tipo]))
   const cu30 = todas.filter((o) => o.es_emergencia_sin_presupuesto && o.estado !== 'FINALIZADA')
   const verCostos = can(rol, 'costos.ver')
 
@@ -69,6 +73,7 @@ export function ObrasPage() {
       />
 
       <Card padded={false}>
+        {buscar && <FiltroBusqueda texto={buscar} onQuitar={quitar} />}
         <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
           <Select label="Tipo" value={filtros.tipo} onChange={(e) => setFiltro('tipo', e.target.value)} placeholder="Todos" className="w-full sm:w-44"
             options={TIPOS_OBRA.map((t) => ({ value: t, label: TIPO_OBRA_LABEL[t] }))} />

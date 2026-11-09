@@ -6,6 +6,8 @@ import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
+import { FiltroBusqueda } from '@/components/FiltroBusqueda'
+import { useBusquedaUrl, coincide } from '@/hooks/useBusquedaUrl'
 
 /**
  * Tabla + formulario genérico para un maestro (cliente o proveedor). Nunca borra: desactiva.
@@ -19,7 +21,8 @@ export function MaestroTab({ singular, plural, servicio, campos, columnas, expor
   const [toggle, setToggle] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [verInactivos, setVerInactivos] = useState(false)
-  const filas = (data ?? []).filter((r) => verInactivos || r.activo)
+  const { buscar, quitar } = useBusquedaUrl()
+  const filas = (data ?? []).filter((r) => (verInactivos || r.activo) && coincide(buscar, r.id, r.rut, r.razon_social, r.contacto, r.comuna))
 
   const rutInvalido = form && !form.id && form.datos.rut && !validarRut(form.datos.rut)
   const valido = form && campos.every((c) => c.opcional || String(form.datos[c.clave] ?? '').trim()) && !rutInvalido
@@ -49,6 +52,7 @@ export function MaestroTab({ singular, plural, servicio, campos, columnas, expor
   return (
     <>
       <Card padded={false}>
+        {buscar && <FiltroBusqueda texto={buscar} onQuitar={quitar} />}
         <div className="flex flex-wrap items-center gap-3 border-b border-line p-4">
           <label className="flex items-center gap-2 text-sm text-ink-soft"><input type="checkbox" className="h-4 w-4 accent-brand" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} />Ver inactivos</label>
           <Mono className="text-xs text-ink-soft">{filas.length} resultados</Mono>

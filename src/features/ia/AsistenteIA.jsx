@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, X, Copy, RotateCcw, FilePlus2, AlertTriangle, ShieldCheck, SendHorizontal, MessageSquarePlus } from 'lucide-react'
+import { Sparkles, Compass, X, Copy, RotateCcw, FilePlus2, AlertTriangle, ShieldCheck, SendHorizontal, MessageSquarePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, Textarea, cn } from '@/components/ui'
 import { iaService, proveedoresService } from '@/services'
@@ -10,6 +10,7 @@ import { formatCLP } from '@/domain/money'
 import { formatFecha } from '@/domain/format'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
+import { catalogoDeRutas, resolverAccion } from './agente'
 
 const copiar = async (texto) => {
   try { await navigator.clipboard.writeText(texto); toast.success('Copiado') } catch { toast.error('No se pudo copiar') }
@@ -80,6 +81,8 @@ function TextoMarkdown({ texto }) {
 
 /** Conversación abierta. El historial vive solo aquí (en memoria): no se guarda ni en el navegador ni en el servidor. */
 function Conversacion({ activo }) {
+  const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
   const [mensajes, setMensajes] = useState(() => [mensajeBienvenida()])
   const [texto, setTexto] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -103,8 +106,12 @@ function Conversacion({ activo }) {
     setError(null)
     setCargando(true)
     try {
-      const { respuesta } = await iaService.conversar(historialParaEnviar(lista))
-      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: respuesta }])
+      // Solo lectura: el servidor propone una pantalla o una búsqueda; aquí se vuelve a validar y recién entonces se navega.
+      const catalogo = catalogoDeRutas(user)
+      const r = await iaService.conversar(historialParaEnviar(lista), catalogo)
+      const accion = resolverAccion(r, catalogo)
+      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion }])
+      if (accion) navigate(accion.url)
     } catch (err) {
       setError(mensajeErrorIA(err))
       setTexto(nuevo.content) // no se pierde lo escrito: se puede reenviar
@@ -123,6 +130,9 @@ function Conversacion({ activo }) {
           <div key={m.id ?? m.content} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
             <div className={cn('max-w-[88%] rounded-2xl px-3.5 py-2.5', m.role === 'user' ? 'rounded-br-md bg-brand text-white' : 'rounded-bl-md border border-line bg-white text-ink')}>
               {m.role === 'user' ? <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</p> : <TextoMarkdown texto={m.content} />}
+              {m.accion && (
+                <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-brand"><Compass className="h-3 w-3" />{m.accion.busqueda ? `Busqué «${m.accion.busqueda}» en ${m.accion.etiqueta}` : `Te llevé a ${m.accion.etiqueta}`}</p>
+              )}
               {m.role === 'assistant' && !m.local && (
                 <button type="button" onClick={() => copiar(m.content)} className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-ink-faint hover:text-ink"><Copy className="h-3 w-3" />Copiar</button>
               )}

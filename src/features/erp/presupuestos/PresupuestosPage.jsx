@@ -9,17 +9,20 @@ import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { FiltroBusqueda } from '@/components/FiltroBusqueda'
+import { useBusquedaUrl, coincide } from '@/hooks/useBusquedaUrl'
 
 export function PresupuestosPage() {
   const navigate = useNavigate()
   const rol = useAuthStore((s) => s.user.rol)
   const [filtros, setFiltro] = usePersistedFilters('presupuestos', { estado: '' })
+  const { buscar, quitar } = useBusquedaUrl()
   const lista = useResource(() => presupuestosService.list(), [])
   const clientes = useResource(() => clientesService.list({ incluirInactivos: true }), [])
   const nombreCliente = (id) => clientes.data?.find((c) => c.id === id)?.razon_social ?? id
 
   const todos = lista.data ?? []
-  const filas = todos.filter((p) => !filtros.estado || p.estado === filtros.estado)
+  const filas = todos.filter((p) => (!filtros.estado || p.estado === filtros.estado) && coincide(buscar, p.id, p.titulo, nombreCliente(p.cliente_id), TIPO_OBRA_LABEL[p.tipo_obra]))
   const aprobados = todos.filter((p) => p.estado === 'APROBADO')
   const enRojo = todos.filter((p) => ['BORRADOR', 'ENVIADO'].includes(p.estado) && p.simulacion.bajoMinimo)
   const margenProm = aprobados.length ? aprobados.reduce((s, p) => s + p.simulacion.margenPct, 0) / aprobados.length : 0
@@ -66,6 +69,7 @@ export function PresupuestosPage() {
       />
 
       <Card padded={false}>
+        {buscar && <FiltroBusqueda texto={buscar} onQuitar={quitar} />}
         <div className="flex items-end gap-3 border-b border-line p-4">
           <Mono className="ml-auto pb-2 text-xs text-ink-soft">{filas.length} resultados</Mono>
         </div>

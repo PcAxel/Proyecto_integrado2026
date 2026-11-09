@@ -10,6 +10,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { FiltroBusqueda } from '@/components/FiltroBusqueda'
+import { useBusquedaUrl, coincide } from '@/hooks/useBusquedaUrl'
 import { ArticuloModal } from './ArticuloModal'
 
 const COLS_EXPORT = [
@@ -22,6 +24,7 @@ export function ArticulosTab({ onVerKardex }) {
   const rol = useAuthStore((s) => s.user.rol)
   const gestiona = can(rol, 'articulos.gestionar')
   const [filtros, setFiltro] = usePersistedFilters('bodega-articulos', { q: '', categoria: '', estado: '', inactivos: false })
+  const { buscar, quitar } = useBusquedaUrl()
   const { data, loading, reload } = useResource(() => articulosService.list({ incluirInactivos: true }), [])
   const [modal, setModal] = useState(null) // { articulo? }
   const [toggle, setToggle] = useState(null)
@@ -34,6 +37,7 @@ export function ArticulosTab({ onVerKardex }) {
       && (!filtros.categoria || a.categoria === filtros.categoria)
       && (!filtros.estado || a.estado_stock === filtros.estado)
       && (!q || a.nombre.toLowerCase().includes(q) || a.sku.toLowerCase().includes(q))
+      && coincide(buscar, a.sku, a.nombre, a.categoria)
   })
   const activos = todos.filter((a) => a.activo)
   const valor = valorInventario(activos)
@@ -72,6 +76,7 @@ export function ArticulosTab({ onVerKardex }) {
       </div>
 
       <Card padded={false}>
+        {buscar && <FiltroBusqueda texto={buscar} onQuitar={quitar} />}
         <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
           <Input label="Buscar" placeholder="SKU o nombre" value={filtros.q} onChange={(e) => setFiltro('q', e.target.value)} className="w-full sm:w-56" />
           <Select label="Categoría" value={filtros.categoria} onChange={(e) => setFiltro('categoria', e.target.value)} placeholder="Todas" options={categorias.map((c) => ({ value: c, label: c }))} className="w-full sm:w-52" />
