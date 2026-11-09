@@ -161,6 +161,7 @@ SIMPLE_JWT = {
 # --- MongoDB (evidencia fotográfica de terreno) ---
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://127.0.0.1:27017')
 MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'fyag_evidencias')
+MONGO_TIMEOUT_MS = int(os.getenv('MONGO_TIMEOUT_MS', '10000'))  # Atlas desde Render puede tardar en el primer contacto
 EVIDENCIA_MAX_BYTES = int(os.getenv('EVIDENCIA_MAX_BYTES', str(8 * 1024 * 1024)))
 
 # Versión vigente de los términos y condiciones; el cliente debe enviarla al aceptar

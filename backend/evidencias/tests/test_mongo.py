@@ -135,3 +135,48 @@ class EvidenciaFlowTests(MongoTestCase):
                 mongo._client = None
         self.assertEqual(r.status_code, 503)
         self.assertEqual(ReporteTerreno.objects.count(), 0)
+
+
+class EvidenciaMongoFuncionesTests(MongoTestCase):
+    """Capa de datos (crear, obtener, listar_por_obra, eliminar) sin pasar por HTTP."""
+
+    def nueva(self, obra='OB-1', tecnico=1, contenido=None):
+        return mongo.crear(obra_id=obra, tecnico_id=tecnico, foto_bytes=contenido or png_bytes(), content_type='image/png',
+                           gps={'latitud': -36.6, 'longitud': -72.1, 'precision_m': 5}, descripcion='prueba')
+
+    def test_crear_guarda_foto_en_gridfs_y_metadatos(self):
+        contenido = png_bytes()
+        doc = self.nueva(contenido=contenido)
+        guardado = mongo.obtener(str(doc['_id']))
+        self.assertEqual(guardado['obra_id'], 'OB-1')
+        self.assertEqual(guardado['foto']['size'], len(contenido))
+        self.assertEqual(mongo.leer_foto(guardado), contenido)
+
+    def test_obtener_con_id_invalido_o_inexistente_devuelve_none(self):
+        self.assertIsNone(mongo.obtener('no-es-un-id'))
+        self.assertIsNone(mongo.obtener('0' * 24))
+
+    def test_listar_por_obra_filtra_y_ordena_de_mas_reciente_a_mas_antigua(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        base = timezone.now()
+        for i in range(3):
+            d = self.nueva(obra='OB-1')
+            mongo.get_evidencias().update_one({'_id': d['_id']}, {'$set': {'capturada_en': base + timedelta(minutes=i)}})
+        self.nueva(obra='OB-2')
+        lista = mongo.listar_por_obra('OB-1')
+        self.assertEqual(len(lista), 3)
+        self.assertEqual([d['capturada_en'] for d in lista], sorted((d['capturada_en'] for d in lista), reverse=True))
+        self.assertEqual(len(mongo.listar_por_obra('OB-1', limite=2)), 2)
+
+    def test_listar_por_obra_puede_limitarse_a_un_tecnico(self):
+        self.nueva(tecnico=1)
+        self.nueva(tecnico=2)
+        self.assertEqual(len(mongo.listar_por_obra('OB-1', tecnico_id=2)), 1)
+
+    def test_eliminar_borra_documento_y_archivo(self):
+        doc = self.nueva()
+        self.assertTrue(mongo.eliminar(str(doc['_id'])))
+        self.assertIsNone(mongo.obtener(str(doc['_id'])))
+        self.assertEqual(mongo.get_db()['fotos_terreno.files'].count_documents({}), 0)
+        self.assertFalse(mongo.eliminar(str(doc['_id'])))
