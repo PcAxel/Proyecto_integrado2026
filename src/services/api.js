@@ -103,7 +103,7 @@ export const api = {
 /** Latido del servidor: true si Django y su base de datos responden. */
 export async function servidorDisponible() {
   try {
-    const { res } = await llamar('/health/', { method: 'GET' })
+    const { res } = await llamar('/salud/', { method: 'GET' })
     return res.ok
   } catch {
     return false
