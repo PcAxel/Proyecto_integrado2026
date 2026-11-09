@@ -7,10 +7,19 @@ export const RUTAS_INSTALAR = { login: '/instalar', terminos: '/instalar/termino
 /** ¿Aceptó los términos? Solo cuenta un `terms_accepted_at` no nulo. */
 export const terminosAceptados = (user) => Boolean(user?.terms_accepted_at)
 
+/**
+ * ¿Debe pasar por los términos? Solo el Técnico, que usa la app instalada en su celular.
+ * El resto de los roles trabaja en el ERP del navegador y no tiene que aceptar nada para entrar.
+ */
+export const terminosPendientes = (user) => {
+  if (user?.rolApi && user.rolApi !== 'TECNICO') return false
+  return !terminosAceptados(user)
+}
+
 /** Pantalla que le corresponde al estado de la sesión. */
 export function rutaPorEstado(session) {
   if (!session?.access || !session?.user) return RUTAS_INSTALAR.login
-  return terminosAceptados(session.user) ? RUTAS_INSTALAR.descarga : RUTAS_INSTALAR.terminos
+  return terminosPendientes(session.user) ? RUTAS_INSTALAR.terminos : RUTAS_INSTALAR.descarga
 }
 
 /**

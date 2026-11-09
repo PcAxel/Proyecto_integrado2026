@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rutaPorEstado, redireccionRequerida, terminosAceptados, RUTAS_INSTALAR as R } from '../instalacion'
+import { rutaPorEstado, redireccionRequerida, terminosAceptados, terminosPendientes, RUTAS_INSTALAR as R } from '../instalacion'
 
 const sinSesion = { access: null, user: null }
 const sinTerminos = { access: 'a', user: { email: 'x@fyag.cl', terms_accepted_at: null } }
@@ -28,5 +28,17 @@ describe('instalación: estado de aceptación → ruta', () => {
   it('con términos aceptados se accede a ambas', () => {
     expect(redireccionRequerida(conTerminos, 'terminos')).toBeNull()
     expect(redireccionRequerida(conTerminos, 'sesion')).toBeNull()
+  })
+})
+
+describe('los términos solo los exige el Técnico', () => {
+  const sesion = (rolApi) => ({ access: 'a', user: { email: 'x@fyag.cl', rolApi, terms_accepted_at: null } })
+  it('Técnico sin aceptar debe pasar por los términos', () => {
+    expect(terminosPendientes(sesion('TECNICO').user)).toBe(true)
+    expect(rutaPorEstado(sesion('TECNICO'))).toBe(R.terminos)
+  })
+  it.each(['ADMIN', 'FINANZAS', 'OPERACIONES', 'RRHH'])('%s no los necesita', (rol) => {
+    expect(terminosPendientes(sesion(rol).user)).toBe(false)
+    expect(rutaPorEstado(sesion(rol))).toBe(R.descarga)
   })
 })

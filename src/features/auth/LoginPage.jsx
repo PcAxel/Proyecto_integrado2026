@@ -1,11 +1,11 @@
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { inicioDeRolApi } from '@/domain/rolesApi'
-import { RUTAS_INSTALAR } from '@/domain/instalacion'
+import { RUTAS_INSTALAR, terminosPendientes } from '@/domain/instalacion'
 import { LoginFlow } from './LoginFlow'
 
 const destinoTras = (user, from) => {
-  if (!user.terms_accepted_at) return RUTAS_INSTALAR.terminos
+  if (terminosPendientes(user)) return RUTAS_INSTALAR.terminos
   // Un técnico nunca debe aterrizar en una ruta del ERP, ni el resto en la app de terreno.
   return from && from.startsWith(inicioDeRolApi(user.rolApi)) ? from : inicioDeRolApi(user.rolApi)
 }
