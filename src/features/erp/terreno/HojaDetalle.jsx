@@ -91,7 +91,7 @@ export function HojaDetalle({ hoja: h, puedeAuditar, onChanged }) {
         </Card>
         <Card title="Conformidad del cliente">
           {h.firma_img
-            ? <img src={h.firma_img} alt="Firma del cliente" className="h-28 w-full rounded-lg border border-line bg-white object-contain" />
+            ? <img src={h.firma_img} alt="Firma del cliente" className="h-28 w-full rounded-lg border border-line bg-[#fff] object-contain" />
             : <p className="flex items-center gap-2 text-sm text-ink-soft"><Pencil className="h-4 w-4" />{h.firma_cliente ? 'Firmada (imagen no incluida en el dato de demostración).' : 'Sin firma.'}</p>}
         </Card>
       </div>

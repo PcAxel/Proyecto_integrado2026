@@ -2,28 +2,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { inicioDeRolApi } from '@/domain/rolesApi'
 import { RUTAS_INSTALAR } from '@/domain/instalacion'
-import { BrandMark } from '@/components/domain'
 import { LoginFlow } from './LoginFlow'
-
-/** Puntos que resumen qué hace el sistema. Es texto institucional, no datos de operación. */
-const PUNTOS = [
-  ['Obras y presupuestos', 'Del presupuesto aprobado al cierre de la obra, con su costo real.'],
-  ['Bodega con trazabilidad', 'Cada material que sale queda ligado a una obra y a una persona.'],
-  ['Terreno verificado', 'Asistencia y hojas de servicio con ubicación real del dispositivo.'],
-]
-
-function Resumen() {
-  return (
-    <ul className="relative max-w-md space-y-4 border-t border-white/10 pt-6" aria-label="Qué hace el sistema">
-      {PUNTOS.map(([titulo, texto]) => (
-        <li key={titulo}>
-          <p className="t-display text-xl text-white">{titulo}</p>
-          <p className="mt-0.5 text-sm leading-snug text-white/60">{texto}</p>
-        </li>
-      ))}
-    </ul>
-  )
-}
 
 const destinoTras = (user, from) => {
   if (!user.terms_accepted_at) return RUTAS_INSTALAR.terminos
@@ -31,12 +10,24 @@ const destinoTras = (user, from) => {
   return from && from.startsWith(inicioDeRolApi(user.rolApi)) ? from : inicioDeRolApi(user.rolApi)
 }
 
+const Logo = () => <img src="/logo-fyag.png" alt="Frío y Agroindustria SpA" className="h-9 w-9 shrink-0 select-none rounded-lg bg-white/95 object-contain p-1" draggable={false} />
+
+// Los campos y botones vienen de LoginFlow (compartido con /instalar): aquí se tiñen desde el contenedor, sin tocar su lógica.
+const TEMA_FORMULARIO = [
+  '[&_label>span:first-child]:text-fyag-ice/80',
+  '[&_input]:h-auto [&_input]:rounded-lg [&_input]:border-fyag-teal/50 [&_input]:bg-fyag-bg [&_input]:px-3.5 [&_input]:py-2 [&_input]:text-sm [&_input]:text-fyag-cream [&_input]:placeholder-fyag-ice/40 [&_input]:outline-none [&_input]:transition [&_input:focus]:border-fyag-ice [&_input:focus]:ring-0',
+  '[&_button[type=submit]]:!h-auto [&_button[type=submit]]:!rounded-lg [&_button[type=submit]]:!bg-fyag-orange [&_button[type=submit]]:!py-2.5 [&_button[type=submit]]:!text-sm [&_button[type=submit]]:!text-fyag-cream [&_button[type=submit]]:!shadow-lg [&_button[type=submit]]:!shadow-fyag-orange/20 [&_button[type=submit]:hover]:!bg-[#b05218] [&_button[type=submit]:disabled]:!opacity-50',
+  '[&_button:not([type=submit])]:!text-fyag-ice [&_button:not([type=submit]):hover]:!bg-fyag-deep/30',
+  '[&_[role=alert]]:!text-fyag-orange [&_[role=status]]:!bg-fyag-orange/10 [&_[role=status]]:!text-fyag-orange',
+  '[&_li>p]:!text-fyag-cream',
+].join(' ')
+
 const MarcoLogin = ({ titulo, subtitulo, children }) => (
-  <div className="w-full max-w-md">
-    <div className="mb-8 lg:hidden"><BrandMark height={56} /></div>
-    <h1 className="t-display text-[2.4rem] leading-none sm:text-[3rem]">{titulo}</h1>
-    <p className="mt-3 text-ink-soft">{subtitulo}</p>
-    <div className="mt-8">{children}</div>
+  <div className={`w-full max-w-sm rounded-2xl border border-fyag-ice/15 bg-fyag-panel p-8 shadow-2xl ${TEMA_FORMULARIO}`}>
+    <div className="mb-6 lg:hidden"><Logo /></div>
+    <h1 className="text-2xl font-semibold leading-tight tracking-tight text-fyag-cream">{titulo}</h1>
+    <p className="mt-2 text-sm text-fyag-ice">{subtitulo}</p>
+    <div className="mt-6">{children}</div>
   </div>
 )
 
@@ -49,21 +40,29 @@ export function LoginPage() {
   if (user) return <Navigate to={destinoTras(user, from)} replace />
 
   return (
-    <div className="grid min-h-full lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-deep via-deep to-[#081E2C] p-10 text-white lg:flex xl:p-14">
-        <div className="lattice pointer-events-none absolute inset-0" aria-hidden="true" />
-        <div className="pointer-events-none absolute -right-32 top-1/3 h-96 w-96 rounded-full bg-brand/25 blur-3xl" aria-hidden="true" />
-        <div className="relative"><BrandMark height={96} placa /></div>
-        <div className="relative space-y-10">
-          <div className="max-w-md">
-            <h2 className="t-display text-[3.2rem] leading-[1.02] xl:text-[3.8rem]">De la cámara de frío a la gerencia, en un solo sistema.</h2>
-            <p className="mt-5 text-lg leading-relaxed text-white/70">Obras, bodega y terreno conectados, con cada persona viendo solo lo que necesita para su trabajo.</p>
-          </div>
-          <Resumen />
+    <div className="grid min-h-screen bg-fyag-bg text-fyag-cream lg:grid-cols-12">
+      <aside className="hidden flex-col justify-between border-r border-fyag-ice/10 bg-gradient-to-b from-fyag-deep/35 via-fyag-bg to-fyag-bg p-10 lg:col-span-7 lg:flex lg:p-16">
+        <div className="flex items-center gap-3">
+          <Logo />
+          <span className="text-xs uppercase tracking-widest text-fyag-ice">Frío y Agroindustria SpA · Sur de Chile</span>
         </div>
-        <p className="relative text-sm text-white/45">Región de Ñuble, Chile</p>
+        <div>
+          <h2 className="max-w-2xl text-3xl font-semibold leading-tight tracking-tight text-fyag-cream lg:text-4xl">Precisión térmica e innovación para la agroindustria.</h2>
+          <p className="mt-3 max-w-xl text-sm text-fyag-ice">Plataforma integral de control operativo, trazabilidad de bodega y asistencia técnica en terreno.</p>
+          <div className="mt-8 grid max-w-2xl gap-4">
+            <section className="rounded-xl border border-fyag-ice/15 bg-fyag-deep/20 p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-fyag-orange">Nuestra Misión</h3>
+              <p className="mt-2 text-sm leading-relaxed text-fyag-cream/90">Ofrecer soluciones tecnológicas integrales en refrigeración industrial y climatización en Ñuble, Biobío y La Araucanía, optimizando procesos productivos, asegurando la cadena de frío y garantizando la máxima conservación para nuestros clientes.</p>
+            </section>
+            <section className="rounded-xl border border-fyag-ice/15 bg-fyag-deep/20 p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-fyag-ice">Nuestra Visión</h3>
+              <p className="mt-2 text-sm leading-relaxed text-fyag-cream/90">Consolidarnos como el referente tecnológico en sistemas de control térmico para una agroindustria moderna y competitiva, siendo un socio estratégico de largo plazo mediante innovación en tiempo real y excelencia técnica.</p>
+            </section>
+          </div>
+        </div>
+        <p className="text-xs text-fyag-ice/60">Región de Ñuble, Biobío y La Araucanía · Chile</p>
       </aside>
-      <main className="flex items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
+      <main className="flex items-center justify-center bg-fyag-bg p-8 lg:col-span-5">
         <LoginFlow Marco={MarcoLogin} aviso={aviso} onListo={(u) => navigate(destinoTras(u, from), { replace: true })} />
       </main>
     </div>

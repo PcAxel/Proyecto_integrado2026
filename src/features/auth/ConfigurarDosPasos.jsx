@@ -36,7 +36,7 @@ export function ConfigurarDosPasos({ qrUri, secret, onConfirmar, onVolver, error
         <Paso n={3} icon={ShieldCheck}>Escribe abajo el <b>código de 6 dígitos</b> que muestra la aplicación.</Paso>
       </ol>
 
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-white p-5">
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-line bg-[#fff] p-5">
         <QRCodeSVG value={qrUri} size={192} level="M" marginSize={2} role="img" aria-label="Código QR para vincular tu autenticador" />
         <details className="w-full text-center text-xs text-ink-soft">
           <summary className="cursor-pointer select-none">¿No puedes escanearlo? Ingresa la clave a mano</summary>

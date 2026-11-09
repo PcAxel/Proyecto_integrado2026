@@ -5,5 +5,5 @@
 export function BrandMark({ height = 40, placa = false, className = '' }) {
   const img = <img src="/logo-fyag.png" alt="Frío y Agroindustria SpA" style={{ height }} className="w-auto select-none" draggable={false} />
   if (!placa) return <span className={className}>{img}</span>
-  return <span className={`inline-flex items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-black/5 ${className}`} style={{ padding: Math.round(height * 0.12) }}>{img}</span>
+  return <span className={`inline-flex items-center justify-center rounded-xl bg-[#fff] shadow-sm ring-1 ring-black/5 ${className}`} style={{ padding: Math.round(height * 0.12) }}>{img}</span>
 }

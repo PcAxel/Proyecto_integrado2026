@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { cn } from './cn'
 
 const VARIANTS = {
-  primary: 'bg-brand text-white shadow-press hover:bg-brand-dark active:translate-y-px active:shadow-none disabled:bg-slate-300 disabled:shadow-none',
+  primary: 'bg-accion text-white shadow-press hover:bg-accion-dark active:translate-y-px active:shadow-none disabled:bg-slate-300 disabled:shadow-none',
   secondary: 'border border-line-strong bg-surface text-ink hover:border-brand/50 hover:bg-brand-tint/50 active:translate-y-px disabled:border-line disabled:text-ink-faint disabled:hover:bg-surface',
   danger: 'bg-crit text-white shadow-press hover:bg-[#AD2F26] active:translate-y-px disabled:bg-slate-300 disabled:shadow-none',
   ghost: 'text-ink-soft hover:bg-slate-100 hover:text-ink disabled:text-ink-faint disabled:hover:bg-transparent',

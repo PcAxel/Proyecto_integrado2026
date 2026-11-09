@@ -57,20 +57,20 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {error && <p className="rounded-lg bg-crit-bg p-3 text-sm text-crit">{error.message}</p>}
+      {error && <p className="rounded-lg border border-fyag-orange/40 bg-fyag-orange/10 p-3 text-sm text-fyag-orange">{error.message}</p>}
 
       {!data ? (
-        <div className="instrument h-72 animate-pulse p-8" aria-busy="true" aria-label="Cargando inicio" />
+        <div className="h-72 animate-pulse rounded-xl border border-fyag-ice/15 bg-fyag-panel p-8" aria-busy="true" aria-label="Cargando inicio" />
       ) : (
         <PanelInstrumentos usuario={user} titular={enfoque.titular(tareas)} apoyo={enfoque.apoyo(tareas)} accesos={enfoque.accesos} instrumento={elegirInstrumento(k)} />
       )}
 
       <div className={cn('grid items-start gap-6', conBandeja && 'xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')}>
-        {conBandeja && (data ? <BandejaTareas tareas={tareas} /> : <div className="card"><Skeleton rows={5} /></div>)}
+        {conBandeja && (data ? <BandejaTareas tareas={tareas} /> : <div className="rounded-xl border border-fyag-ice/15 bg-fyag-panel"><Skeleton rows={5} /></div>)}
         <section aria-label="Indicadores">
           <div className={cn('grid grid-cols-2 gap-3 sm:gap-4', conBandeja ? '' : 'lg:grid-cols-3 min-[1900px]:grid-cols-6')}>
-            {!data && Array.from({ length: 4 }, (_, i) => <div key={i} className="card h-[116px]"><Skeleton rows={2} /></div>)}
-            {visibles.map(({ id, ...t }) => <KpiTile key={id} {...t} animar />)}
+            {!data && Array.from({ length: 4 }, (_, i) => <div key={i} className="h-[116px] rounded-xl border border-fyag-ice/15 bg-fyag-panel"><Skeleton rows={2} /></div>)}
+            {visibles.map(({ id, ...t }) => <KpiTile key={id} {...t} animar oscuro />)}
           </div>
           {hayMas && (
             <Button variant="ghost" size="sm" className="mt-3" onClick={() => setTodos((v) => !v)} aria-expanded={todos}>
@@ -84,16 +84,16 @@ export function DashboardPage() {
       {data && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 2xl:grid-cols-4">
           {data.comparativo && (
-            <Card className={cn('lg:col-span-2', !data.actividad && 'lg:col-span-3')} title="Presupuestado y real por obra" subtitle="Costo comprometido frente al costo acumulado" icon={HardHat} action={<Link to="/erp/obras" className="text-sm font-medium text-brand-dark hover:underline">Ver obras</Link>}>
+            <Card oscuro className={cn('lg:col-span-2', !data.actividad && 'lg:col-span-3')} title="Presupuestado y real por obra" subtitle="Costo comprometido frente al costo acumulado" icon={HardHat} action={<Link to="/erp/obras" className="text-sm font-medium text-fyag-ice hover:underline">Ver obras</Link>}>
               {data.comparativo.length ? <BarrasPareadas items={data.comparativo} /> : <EmptyState title="Sin obras con presupuesto" hint="Cuando una obra tenga presupuesto aprobado, compararás aquí su costo real." />}
             </Card>
           )}
           {data.actividad && (
-            <Card className={cn('lg:col-span-1', !data.comparativo && 'lg:col-span-3')} title="Actividad reciente" icon={ClipboardCheck} action={<Link to="/erp/auditoria" className="text-sm font-medium text-brand-dark hover:underline">Ver todo</Link>}>
+            <Card oscuro className={cn('lg:col-span-1', !data.comparativo && 'lg:col-span-3')} title="Actividad reciente" icon={ClipboardCheck} action={<Link to="/erp/auditoria" className="text-sm font-medium text-fyag-ice hover:underline">Ver todo</Link>}>
               <ActividadReciente logs={data.actividad} />
             </Card>
           )}
-          <Card className={cn('lg:col-span-3', data.comparativo || data.actividad ? '2xl:col-span-1' : '2xl:col-span-4')} title="Alertas del sistema" subtitle={data.alertas.length ? `${data.alertas.length} activas` : undefined} icon={Bell}>
+          <Card oscuro className={cn('lg:col-span-3', data.comparativo || data.actividad ? '2xl:col-span-1' : '2xl:col-span-4')} title="Alertas del sistema" subtitle={data.alertas.length ? `${data.alertas.length} activas` : undefined} icon={Bell}>
             {data.alertas.length === 0
               ? <EmptyState icon={CheckCircle2} title="Todo en orden" hint="No hay alertas activas para tu rol." />
               : <ListaAlertas alertas={data.alertas} limite={12} columnas />}

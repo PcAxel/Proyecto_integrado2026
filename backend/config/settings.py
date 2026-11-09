@@ -70,7 +70,11 @@ TEMPLATES = [
 ]
 
 # --- Base de datos: MySQL por defecto; sqlite solo para pruebas locales sin servidor ---
-if os.getenv('DB_ENGINE', 'mysql') == 'sqlite':
+if os.getenv('DATABASE_URL'):
+    # Hosting gestionado (Render + Aiven PostgreSQL): toda la conexión viene en una sola URL.
+    import dj_database_url
+    DATABASES = {'default': dj_database_url.config(env='DATABASE_URL', conn_max_age=600, conn_health_checks=True, ssl_require=True)}
+elif os.getenv('DB_ENGINE', 'mysql') == 'sqlite':
     DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 else:
     DATABASES = {
@@ -84,6 +88,15 @@ else:
             'OPTIONS': {'charset': 'utf8mb4'},
         }
     }
+
+# --- Caché compartida (Valkey en Aiven): el código anti-reuso de 2FA y los límites de uso deben valer para todos los procesos ---
+if os.getenv('VALKEY_URL'):
+    _opciones = {'CLIENT_CLASS': 'django_redis.client.DefaultClient', 'SOCKET_CONNECT_TIMEOUT': 5, 'SOCKET_TIMEOUT': 5}
+    if os.environ['VALKEY_URL'].startswith('rediss://'):
+        # Con VALKEY_CA_CERT (ruta al ca.pem de Aiven) se verifica el certificado del servidor.
+        _ca = os.getenv('VALKEY_CA_CERT')
+        _opciones['CONNECTION_POOL_KWARGS'] = {'ssl_cert_reqs': 'required', 'ssl_ca_certs': _ca} if _ca else {'ssl_cert_reqs': None}
+    CACHES = {'default': {'BACKEND': 'django_redis.cache.RedisCache', 'LOCATION': os.environ['VALKEY_URL'], 'OPTIONS': _opciones, 'KEY_PREFIX': 'fyag'}}
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 

@@ -2,6 +2,128 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --c-f-bg: 10 15 20;
+  --c-f-panel: 13 21 28;
+  --c-f-deep: 15 61 62;
+  --c-f-teal: 46 111 115;
+  --c-f-ice: 127 179 184;
+  --c-f-cream: 234 220 200;
+  --c-canvas: 238 243 246;
+  --c-surface: 255 255 255;
+  --c-line: 221 229 235;
+  --c-line-strong: 195 208 217;
+  --c-ink: 18 34 47;
+  --c-ink-soft: 81 99 111;
+  --c-ink-faint: 125 144 157;
+  --c-slate-50: 246 249 251;
+  --c-slate-100: 235 241 245;
+  --c-slate-200: 221 229 235;
+  --c-slate-300: 195 208 217;
+  --c-slate-400: 143 162 175;
+  --c-slate-500: 97 118 132;
+  --c-slate-600: 71 92 107;
+  --c-slate-700: 52 72 90;
+  --c-slate-800: 31 51 68;
+  --c-slate-900: 18 34 47;
+  --c-brand: 12 124 153;
+  --c-brand-dark: 9 102 129;
+  --c-brand-light: 61 180 210;
+  --c-brand-tint: 230 245 249;
+  --c-accion: 12 124 153;
+  --c-accion-dark: 9 102 129;
+  --c-ok: 27 138 88;
+  --c-ok-bg: 225 244 234;
+  --c-warn: 184 110 0;
+  --c-warn-bg: 253 240 213;
+  --c-crit: 199 58 48;
+  --c-crit-bg: 252 230 227;
+  --c-harvest-bg: 253 240 213;
+}
+/* Tema oscuro del ERP (lo activa ErpLayout en <html>). La app de terreno (/app) conserva el tema claro. */
+html.tema-erp {
+  --c-canvas: 10 15 20;
+  --c-surface: 13 21 28;
+  --c-line: 26 42 51;
+  --c-line-strong: 38 64 74;
+  --c-ink: 234 220 200;
+  --c-ink-soft: 157 191 194;
+  --c-ink-faint: 111 148 152;
+  --c-slate-50: 15 26 34;
+  --c-slate-100: 20 34 43;
+  --c-slate-200: 27 45 56;
+  --c-slate-300: 42 67 80;
+  --c-slate-400: 94 127 134;
+  --c-slate-500: 127 163 168;
+  --c-slate-600: 155 187 190;
+  --c-slate-700: 188 211 209;
+  --c-slate-800: 216 221 210;
+  --c-slate-900: 234 220 200;
+  --c-brand: 63 143 149;
+  --c-brand-dark: 46 111 115;
+  --c-brand-light: 127 179 184;
+  --c-brand-tint: 18 56 59;
+  --c-accion: 198 96 31;
+  --c-accion-dark: 176 82 24;
+  --c-ok: 70 201 143;
+  --c-ok-bg: 18 52 42;
+  --c-warn: 232 163 61;
+  --c-warn-bg: 58 42 18;
+  --c-crit: 239 106 95;
+  --c-crit-bg: 58 26 23;
+  --c-harvest-bg: 58 42 18;
+  color-scheme: dark;
+}
+/* Tema claro del ERP (opcional por persona): crema y petróleo, no blanco clínico. */
+html.tema-erp.tema-claro {
+  --c-canvas: 243 238 227;
+  --c-surface: 252 250 245;
+  --c-line: 224 216 200;
+  --c-line-strong: 203 191 168;
+  --c-ink: 18 48 47;
+  --c-ink-soft: 75 106 107;
+  --c-ink-faint: 123 148 148;
+  --c-slate-50: 248 245 238;
+  --c-slate-100: 239 234 223;
+  --c-slate-200: 224 216 200;
+  --c-slate-300: 203 191 168;
+  --c-slate-400: 143 163 161;
+  --c-slate-500: 103 130 128;
+  --c-slate-600: 75 106 107;
+  --c-slate-700: 52 80 79;
+  --c-slate-800: 31 60 60;
+  --c-slate-900: 18 48 47;
+  --c-brand: 46 111 115;
+  --c-brand-dark: 15 61 62;
+  --c-brand-light: 127 179 184;
+  --c-brand-tint: 221 235 232;
+  --c-accion: 198 96 31;
+  --c-accion-dark: 176 82 24;
+  --c-ok: 27 127 82;
+  --c-ok-bg: 220 239 227;
+  --c-warn: 154 91 0;
+  --c-warn-bg: 248 232 200;
+  --c-crit: 184 53 43;
+  --c-crit-bg: 246 221 216;
+  --c-harvest-bg: 248 232 200;
+  --c-f-bg: 243 238 227;
+  --c-f-panel: 252 250 245;
+  --c-f-deep: 207 227 224;
+  --c-f-ice: 63 115 120;
+  --c-f-cream: 18 48 47;
+  --c-f-teal: 46 111 115;
+  color-scheme: light;
+}
+html.tema-erp.tema-claro * { scrollbar-color: #CBBFA8 transparent; }
+html.tema-erp.tema-claro *::-webkit-scrollbar-thumb { background: #CBBFA8; background-clip: padding-box; }
+html.tema-erp.tema-claro *::-webkit-scrollbar-thumb:hover { background: #8FA3A1; background-clip: padding-box; }
+html.tema-erp.tema-claro ::selection { background: #CFE3E0; color: #12302F; }
+html.tema-erp .bg-white { background-color: rgb(var(--c-surface)); }
+html.tema-erp * { scrollbar-color: #26404A transparent; }
+html.tema-erp *::-webkit-scrollbar-thumb { background: #26404A; background-clip: padding-box; }
+html.tema-erp *::-webkit-scrollbar-thumb:hover { background: #5E7F86; background-clip: padding-box; }
+html.tema-erp ::selection { background: #2E6F73; color: #EADCC8; }
+
 @layer base {
   html, body, #root { height: 100%; }
   body {

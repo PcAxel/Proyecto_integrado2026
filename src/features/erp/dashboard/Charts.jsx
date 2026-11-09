@@ -22,12 +22,12 @@ export function BarrasPareadas({ items }) {
         {items.map((o) => (
           <li key={o.id}>
             <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-              <Link to={`/erp/obras/${o.id}`} className="min-w-0 truncate font-medium hover:text-brand"><Mono className="mr-1.5 text-xs text-ink-soft">{o.id}</Mono>{o.nombre}</Link>
+              <Link to={`/erp/obras/${o.id}`} className="min-w-0 truncate font-medium hover:text-fyag-ice"><Mono className="mr-1.5 text-xs text-ink-soft">{o.id}</Mono>{o.nombre}</Link>
               <span className="flex shrink-0 items-center gap-2"><Mono className="text-xs">{formatPct(o.desvioPct)}</Mono><Badge tone={TONO_DESVIO[o.estadoDesvio]}>{LABEL_DESVIO[o.estadoDesvio]}</Badge></span>
             </div>
             {[['Presupuestado', o.presupuestado, 'bg-slate-300'], ['Real', o.real, COLOR_REAL[o.estadoDesvio]]].map(([etiqueta, valor, color]) => (
               <div key={etiqueta} className="flex items-center gap-2" role="img" aria-label={`${etiqueta} ${o.nombre}: ${valor} pesos`}>
-                <div className="h-3 flex-1 rounded-sm bg-slate-50"><div className={cn('h-full rounded-sm', color)} style={{ width: `${(valor / max) * 100}%` }} /></div>
+                <div className="h-3 flex-1 rounded-sm bg-fyag-bg"><div className={cn('h-full rounded-sm', color)} style={{ width: `${(valor / max) * 100}%` }} /></div>
                 <MoneyCell value={valor} className="w-24 text-right text-xs" />
               </div>
             ))}
@@ -56,7 +56,7 @@ export function ListaAlertas({ alertas, limite, columnas = false }) {
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{a.titulo}</p><p className="truncate text-xs text-ink-soft">{a.detalle}</p></div>
           </div>
         )
-        return <li key={a.id} className={columnas ? 'min-w-0 border-b border-line' : 'min-w-0'}>{a.ruta ? <Link to={a.ruta} className="block rounded-lg hover:bg-slate-50">{cuerpo}</Link> : cuerpo}</li>
+        return <li key={a.id} className={columnas ? 'min-w-0 border-b border-line' : 'min-w-0'}>{a.ruta ? <Link to={a.ruta} className="block rounded-lg hover:bg-fyag-deep/30">{cuerpo}</Link> : cuerpo}</li>
       })}
     </ul>
   )

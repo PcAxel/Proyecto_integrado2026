@@ -4,21 +4,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Neutros con un matiz petróleo: todo el gris del sistema comparte la misma temperatura de color.
-        slate: { 50: '#F6F9FB', 100: '#EBF1F5', 200: '#DDE5EB', 300: '#C3D0D9', 400: '#8FA2AF', 500: '#617684', 600: '#475C6B', 700: '#34485A', 800: '#1F3344', 900: '#12222F' },
-        canvas: '#EEF3F6',
-        surface: '#FFFFFF',
-        line: { DEFAULT: '#DDE5EB', strong: '#C3D0D9' },
-        ink: { DEFAULT: '#12222F', soft: '#51636F', faint: '#7D909D' },
+        // Neutros y estados: variables CSS (src/styles/index.css). El ERP las cambia a oscuro con html.tema-erp.
+        slate: { 50: 'rgb(var(--c-slate-50) / <alpha-value>)', 100: 'rgb(var(--c-slate-100) / <alpha-value>)', 200: 'rgb(var(--c-slate-200) / <alpha-value>)', 300: 'rgb(var(--c-slate-300) / <alpha-value>)', 400: 'rgb(var(--c-slate-400) / <alpha-value>)', 500: 'rgb(var(--c-slate-500) / <alpha-value>)', 600: 'rgb(var(--c-slate-600) / <alpha-value>)', 700: 'rgb(var(--c-slate-700) / <alpha-value>)', 800: 'rgb(var(--c-slate-800) / <alpha-value>)', 900: 'rgb(var(--c-slate-900) / <alpha-value>)' },
+        canvas: 'rgb(var(--c-canvas) / <alpha-value>)',
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        line: { DEFAULT: 'rgb(var(--c-line) / <alpha-value>)', strong: 'rgb(var(--c-line-strong) / <alpha-value>)' },
+        ink: { DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)', soft: 'rgb(var(--c-ink-soft) / <alpha-value>)', faint: 'rgb(var(--c-ink-faint) / <alpha-value>)' },
         // Glaciar: la acción principal. Petróleo: la identidad (barra lateral y paneles de instrumentos).
-        brand: { DEFAULT: '#0C7C99', dark: '#096681', light: '#3DB4D2', tint: '#E6F5F9' },
+        brand: { DEFAULT: 'rgb(var(--c-brand) / <alpha-value>)', dark: 'rgb(var(--c-brand-dark) / <alpha-value>)', light: 'rgb(var(--c-brand-light) / <alpha-value>)', tint: 'rgb(var(--c-brand-tint) / <alpha-value>)' },
+        // Botón principal: glaciar en la app de terreno, naranja corporativo en el ERP.
+        accion: { DEFAULT: 'rgb(var(--c-accion) / <alpha-value>)', dark: 'rgb(var(--c-accion-dark) / <alpha-value>)' },
         deep: { DEFAULT: '#0B2A3C', 800: '#0F3650', 700: '#164563', 600: '#1F5878' },
         ice: '#7DE3F4',
         // Durazno de cosecha: el único acento cálido, reservado para lo que pide atención.
-        harvest: { DEFAULT: '#F0A030', bg: '#FDF0D5' },
-        ok: { DEFAULT: '#1B8A58', bg: '#E1F4EA' },
-        warn: { DEFAULT: '#B86E00', bg: '#FDF0D5' },
-        crit: { DEFAULT: '#C73A30', bg: '#FCE6E3' },
+        harvest: { DEFAULT: '#F0A030', bg: 'rgb(var(--c-harvest-bg) / <alpha-value>)' },
+        ok: { DEFAULT: 'rgb(var(--c-ok) / <alpha-value>)', bg: 'rgb(var(--c-ok-bg) / <alpha-value>)' },
+        warn: { DEFAULT: 'rgb(var(--c-warn) / <alpha-value>)', bg: 'rgb(var(--c-warn-bg) / <alpha-value>)' },
+        crit: { DEFAULT: 'rgb(var(--c-crit) / <alpha-value>)', bg: 'rgb(var(--c-crit-bg) / <alpha-value>)' },
+        // Paleta corporativa oscura (uso: bg-fyag-bg, text-fyag-cream, border-fyag-teal…).
+        fyag: {
+          bg: 'rgb(var(--c-f-bg) / <alpha-value>)', // Lienzo principal oscuro estilo Linear
+          panel: 'rgb(var(--c-f-panel) / <alpha-value>)', // Superficie de tarjetas y bloques
+          deep: 'rgb(var(--c-f-deep) / <alpha-value>)', // Verde petróleo profundo
+          teal: 'rgb(var(--c-f-teal) / <alpha-value>)', // Primario / Hover / Estado activo
+          ice: 'rgb(var(--c-f-ice) / <alpha-value>)', // Acento secundario / Íconos / Subtítulos
+          cream: 'rgb(var(--c-f-cream) / <alpha-value>)', // Texto principal cálido y números KPI
+          orange: '#C6601F', // CTA principal / Alertas / Margen crítico
+        },
       },
       fontFamily: {
         sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],

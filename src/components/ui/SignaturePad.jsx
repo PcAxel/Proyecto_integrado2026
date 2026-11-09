@@ -58,7 +58,7 @@ export function SignaturePad({ value, onChange }) {
 
   return (
     <div>
-      <div className="relative overflow-hidden rounded-xl border-2 border-dashed border-line bg-white">
+      <div className="relative overflow-hidden rounded-xl border-2 border-dashed border-line bg-[#fff]">
         <canvas ref={ref} className="h-44 w-full touch-none" onPointerDown={inicio} onPointerMove={mover} onPointerUp={fin} onPointerLeave={fin} aria-label="Área de firma" />
         {!value && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-ink-faint">Firme aquí</span>}
       </div>
