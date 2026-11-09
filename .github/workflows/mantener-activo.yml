@@ -1,0 +1,19 @@
+name: Mantener el backend despierto
+
+# El plan gratuito de Render duerme el servicio tras 15 minutos sin uso y la primera petición tarda cerca de un minuto
+# (suficiente para que el sitio muestre un error). Un ping cada 10 minutos lo mantiene activo; /api/salud/ además toca
+# PostgreSQL, Valkey y MongoDB, así que también evita que esos servicios gratuitos se vayan a reposo.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar el estado del backend
+        run: curl -fsS --retry 3 --retry-delay 20 --max-time 90 https://fyag-backend.onrender.com/api/salud/
