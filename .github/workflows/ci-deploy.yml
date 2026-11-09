@@ -25,25 +25,23 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     services:
-      mysql:
-        image: mysql:8.4
-        env: { MYSQL_ROOT_PASSWORD: ci-root, MYSQL_DATABASE: fyag_erp }
-        ports: ["3306:3306"]
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: ci, POSTGRES_PASSWORD: ci-clave, POSTGRES_DB: fyag_erp }
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci-root" --health-interval=5s --health-timeout=5s --health-retries=20
-      mongo:
-        image: mongo:7
-        ports: ["27017:27017"]
+          --health-cmd="pg_isready -U ci -d fyag_erp" --health-interval=5s --health-timeout=5s --health-retries=20
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd="valkey-cli ping" --health-interval=5s --health-timeout=5s --health-retries=20
+    # Sin servicio de MongoDB a propósito: sus pruebas se saltan solas cuando no hay un servidor alcanzable.
     env:
       DJANGO_SECRET_KEY: clave-solo-para-ci
       DJANGO_DEBUG: "True"
-      DB_ENGINE: mysql
-      DB_NAME: fyag_erp
-      DB_USER: root
-      DB_PASSWORD: ci-root
-      DB_HOST: 127.0.0.1
-      MONGO_URI: mongodb://127.0.0.1:27017
-      MONGO_DB_NAME: fyag_evidencias_ci
+      DATABASE_URL: postgres://ci:ci-clave@127.0.0.1:5432/fyag_erp
+      VALKEY_URL: redis://127.0.0.1:6379/0
       ARCHIVOS_PRIVADOS: ${{ runner.temp }}/archivos
     defaults:
       run:
@@ -52,8 +50,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.13", cache: pip, cache-dependency-path: backend/requirements.txt }
-      - run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config
-        working-directory: .
       - run: pip install -r requirements.txt
       - run: python manage.py makemigrations --check --dry-run   # el código no puede tener cambios de modelo sin migración
       - run: python manage.py test
