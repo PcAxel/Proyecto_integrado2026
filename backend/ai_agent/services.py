@@ -27,7 +27,7 @@ def get_client():
     if not settings.DEEPSEEK_API_KEY:
         raise ServicioIAError('El agente de IA no está configurado en este servidor.', 503, 'ai_not_configured')
     return OpenAI(api_key=settings.DEEPSEEK_API_KEY, base_url=settings.DEEPSEEK_BASE_URL,
-                  timeout=settings.AI_TIMEOUT_SEGUNDOS, max_retries=1)
+                  timeout=settings.AI_TIMEOUT_SEGUNDOS, max_retries=0)  # sin reintento interno: duplicaría la espera
 
 
 def _contenido_usuario(etiqueta, texto, imagen_b64=None):

@@ -177,7 +177,9 @@ REFRESH_COOKIE_SAMESITE = os.getenv('REFRESH_COOKIE_SAMESITE', 'Lax')
 DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')  # sin clave el agente responde 503; nunca se envía al frontend
 DEEPSEEK_BASE_URL = os.getenv('DEEPSEEK_BASE_URL', 'https://api.deepseek.com')
 DEEPSEEK_MODEL = os.getenv('DEEPSEEK_MODEL', 'deepseek-chat')
-AI_TIMEOUT_SEGUNDOS = int(os.getenv('AI_TIMEOUT_SEGUNDOS', '30'))
+# Tope por consulta a la IA. Debe quedar por debajo del tiempo máximo del navegador (35 s) y del proxy de Vercel; por eso se limita a 28 s
+# aunque el entorno pida más, y el cliente de DeepSeek no reintenta por su cuenta (ver ai_agent/services.py).
+AI_TIMEOUT_SEGUNDOS = min(int(os.getenv('AI_TIMEOUT_SEGUNDOS', '25')), 28)
 AI_MAX_TOKENS_RESPUESTA = int(os.getenv('AI_MAX_TOKENS_RESPUESTA', '700'))
 AI_SOPORTA_IMAGEN = os.getenv('AI_SOPORTA_IMAGEN', 'False') == 'True'  # deepseek-chat no lee imágenes: se envía texto OCR
 AI_MAX_TOKENS_CHAT = int(os.getenv('AI_MAX_TOKENS_CHAT', '1200'))
