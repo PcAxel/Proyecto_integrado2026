@@ -12,7 +12,16 @@ class Role(models.TextChoices):
     RRHH = 'RRHH', 'Recursos Humanos'
 
 
-class CustomUserManager(BaseUserManager):
+class UsuariosNoSeEliminan(Exception):
+    """Los perfiles de usuario son parte de la trazabilidad y la auditoría: se desactivan, nunca se borran."""
+
+
+class UserQuerySet(models.QuerySet):
+    def delete(self):
+        raise UsuariosNoSeEliminan('Los usuarios no se eliminan: se desactivan (is_active = False).')
+
+
+class CustomUserManager(BaseUserManager.from_queryset(UserQuerySet)):
     use_in_migrations = True
 
     def _create(self, email, password, **extra):
@@ -53,6 +62,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     terms_version = models.CharField(max_length=30, blank=True)
     date_joined = models.DateTimeField(default=timezone.now)
 
+    # Desactivación (borrado lógico): quién y cuándo cortó el acceso. El perfil y su historial se conservan siempre.
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    deactivated_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
@@ -60,6 +73,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    def delete(self, *args, **kwargs):
+        raise UsuariosNoSeEliminan('Los usuarios no se eliminan: se desactivan (is_active = False).')
 
     @property
     def full_name(self):

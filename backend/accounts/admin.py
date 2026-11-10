@@ -10,4 +10,10 @@ class CustomUserAdmin(admin.ModelAdmin):
     search_fields = ('email', 'first_name', 'last_name')
     # El secreto TOTP y el hash de la contraseña nunca se muestran ni se editan desde el admin.
     exclude = ('password', 'otp_secret')
-    readonly_fields = ('terms_accepted_at', 'terms_accepted_ip', 'terms_version')
+    readonly_fields = ('terms_accepted_at', 'terms_accepted_ip', 'terms_version', 'deactivated_at', 'deactivated_by')
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # los usuarios se desactivan, no se eliminan (trazabilidad)
+
+    def get_actions(self, request):
+        return {}  # sin acciones masivas (incluye «eliminar seleccionados»)
