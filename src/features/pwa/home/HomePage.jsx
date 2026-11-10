@@ -10,6 +10,7 @@ import { rrhhService } from '@/services'
 import { hayPendientes, textoAvisoPendientes } from '@/domain/firma'
 import { horaDe, TIPOS_MARCA } from '@/domain/asistencia'
 import { useAsistencia } from '../asistencia/useAsistencia'
+import { ActivarUbicacion } from './ActivarUbicacion'
 
 const saludo = () => {
   const h = new Date().getHours()
@@ -49,6 +50,8 @@ export function HomePage() {
         <p className="text-lg text-ink-soft">{saludo()},</p>
         <h1 className="t-display text-[2.4rem] leading-none text-ink">{user.nombre.split(' ')[0]}</h1>
       </div>
+
+      <ActivarUbicacion />
 
       {hayPendientes(docs.data) && (
         <Link to={docs.data.length === 1 ? `/app/documentos/${docs.data[0].id}` : '/app/documentos'} role="alert"

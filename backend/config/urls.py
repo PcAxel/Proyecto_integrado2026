@@ -7,7 +7,6 @@ urlpatterns = [
     path('api/', include('presupuestos.urls')),
     path('api/', include('obras.urls')),
     path('api/', include('bodega.urls')),
-    path('api/', include('personal.urls')),
     path('api/', include('flota.urls')),
     path('api/', include('evidencias.urls')),
     path('api/', include('asistencia.urls')),

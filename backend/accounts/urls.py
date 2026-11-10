@@ -11,4 +11,6 @@ urlpatterns = [
     path('auth/me/', views.MeView.as_view()),
     path('health/', views.HealthView.as_view()),
     path('users/', views.UserCreateView.as_view()),
+    path('users/<int:pk>/desactivar/', views.UserDesactivarView.as_view()),
+    path('users/<int:pk>/reactivar/', views.UserReactivarView.as_view()),
 ]

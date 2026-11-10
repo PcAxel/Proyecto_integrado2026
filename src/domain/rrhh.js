@@ -1,6 +1,8 @@
 /** Textos y reglas de presentación de contratos y finiquitos. Los montos NO se calculan aquí: los calcula el servidor. */
 
-export const TIPOS_CONTRATO = [{ value: 'INDEFINIDO', label: 'Indefinido' }, { value: 'PLAZO_FIJO', label: 'Plazo fijo' }]
+import { validarRut, normalizarRut } from './rut'
+
+export const TIPOS_CONTRATO = [{ value: 'INDEFINIDO', label: 'Indefinido' }, { value: 'PLAZO_FIJO', label: 'Plazo fijo' }, { value: 'OBRA_FAENA', label: 'Obra o faena' }]
 
 export const TIPOS_DOCUMENTO = [
   { value: 'AMONESTACION', label: 'Amonestación' }, { value: 'ANEXO', label: 'Anexo de contrato' },
@@ -43,3 +45,28 @@ export function validarArchivo(archivo, extensiones) {
   if (archivo.size > MAX_MB * 1024 * 1024) return `El archivo supera ${MAX_MB} MB.`
   return null
 }
+
+
+/**
+ * Validación de la ficha del trabajador antes de enviarla (el servidor vuelve a validar todo: esto solo ahorra una ida y vuelta).
+ * @param {{rut?:string, afp?:string, sistema_salud?:string, isapre?:string, tipo_contrato?:string, fecha_ingreso?:string}} f
+ * @returns {Record<string,string>} errores por campo; vacío si todo está bien
+ */
+export function validarFicha(f) {
+  const e = {}
+  const rut = normalizarRut(f.rut ?? '')
+  if (!f.rut?.trim()) e.rut = 'Ingresa el RUT.'
+  else if (!validarRut(rut)) e.rut = 'El RUT no es válido: revisa el dígito verificador.'
+  if (!f.afp) e.afp = 'Elige la AFP.'
+  if (!f.sistema_salud) e.sistema_salud = 'Elige el sistema de salud.'
+  if (f.sistema_salud === 'ISAPRE' && !f.isapre) e.isapre = 'Elige la isapre.'
+  if (!f.tipo_contrato) e.tipo_contrato = 'Elige el tipo de contrato.'
+  if (!f.fecha_ingreso) e.fecha_ingreso = 'Ingresa la fecha de ingreso.'
+  return e
+}
+
+/** Cuerpo que se envía al servidor: el RUT va normalizado y la isapre solo existe si el sistema de salud es Isapre. */
+export const cuerpoFicha = (f) => ({
+  rut: normalizarRut(f.rut), afp: f.afp, sistema_salud: f.sistema_salud, isapre: f.sistema_salud === 'ISAPRE' ? f.isapre : '',
+  tipo_contrato: f.tipo_contrato, fecha_ingreso: f.fecha_ingreso,
+})

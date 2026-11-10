@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
@@ -8,15 +9,67 @@ from accounts.models import CustomUser, Role
 
 from . import archivos, sellado
 from .calculo import CAUSALES, calcular_finiquito
-from .models import Contrato, DocumentoLaboral, DocumentoRRHH, Finiquito
+from .models import Contrato, DocumentoLaboral, DocumentoRRHH, FichaTrabajador, Finiquito
+from .validadores import normalizar_rut, validar_rut
 
 
 def nombre_de(u):
     return u.full_name or u.email
 
 
+class FichaTrabajadorSerializer(serializers.ModelSerializer):
+    """Ficha laboral y previsional. La cuenta (`usuario`) la crea el Administrador; aquí solo se completa y se edita."""
+    usuario_nombre = serializers.SerializerMethodField()
+    usuario_email = serializers.EmailField(source='usuario.email', read_only=True)
+    rut = serializers.CharField(max_length=16)
+
+    class Meta:
+        model = FichaTrabajador
+        fields = ['id', 'usuario', 'usuario_nombre', 'usuario_email', 'rut', 'afp', 'sistema_salud', 'isapre', 'tipo_contrato', 'fecha_ingreso',
+                  'actualizado_en']
+        read_only_fields = ['actualizado_en']
+
+    def get_usuario_nombre(self, f):
+        return nombre_de(f.usuario)
+
+    def validate_usuario(self, u):
+        if self.instance is not None and u != self.instance.usuario:
+            raise serializers.ValidationError('La ficha no se puede pasar a otra persona.')
+        if self.instance is None and not u.is_active:
+            raise serializers.ValidationError('La cuenta está desactivada.')
+        return u
+
+    def validate_rut(self, valor):
+        try:
+            rut = validar_rut(valor)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        usado = FichaTrabajador.objects.filter(rut=rut)
+        if self.instance is not None:
+            usado = usado.exclude(pk=self.instance.pk)
+        if usado.exists():
+            raise serializers.ValidationError('Ya existe una ficha con este RUT.')
+        return rut
+
+    def validate_fecha_ingreso(self, d):
+        if d.year < 1950:
+            raise serializers.ValidationError('La fecha de ingreso no es válida.')
+        return d
+
+    def validate(self, attrs):
+        actual = self.instance
+        salud = attrs.get('sistema_salud', actual.sistema_salud if actual else None)
+        isapre = attrs.get('isapre', actual.isapre if actual else '')
+        if salud == FichaTrabajador.SistemaSalud.ISAPRE and not isapre:
+            raise serializers.ValidationError({'isapre': 'Indica la isapre.'})
+        if salud == FichaTrabajador.SistemaSalud.FONASA:
+            attrs['isapre'] = ''  # Fonasa no lleva isapre: se limpia en vez de rechazar un valor que quedó de antes
+        return attrs
+
+
 class ContratoSerializer(serializers.ModelSerializer):
     empleado_nombre = serializers.SerializerMethodField()
+    tipo_contrato = serializers.CharField(read_only=True, allow_null=True)  # viene de la ficha del trabajador: no se escribe aquí
     finiquito_id = serializers.SerializerMethodField()
 
     class Meta:
@@ -33,6 +86,8 @@ class ContratoSerializer(serializers.ModelSerializer):
     def validate_empleado(self, u):
         if not u.is_active:
             raise serializers.ValidationError('El empleado está inactivo.')
+        if self.instance is None and getattr(u, 'ficha', None) is None:
+            raise serializers.ValidationError('Completa primero la ficha del trabajador (RUT, previsión, salud y tipo de contrato).')
         return u
 
     def validate(self, datos):
@@ -40,9 +95,11 @@ class ContratoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Un contrato finiquitado no se puede modificar.')
         if self.instance and 'empleado' in datos and datos['empleado'] != self.instance.empleado:
             raise serializers.ValidationError({'empleado': 'No se puede cambiar el empleado de un contrato.'})
-        actual = {f: getattr(self.instance, f) for f in ('tipo_contrato', 'fecha_inicio', 'fecha_termino')} if self.instance else {}
+        actual = {f: getattr(self.instance, f) for f in ('fecha_inicio', 'fecha_termino')} if self.instance else {}
         mezcla = {**actual, **datos}
-        if mezcla.get('tipo_contrato') == Contrato.Tipo.PLAZO_FIJO and not mezcla.get('fecha_termino'):
+        empleado = datos.get('empleado') or (self.instance.empleado if self.instance else None)
+        ficha = getattr(empleado, 'ficha', None)
+        if ficha and ficha.tipo_contrato == FichaTrabajador.TipoContrato.PLAZO_FIJO and not mezcla.get('fecha_termino'):
             raise serializers.ValidationError({'fecha_termino': 'Un contrato a plazo fijo requiere fecha de término.'})
         if mezcla.get('fecha_termino') and mezcla['fecha_termino'] < mezcla['fecha_inicio']:
             raise serializers.ValidationError({'fecha_termino': 'La fecha de término no puede ser anterior al inicio.'})
@@ -209,10 +266,20 @@ class PersonalSerializer(serializers.ModelSerializer):
     """Fila de la tabla de personal: persona + estado contractual vigente (o el último)."""
     nombre = serializers.SerializerMethodField()
     contrato = serializers.SerializerMethodField()
+    ficha_id = serializers.SerializerMethodField()
+    tipo_contrato = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'nombre', 'email', 'role', 'is_active', 'contrato']
+        fields = ['id', 'nombre', 'email', 'role', 'is_active', 'contrato', 'ficha_id', 'tipo_contrato']
+
+    def get_tipo_contrato(self, u):
+        ficha = getattr(u, 'ficha', None)  # fuente de verdad del tipo de contrato; None mientras no exista la ficha
+        return ficha.tipo_contrato if ficha else None
+
+    def get_ficha_id(self, u):
+        ficha = getattr(u, 'ficha', None)  # None = la cuenta existe pero RR. HH. aún no completa su ficha
+        return ficha.id if ficha else None
 
     def get_nombre(self, u):
         return nombre_de(u)

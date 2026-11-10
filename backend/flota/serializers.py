@@ -16,7 +16,7 @@ class VehiculoSerializer(serializers.ModelSerializer):
                   'vencimiento_permiso', 'vencimiento_seguro', 'tecnico', 'tecnico_nombre', 'activo')
 
     def get_tecnico_nombre(self, obj):
-        return f'{obj.tecnico.nombres} {obj.tecnico.apellidos}' if obj.tecnico else '—'
+        return (obj.tecnico.full_name or obj.tecnico.email) if obj.tecnico else '—'
 
     def validate_patente(self, value):
         return value.upper().replace(' ', '')

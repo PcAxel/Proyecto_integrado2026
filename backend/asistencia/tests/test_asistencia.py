@@ -4,14 +4,12 @@ from django.utils import timezone
 
 from accounts.tests.base import RoleTestCase
 from asistencia.models import MarcaAsistencia
-from personal.models import Trabajador
 
 
 class RelojControlTests(RoleTestCase):
     def setUp(self):
         super().setUp()
         self.tec = self.users['TECNICO']
-        self.ficha = Trabajador.objects.create(rut='1-9', nombres='Tomás', apellidos='Vera', cargo='Técnico', usuario=self.tec)
 
     def marcar(self, tipo, **extra):
         return self.client.post('/api/asistencia/marcar/', {'tipo': tipo, 'lat': -36.6, 'lng': -72.1, **extra}, format='json')
@@ -48,12 +46,11 @@ class RelojControlTests(RoleTestCase):
             self.as_role(rol)
             self.assertEqual(self.marcar('ENTRADA').status_code, 403, rol)
 
-    def test_tecnico_sin_ficha(self):
-        otro = self.users['OPERACIONES']
-        self.client.force_authenticate(self.users['TECNICO'])
-        self.ficha.usuario = None
-        self.ficha.save()
-        self.assertEqual(self.marcar('ENTRADA').status_code, 403)
+    def test_una_cuenta_desactivada_no_aparece_en_la_asistencia_de_hoy(self):
+        from accounts.models import CustomUser
+        self.as_role('RRHH')
+        CustomUser.objects.filter(pk=self.tec.pk).update(is_active=False)
+        self.assertNotIn(self.tec.pk, [f['tecnico_id'] for f in self.client.get('/api/asistencia/hoy/').data])
 
     def test_mi_dia(self):
         self.as_role('TECNICO')
@@ -67,7 +64,7 @@ class RelojControlTests(RoleTestCase):
         self.as_role('RRHH')
         r = self.client.get('/api/asistencia/hoy/')
         self.assertEqual(r.status_code, 200)
-        fila = next(f for f in r.data if f['tecnico_id'] == self.ficha.pk)
+        fila = next(f for f in r.data if f['tecnico_id'] == self.tec.pk)
         self.assertEqual(fila['estado'], 'EN_JORNADA')
         self.assertIsNotNone(fila['entrada'])
         for rol in ('FINANZAS', 'OPERACIONES', 'TECNICO'):
@@ -81,24 +78,14 @@ class RelojControlTests(RoleTestCase):
 
 
 class PersonalFlotaTests(RoleTestCase):
-    def test_rrhh_edita_tarifa_y_estado_vehiculo(self):
-        t = Trabajador.objects.create(rut='2-7', nombres='Ana', apellidos='Soto', cargo='Técnico', tarifa_hora=7000)
+    def test_rrhh_edita_estado_vehiculo(self):
         self.as_role('RRHH')
-        r = self.client.patch(f'/api/trabajadores/{t.pk}/', {'costo_hora_hombre': 8200}, format='json')
-        self.assertEqual((r.status_code, r.data['costo_hora_hombre'], r.data['nombre']), (200, 8200, 'Ana Soto'))
-
         from flota.models import Vehiculo
-        v = Vehiculo.objects.create(patente='AB-1234', marca='Toyota', modelo='Hilux')
+        v = Vehiculo.objects.create(patente='AB-1234', marca='Toyota', modelo='Hilux', tecnico=self.users['TECNICO'])
         r = self.client.patch(f'/api/vehiculos/{v.pk}/', {'estado': 'EN_TALLER'}, format='json')
-        self.assertEqual((r.status_code, r.data['estado']), (200, 'EN_TALLER'))
+        self.assertEqual((r.status_code, r.data['estado'], r.data['tecnico']), (200, 'EN_TALLER', self.users['TECNICO'].pk))
+        self.assertEqual(r.data['tecnico_nombre'], self.users['TECNICO'].email)
 
-    def test_finanzas_solo_lee_personal(self):
-        t = Trabajador.objects.create(rut='3-5', nombres='Luis', apellidos='Mora', cargo='Ayudante')
-        self.as_role('FINANZAS')
-        self.assertEqual(self.client.get('/api/trabajadores/').status_code, 200)
-        self.assertEqual(self.client.patch(f'/api/trabajadores/{t.pk}/', {'costo_hora_hombre': 1}, format='json').status_code, 403)
-
-    def test_operaciones_y_tecnico_no_ven_personal(self):
-        for rol in ('OPERACIONES', 'TECNICO'):
-            self.as_role(rol)
-            self.assertEqual(self.client.get('/api/trabajadores/').status_code, 403, rol)
+    def test_el_endpoint_antiguo_de_trabajadores_ya_no_existe(self):
+        self.as_role('ADMIN')
+        self.assertEqual(self.client.get('/api/trabajadores/').status_code, 404)

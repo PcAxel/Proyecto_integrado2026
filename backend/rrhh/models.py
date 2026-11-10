@@ -6,19 +6,81 @@ from django.utils import timezone
 
 from .archivos import almacen_privado, ruta_comprobante, ruta_documento, ruta_firma, ruta_firmado, validar_ext_comprobante, validar_ext_pdf
 from .calculo import CAUSALES
+from .validadores import validar_rut
+
+
+class FichaTrabajador(models.Model):
+    """Datos laborales y previsionales de una persona. La cuenta (`CustomUser`) queda solo para el acceso y el rol: el Administrador
+    crea la credencial y luego RR. HH. (o el Administrador) completa esta ficha. Base para contratos y liquidaciones de sueldo."""
+
+    class AFP(models.TextChoices):
+        CAPITAL = 'CAPITAL', 'AFP Capital'
+        CUPRUM = 'CUPRUM', 'AFP Cuprum'
+        HABITAT = 'HABITAT', 'AFP Habitat'
+        MODELO = 'MODELO', 'AFP Modelo'
+        PLANVITAL = 'PLANVITAL', 'AFP PlanVital'
+        PROVIDA = 'PROVIDA', 'AFP ProVida'
+        UNO = 'UNO', 'AFP Uno'
+        IPS = 'IPS', 'IPS (sistema antiguo)'
+
+    class SistemaSalud(models.TextChoices):
+        FONASA = 'FONASA', 'Fonasa'
+        ISAPRE = 'ISAPRE', 'Isapre'
+
+    class Isapre(models.TextChoices):
+        BANMEDICA = 'BANMEDICA', 'Banmédica'
+        COLMENA = 'COLMENA', 'Colmena Golden Cross'
+        CONSALUD = 'CONSALUD', 'Consalud'
+        CRUZ_BLANCA = 'CRUZ_BLANCA', 'Cruz Blanca'
+        ESENCIAL = 'ESENCIAL', 'Esencial'
+        NUEVA_MASVIDA = 'NUEVA_MASVIDA', 'Nueva Masvida'
+        VIDA_TRES = 'VIDA_TRES', 'Vida Tres'
+        OTRA = 'OTRA', 'Otra isapre'
+
+    class TipoContrato(models.TextChoices):
+        PLAZO_FIJO = 'PLAZO_FIJO', 'Plazo fijo'
+        INDEFINIDO = 'INDEFINIDO', 'Indefinido'
+        OBRA_FAENA = 'OBRA_FAENA', 'Obra o faena'
+
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ficha')
+    rut = models.CharField(max_length=10, unique=True, validators=[validar_rut], help_text='Sin puntos y con guion: 12345678-5')
+    afp = models.CharField('previsión (AFP)', max_length=12, choices=AFP.choices)
+    sistema_salud = models.CharField(max_length=6, choices=SistemaSalud.choices)
+    isapre = models.CharField(max_length=14, choices=Isapre.choices, blank=True, help_text='Solo si el sistema de salud es Isapre')
+    tipo_contrato = models.CharField(max_length=12, choices=TipoContrato.choices)
+    fecha_ingreso = models.DateField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    actualizado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
+    class Meta:
+        ordering = ['usuario__first_name', 'usuario__last_name', 'usuario__email']
+        verbose_name = 'ficha de trabajador'
+        verbose_name_plural = 'fichas de trabajadores'
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(sistema_salud='FONASA', isapre='') | (Q(sistema_salud='ISAPRE') & ~Q(isapre=''))),
+                name='isapre_solo_si_sistema_isapre'),
+        ]
+
+    def clean(self):
+        if self.sistema_salud == self.SistemaSalud.ISAPRE and not self.isapre:
+            raise ValidationError({'isapre': 'Indica la isapre.'})
+        if self.sistema_salud == self.SistemaSalud.FONASA and self.isapre:
+            raise ValidationError({'isapre': 'Fonasa no lleva isapre.'})
+
+    def __str__(self):
+        return f'Ficha de {self.usuario}'
 
 
 class Contrato(models.Model):
-    class Tipo(models.TextChoices):
-        INDEFINIDO = 'INDEFINIDO', 'Indefinido'
-        PLAZO_FIJO = 'PLAZO_FIJO', 'Plazo fijo'
+    """Período contractual y sueldo base. El TIPO de contrato no se guarda aquí: la fuente de verdad es `FichaTrabajador.tipo_contrato`."""
 
     class Estado(models.TextChoices):
         ACTIVO = 'ACTIVO', 'Activo'
         FINIQUITADO = 'FINIQUITADO', 'Finiquitado'
 
     empleado = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='contratos')
-    tipo_contrato = models.CharField(max_length=12, choices=Tipo.choices)
     fecha_inicio = models.DateField()
     fecha_termino = models.DateField(null=True, blank=True)
     sueldo_base = models.DecimalField(max_digits=12, decimal_places=0)
@@ -35,8 +97,14 @@ class Contrato(models.Model):
             models.CheckConstraint(condition=Q(sueldo_base__gt=0), name='sueldo_base_positivo'),
         ]
 
+    @property
+    def tipo_contrato(self):
+        """Tipo de contrato de la ficha del trabajador (None si aún no tiene ficha)."""
+        ficha = getattr(self.empleado, 'ficha', None)
+        return ficha.tipo_contrato if ficha else None
+
     def clean(self):
-        if self.tipo_contrato == self.Tipo.PLAZO_FIJO and not self.fecha_termino:
+        if self.tipo_contrato == FichaTrabajador.TipoContrato.PLAZO_FIJO and not self.fecha_termino:
             raise ValidationError({'fecha_termino': 'Un contrato a plazo fijo requiere fecha de término.'})
         if self.fecha_termino and self.fecha_termino < self.fecha_inicio:
             raise ValidationError({'fecha_termino': 'La fecha de término no puede ser anterior al inicio.'})

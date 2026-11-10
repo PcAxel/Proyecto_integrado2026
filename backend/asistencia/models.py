@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -7,7 +8,7 @@ class MarcaAsistencia(models.Model):
         ENTRADA = 'ENTRADA', 'Entrada'
         SALIDA = 'SALIDA', 'Salida'
 
-    trabajador = models.ForeignKey('personal.Trabajador', on_delete=models.PROTECT, related_name='marcas')
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='marcas')
     tipo = models.CharField(max_length=8, choices=Tipo.choices)
     fecha = models.DateTimeField()  # la captura el dispositivo; puede llegar tarde si no había señal
     lat = models.FloatField()

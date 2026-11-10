@@ -55,7 +55,7 @@ class TermsTests(RoleTestCase):
     def test_blocks_every_operational_endpoint_until_accepted(self):
         self.client.force_authenticate(self.nuevo)
         for url in ('/api/obras/', '/api/reportes/', '/api/articulos/', '/api/presupuestos/',
-                    '/api/vehiculos/', '/api/trabajadores/', '/api/cardex/'):
+                    '/api/vehiculos/', '/api/cardex/'):
             r = self.client.get(url)
             self.assertEqual(r.status_code, 403, url)
             self.assertEqual(r.data['detail'].code, 'terms_not_accepted', url)

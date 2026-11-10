@@ -1,3 +1,4 @@
+import logging
 import secrets
 from urllib.parse import quote
 
@@ -7,6 +8,7 @@ from django.core.cache import cache
 from django.core import signing
 from django.utils import timezone
 from django.db import connection
+from django.shortcuts import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
@@ -16,7 +18,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from config.ip import ip_cliente
 
 from .emails import send_onboarding_email
-from .models import CustomUser
+from .models import CustomUser, Role
 from .permissions import IsAdminRole
 from .serializers import (
     AcceptTermsSerializer,
@@ -27,6 +29,8 @@ from .serializers import (
     UserSerializer,
 )
 from .throttles import LoginRateThrottle, RefreshRateThrottle
+
+logger = logging.getLogger(__name__)
 
 CHALLENGE_SALT = 'fyag.2fa.challenge'
 MAX_FALLOS_LOGIN = 5
@@ -175,6 +179,49 @@ class UserCreateView(APIView):
         except Exception:
             email_sent = False
         return Response({**UserSerializer(user).data, 'email_sent': email_sent}, status=status.HTTP_201_CREATED)
+
+
+def _cortar_sesiones(user):
+    """Invalida todos los refresh tokens de la persona (el access token ya deja de servir porque la cuenta queda inactiva)."""
+    from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+    for t in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=t)
+
+
+class UserDesactivarView(APIView):
+    """POST /api/users/<id>/desactivar/ — solo el Administrador. Borrado lógico: la cuenta pierde el acceso y se conserva todo su historial.
+    No existe ningún endpoint para eliminar usuarios."""
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk):
+        user = get_object_or_404(CustomUser, pk=pk)
+        if user.pk == request.user.pk:
+            return Response({'detail': 'No puedes desactivar tu propia cuenta.', 'code': 'self_deactivation'}, status=status.HTTP_400_BAD_REQUEST)
+        if user.is_active and user.role == Role.ADMIN and not CustomUser.objects.filter(role=Role.ADMIN, is_active=True).exclude(pk=user.pk).exists():
+            return Response({'detail': 'Debe quedar al menos un Administrador activo.', 'code': 'last_admin'}, status=status.HTTP_409_CONFLICT)
+        if user.is_active:
+            user.is_active = False
+            user.deactivated_at = timezone.now()
+            user.deactivated_by = request.user
+            user.save(update_fields=['is_active', 'deactivated_at', 'deactivated_by'])
+            _cortar_sesiones(user)
+            logger.info('usuario_desactivado id=%s por=%s', user.pk, request.user.pk)
+        return Response(UserSerializer(user).data)
+
+
+class UserReactivarView(APIView):
+    """POST /api/users/<id>/reactivar/ — solo el Administrador. Devuelve el acceso; su 2FA y su historial siguen como estaban."""
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, pk):
+        user = get_object_or_404(CustomUser, pk=pk)
+        if not user.is_active:
+            user.is_active = True
+            user.deactivated_at = None
+            user.deactivated_by = None
+            user.save(update_fields=['is_active', 'deactivated_at', 'deactivated_by'])
+            logger.info('usuario_reactivado id=%s por=%s', user.pk, request.user.pk)
+        return Response(UserSerializer(user).data)
 
 
 class MeView(APIView):
