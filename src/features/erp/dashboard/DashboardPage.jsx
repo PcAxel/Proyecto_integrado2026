@@ -23,7 +23,7 @@ export function DashboardPage() {
   const [todos, setTodos] = useState(false)
   const k = data?.kpis ?? {}
   const definido = (v) => v !== undefined && v !== null
-  const docsVencidos = (data?.alertas ?? []).filter((a) => a.severidad === 'CRITICA' && ['LICENCIA', 'REVISION_TECNICA', 'SEGURO'].includes(a.tipo)).length
+  const docsVencidos = (data?.alertas ?? []).filter((a) => a.severidad === 'CRITICA' && ['LICENCIA', 'REVISION_TECNICA', 'PERMISO_CIRCULACION', 'SEGURO'].includes(a.tipo)).length
   const enfoque = ENFOQUES[user.rol] ?? ENFOQUES.CONSULTA
   const tareas = data?.tareas ?? []
 

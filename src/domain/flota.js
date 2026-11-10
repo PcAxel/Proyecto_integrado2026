@@ -37,3 +37,6 @@ export function resumenFlota(flota) {
     kmTotal: vigentes.reduce((s, v) => s + (v.km_actual ?? 0), 0),
   }
 }
+
+/** Patente chilena: formato antiguo (AB-1234) o vigente (ABCD-12), con o sin guion. */
+export const esPatenteValida = (texto) => /^([A-Z]{2}\d{4}|[A-Z]{4}\d{2})$/.test(String(texto ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase())

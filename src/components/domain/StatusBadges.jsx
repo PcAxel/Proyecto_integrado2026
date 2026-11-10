@@ -47,6 +47,7 @@ export const ChecklistResultBadge = ({ resultado }) => <Badge tone={CHECK[result
 
 /** Fecha de vencimiento con color según la cercanía (vencido / ≤15 días / ≤60 días). */
 export function VencimientoBadge({ fecha, hoy }) {
+  if (!fecha) return <Badge tone="neutral">Sin registro</Badge>
   const [y, m, d] = fecha.slice(0, 10).split('-').map(Number)
   const [hy, hm, hd] = hoy.split('-').map(Number)
   const dias = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(hy, hm - 1, hd)) / 86_400_000)

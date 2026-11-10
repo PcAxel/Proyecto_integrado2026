@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Users, Wallet, ShieldAlert, Pencil, Power, Truck, Gauge, Wrench, X } from 'lucide-react'
+import { Users, Wallet, ShieldAlert, Pencil, Power, Truck, Gauge, Wrench, X, Plus, FileCheck2, History } from 'lucide-react'
 import { PageHeader, Tabs, Card, DataTable, KpiTile, Badge, Mono, IconButton, Modal, Button, NumberField, ConfirmDialog, ExportMenu } from '@/components/ui'
 import { MoneyCell, VencimientoBadge } from '@/components/domain'
-import { personalService } from '@/services'
+import { personalService, flotaService } from '@/services'
 import { formatCLP } from '@/domain/money'
 import { normalizar } from '@/domain/busqueda'
 import { formatKm, resumenFlota, ESTADOS_VEHICULO } from '@/domain/flota'
@@ -14,6 +14,7 @@ import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 import { ListaAlertas } from '../dashboard/Charts'
 import { AsistenciaHoy } from './AsistenciaHoy'
+import { VehiculoModal, DocumentoModal, KmModal, HistorialModal } from './GestionFlota'
 
 const COLS_FICHAS = [
   { titulo: 'Código', clave: 'id' }, { titulo: 'Nombre', clave: 'nombre', ancho: 26 }, { titulo: 'RUT', clave: 'rut' }, { titulo: 'Cargo', clave: 'cargo', ancho: 28 },
@@ -24,12 +25,15 @@ const COLS_FLOTA = [
   { titulo: 'Código', clave: 'id' }, { titulo: 'Patente', clave: 'patente' }, { titulo: 'Marca', clave: 'marca' }, { titulo: 'Modelo', clave: 'modelo', ancho: 22 },
   { titulo: 'Asignado a', clave: 'tecnico_nombre', ancho: 24 }, { titulo: 'Kilometraje actual', clave: 'km_actual', tipo: 'numero' },
   { titulo: 'Estado', clave: (v) => (v.estado === 'EN_TALLER' ? 'En taller' : 'Activo') },
-  { titulo: 'Revisión técnica', clave: 'vencimiento_revision', tipo: 'fecha' }, { titulo: 'Seguro', clave: 'vencimiento_seguro', tipo: 'fecha' },
+  { titulo: 'Última revisión (hecha)', clave: 'ultima_revision', tipo: 'fecha' }, { titulo: 'Revisión técnica (vence)', clave: 'vencimiento_revision', tipo: 'fecha' },
+  { titulo: 'Permiso de circulación (vence)', clave: 'vencimiento_permiso', tipo: 'fecha' }, { titulo: 'Seguro (vence)', clave: 'vencimiento_seguro', tipo: 'fecha' },
 ]
 
 export function PersonalPage() {
   const rol = useAuthStore((s) => s.user.rol)
   const gestiona = can(rol, 'personal.editar')
+  // La flota la administran RR. HH. y el Administrador (los mismos roles que entran a Contratos y Finiquitos); el servidor lo exige igualmente.
+  const gestionaFlota = can(rol, 'rrhh.ver')
   const veAsistencia = can(rol, 'asistencia.ver')
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') ?? 'fichas'
@@ -38,11 +42,15 @@ export function PersonalPage() {
   const [tarifa, setTarifa] = useState(null) // { ficha, valor }
   const [toggle, setToggle] = useState(null)
   const [taller, setTaller] = useState(null)
+  const [vehiculoModal, setVehiculoModal] = useState(null) // { vehiculo? }
+  const [docModal, setDocModal] = useState(null)
+  const [kmModal, setKmModal] = useState(null)
+  const [histModal, setHistModal] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const hoy = fechaLocal()
 
   const fichas = useResource(() => personalService.list({ incluirInactivos: true }), [])
-  const flota = useResource(() => personalService.listFlota(), [])
+  const flota = useResource(() => flotaService.listar(), []) // tablas relacionales de la flota (fuente de verdad)
   const alertas = useResource(() => personalService.alertas(), [])
   const activos = (fichas.data ?? []).filter((p) => p.activo)
   const resumen = resumenFlota(flota.data ?? [])
@@ -55,9 +63,11 @@ export function PersonalPage() {
     setGuardando(false)
     if (r) { setTarifa(null); fichas.reload() }
   }
+  const tras = () => { flota.reload(); alertas.reload() }
+  const tecnicos = activos.filter((p) => p.usuario_id).map((p) => ({ value: Number(String(p.usuario_id).slice(2)), label: p.nombre }))
   const confirmarTaller = async () => {
     const nuevo = taller.estado === ESTADOS_VEHICULO.ACTIVO ? ESTADOS_VEHICULO.EN_TALLER : ESTADOS_VEHICULO.ACTIVO
-    const r = await runAction(personalService.setEstadoVehiculo(taller.id, nuevo), nuevo === 'EN_TALLER' ? `${taller.patente} enviado a taller` : `${taller.patente} vuelve a estar activo`)
+    const r = await runAction(flotaService.actualizar(taller.id, { estado: nuevo }), nuevo === 'EN_TALLER' ? `${taller.patente} enviado a taller` : `${taller.patente} vuelve a estar activo`)
     if (r) { setTaller(null); flota.reload() }
   }
   const confirmarToggle = async () => {
@@ -87,11 +97,21 @@ export function PersonalPage() {
     { key: 'estado', header: 'Estado', render: (v) => (v.estado === ESTADOS_VEHICULO.ACTIVO
       ? <Badge tone="ok">Activo</Badge>
       : <Badge tone="warn" icon={Wrench}>En taller</Badge>) },
+    { key: 'ultrev', header: 'Revisión hecha', render: (v) => (v.ultima_revision ? <Mono className="text-xs">{formatFecha(v.ultima_revision)}</Mono> : <span className="text-ink-faint">—</span>) },
     { key: 'rev', header: 'Revisión técnica', render: (v) => <VencimientoBadge fecha={v.vencimiento_revision} hoy={hoy} /> },
+    { key: 'per', header: 'Permiso circ.', render: (v) => <VencimientoBadge fecha={v.vencimiento_permiso} hoy={hoy} /> },
     { key: 'seg', header: 'Seguro', render: (v) => <VencimientoBadge fecha={v.vencimiento_seguro} hoy={hoy} /> },
-    ...(gestiona ? [{ key: 'acc', header: '', align: 'right', render: (v) => (
-      <IconButton icon={Wrench} label={v.estado === ESTADOS_VEHICULO.ACTIVO ? 'Enviar a taller' : 'Marcar como activo'} size="sm" onClick={() => setTaller(v)} />
-    ) }] : []),
+    { key: 'acc', header: '', align: 'right', render: (v) => (
+      <div className="flex justify-end gap-1">
+        <IconButton icon={History} label="Ver historial" size="sm" onClick={() => setHistModal(v)} />
+        {gestionaFlota && <>
+          <IconButton icon={FileCheck2} label="Registrar revisión o documento" size="sm" onClick={() => setDocModal(v)} />
+          <IconButton icon={Gauge} label="Actualizar kilometraje" size="sm" onClick={() => setKmModal(v)} />
+          <IconButton icon={Pencil} label="Editar vehículo" size="sm" onClick={() => setVehiculoModal({ vehiculo: v })} />
+          <IconButton icon={Wrench} label={v.estado === ESTADOS_VEHICULO.ACTIVO ? 'Enviar a taller' : 'Marcar como activo'} size="sm" onClick={() => setTaller(v)} />
+        </>}
+      </div>
+    ) },
   ]
 
   return (
@@ -99,7 +119,10 @@ export function PersonalPage() {
       <PageHeader title="Personal y Flota" subtitle="Fichas con tarifa hora-hombre, vehículos y vencimientos"
         actions={tab === 'fichas'
           ? <ExportMenu nombre="personal" titulo="Personal" subtitulo="Fichas y tarifas hora-hombre" columnas={COLS_FICHAS} filas={fichas.data ?? []} />
-          : tab === 'flota' ? <ExportMenu nombre="flota" titulo="Flota" subtitulo="Vehículos y vencimientos" columnas={COLS_FLOTA} filas={flota.data ?? []} /> : null} />
+          : tab === 'flota' ? <div className="flex flex-wrap items-center gap-2">
+            <ExportMenu nombre="flota" titulo="Flota" subtitulo="Vehículos y vencimientos" columnas={COLS_FLOTA} filas={flota.data ?? []} />
+            {gestionaFlota && <Button icon={Plus} onClick={() => setVehiculoModal({})}>Nuevo vehículo</Button>}
+          </div> : null} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
         <KpiTile label="Técnicos activos" value={fichas.data ? activos.length : '—'} icon={Users} hint={`de ${fichas.data?.length ?? '—'} en dotación`} />
@@ -128,6 +151,10 @@ export function PersonalPage() {
       {tab === 'asistencia' && veAsistencia && <AsistenciaHoy />}
       {tab === 'alertas' && <Card title="Próximos vencimientos (60 días)">{alertas.data && <ListaAlertas alertas={alertas.data} />}</Card>}
 
+      {vehiculoModal && <VehiculoModal vehiculo={vehiculoModal.vehiculo} tecnicos={tecnicos} onClose={() => setVehiculoModal(null)} onSaved={tras} />}
+      {docModal && <DocumentoModal vehiculo={docModal} onClose={() => setDocModal(null)} onSaved={tras} />}
+      {kmModal && <KmModal vehiculo={kmModal} onClose={() => setKmModal(null)} onSaved={tras} />}
+      {histModal && <HistorialModal vehiculo={histModal} onClose={() => setHistModal(null)} />}
       <Modal open={Boolean(tarifa)} onClose={() => setTarifa(null)} title={`Tarifa de ${tarifa?.ficha.nombre ?? ''}`}
         footer={<><Button variant="secondary" onClick={() => setTarifa(null)}>Cancelar</Button><Button loading={guardando} disabled={!(tarifa?.valor > 0) || tarifa?.valor === tarifa?.ficha.costo_hora_hombre} onClick={guardarTarifa}>Guardar tarifa</Button></>}>
         {tarifa && <div className="space-y-4">

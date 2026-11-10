@@ -20,6 +20,7 @@ export function diasHasta(fecha, hoy) {
 export function alertasVencimiento({ personal, flota, hoy, ventanaDias = 60 }) {
   const out = []
   const evaluar = (id, tipo, titulo, fecha, ruta) => {
+    if (!fecha) return // aún no se registró este vencimiento: no hay nada que alertar
     const dias = diasHasta(fecha, hoy)
     if (dias > ventanaDias) return
     out.push({
@@ -31,6 +32,7 @@ export function alertasVencimiento({ personal, flota, hoy, ventanaDias = 60 }) {
   personal.filter((p) => p.activo).forEach((p) => evaluar(`LIC-${p.id}`, 'LICENCIA', `Licencia de conducir · ${p.nombre}`, p.vencimiento_licencia, '/erp/personal?tab=alertas'))
   flota.filter((v) => v.activo).forEach((v) => {
     evaluar(`REV-${v.id}`, 'REVISION_TECNICA', `Revisión técnica · ${v.patente}`, v.vencimiento_revision, '/erp/personal?tab=alertas')
+    evaluar(`PER-${v.id}`, 'PERMISO_CIRCULACION', `Permiso de circulación · ${v.patente}`, v.vencimiento_permiso, '/erp/personal?tab=alertas')
     evaluar(`SEG-${v.id}`, 'SEGURO', `Seguro obligatorio · ${v.patente}`, v.vencimiento_seguro, '/erp/personal?tab=alertas')
   })
   return ordenarAlertas(out)
