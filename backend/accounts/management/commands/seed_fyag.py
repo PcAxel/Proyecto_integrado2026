@@ -105,6 +105,31 @@ class Command(BaseCommand):
         parser.add_argument('--reiniciar', action='store_true', help='Borra y vuelve a cargar las tablas del ERP.')
 
     @transaction.atomic
+    def _sembrar_flota(self, filas):
+        """La flota vive en tablas relacionales (app `flota`), no como JSON. Idempotente: si ya hay vehículos no toca nada."""
+        from datetime import date, timedelta
+
+        from flota import servicio
+        from flota.models import DocumentoVehiculo, LecturaOdometro, Vehiculo
+        if Vehiculo.objects.exists():
+            return 0
+        usuario_de_ficha = {r.rid: r.datos.get('usuario_id') for r in Registro.objects.filter(tabla='personal')}
+        n = 0
+        for f in filas:
+            uid_tec = usuario_de_ficha.get(f.get('tecnico_id'))
+            v = Vehiculo.objects.create(
+                codigo=f['id'], patente=f['patente'], marca=f['marca'], modelo=f['modelo'], estado=f['estado'], activo=f.get('activo', True),
+                tecnico=CustomUser.objects.filter(pk=int(uid_tec[2:])).first() if uid_tec else None)
+            if f.get('km_actual'):
+                servicio.registrar_km(v, int(f['km_actual']), LecturaOdometro.Origen.INICIAL)
+            for tipo, clave in (('REVISION_TECNICA', 'vencimiento_revision'), ('SEGURO', 'vencimiento_seguro'), ('PERMISO_CIRCULACION', 'vencimiento_permiso')):
+                if f.get(clave):
+                    vence = date.fromisoformat(f[clave])
+                    DocumentoVehiculo.objects.create(vehiculo=v, tipo=tipo, fecha_vencimiento=vence, fecha_realizacion=vence - timedelta(days=365),
+                                                     observacion='Dato de demostración')
+            n += 1
+        return n
+
     def handle(self, *args, **opts):
         if not settings.DEBUG and not opts['force']:
             raise CommandError('seed_fyag usa contraseñas conocidas: solo se ejecuta con DJANGO_DEBUG=True.')
@@ -132,12 +157,18 @@ class Command(BaseCommand):
 
         if opts['reiniciar']:
             Registro.objects.filter(tabla__in=tablas.TABLAS).delete()
+            from flota.models import DocumentoVehiculo, LecturaOdometro, Vehiculo
+            for m in (LecturaOdometro, DocumentoVehiculo, Vehiculo):
+                m.objects.all().delete()
         datos = json.loads((Path(__file__).resolve().parents[2].parent / 'erp' / 'seed_data.json').read_text(encoding='utf-8'))
         hoy = timezone.localdate().isoformat()
         creados = 0
         if not opts['demo']:
             datos = depurar(datos)
         for tabla, filas in datos.items():
+            if tabla == 'flota':
+                creados += self._sembrar_flota(reemplazar(filas, mapa))
+                continue
             if Registro.objects.filter(tabla=tabla).exists():
                 continue  # idempotente: no pisa datos ya cargados ni los que se hayan trabajado desde la app
             for fila in reemplazar(filas, mapa):

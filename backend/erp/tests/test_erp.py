@@ -3,6 +3,8 @@ from django.utils import timezone
 from accounts.tests.base import RoleTestCase
 from erp.escritura import uid
 from erp.models import Registro
+from flota import servicio
+from flota.models import DocumentoVehiculo, LecturaOdometro, Vehiculo
 
 
 def crear(tabla, rid, **datos):
@@ -21,8 +23,11 @@ class ErpBase(RoleTestCase):
         crear('personal', 'T-02', nombre='Luis', cargo='Técnico', costo_hora_hombre=8000, usuario_id='U-999', activo=True)
         crear('hojas', 'HS-0001', obra_id='OB-0001', tecnico_id='T-01', estado='ENVIADA')
         crear('hojas', 'HS-0002', obra_id='OB-0002', tecnico_id='T-02', estado='ENVIADA')
-        crear('flota', 'VH-01', patente='AB-1', estado='ACTIVO', activo=True, km_actual=100, vencimiento_revision='2027-01-01', vencimiento_seguro='2027-01-01')
-        crear('flota', 'VH-02', patente='AB-2', estado='EN_TALLER', activo=True, km_actual=100, vencimiento_revision='2027-01-01', vencimiento_seguro='2027-01-01')
+        # La flota vive en tablas relacionales (app `flota`); el ERP la expone con la misma forma de siempre.
+        for codigo, patente, estado in (('VH-01', 'AB-1234', 'ACTIVO'), ('VH-02', 'AB-5678', 'EN_TALLER')):
+            v = Vehiculo.objects.create(codigo=codigo, patente=patente, marca='Toyota', modelo='Hilux', estado=estado, kilometraje=100)
+            DocumentoVehiculo.objects.create(vehiculo=v, tipo='REVISION_TECNICA', fecha_vencimiento='2027-01-01')
+            DocumentoVehiculo.objects.create(vehiculo=v, tipo='SEGURO', fecha_vencimiento='2027-01-01')
 
     def snap(self, rol):
         self.as_role(rol)
@@ -276,3 +281,48 @@ class ContadoresTests(ErpBase):
         r = lote_de_marca('SALIDA', 2)
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(Registro.objects.filter(tabla='auditoria').count(), 2)
+
+
+class FlotaRelacionalTests(ErpBase):
+    """La flota ya no es JSON: el ERP la lee y escribe en las tablas del vehículo."""
+
+    def test_el_snapshot_trae_la_flota_con_la_misma_forma_que_antes(self):
+        v = next(x for x in self.snap('RRHH')['flota'] if x['id'] == 'VH-01')
+        self.assertEqual((v['patente'], v['km_actual'], v['estado'], v['vencimiento_revision'], v['vencimiento_seguro']), ('AB-1234', 100, 'ACTIVO', '2027-01-01', '2027-01-01'))
+        self.assertIsNone(v['vencimiento_permiso'])  # nunca se registró
+        self.assertFalse(Registro.objects.filter(tabla='flota').exists())
+
+    def test_los_vencimientos_los_ve_solo_quien_puede_ver_personal(self):
+        for rol in ('RRHH', 'FINANZAS', 'ADMIN'):
+            self.assertIn('vencimiento_revision', self.snap(rol)['flota'][0], rol)
+        self.assertEqual(self.snap('OPERACIONES')['flota'], [])  # no tiene acceso a la tabla
+
+    def test_el_tecnico_asignado_se_traduce_a_su_ficha_del_erp(self):
+        Vehiculo.objects.filter(codigo='VH-01').update(tecnico=self.users['TECNICO'])
+        self.assertEqual(next(x for x in self.snap('RRHH')['flota'] if x['id'] == 'VH-01')['tecnico_id'], 'T-01')
+
+    def test_enviar_a_taller_se_guarda_en_la_tabla_del_vehiculo(self):
+        r = self.lote('RRHH', {'op': 'patch', 'tabla': 'flota', 'id': 'VH-01', 'cambios': {'estado': 'EN_TALLER'}})
+        self.assertEqual((r.status_code, r.json()['filas'][0]['estado']), (200, 'EN_TALLER'))
+        self.assertEqual(Vehiculo.objects.get(codigo='VH-01').estado, 'EN_TALLER')
+
+    def test_el_odometro_que_envia_la_hoja_deja_una_lectura(self):
+        self.assertEqual(self.lote('TECNICO', {'op': 'patch', 'tabla': 'flota', 'id': 'VH-01', 'cambios': {'km_actual': 180}}).status_code, 200)
+        v = Vehiculo.objects.get(codigo='VH-01')
+        self.assertEqual(v.kilometraje, 180)
+        lectura = v.lecturas.get()
+        self.assertEqual((lectura.km, lectura.origen, lectura.registrado_por_id), (180, 'HOJA_SERVICIO', self.users['TECNICO'].pk))
+
+    def test_nadie_baja_el_odometro_ni_edita_otros_campos_por_el_erp(self):
+        self.assertEqual(self.lote('TECNICO', {'op': 'patch', 'tabla': 'flota', 'id': 'VH-01', 'cambios': {'km_actual': 50}}).status_code, 403)
+        self.assertEqual(Vehiculo.objects.get(codigo='VH-01').kilometraje, 100)
+        self.lote('RRHH', {'op': 'patch', 'tabla': 'flota', 'id': 'VH-01', 'cambios': {'patente': 'ZZ-0000', 'vencimiento_revision': '2030-01-01'}})
+        v = Vehiculo.objects.get(codigo='VH-01')
+        self.assertEqual(v.patente, 'AB-1234')
+        self.assertEqual(servicio.vencimiento_vigente(v, 'REVISION_TECNICA').fecha_vencimiento.isoformat(), '2027-01-01')
+
+    def test_el_erp_no_crea_vehiculos(self):
+        r = self.lote('RRHH', {'op': 'insert', 'tabla': 'flota', 'fila': {'id': 'VH-03', 'patente': 'ZZ-9999'}})
+        self.assertEqual(r.status_code, 403)
+        self.assertFalse(Vehiculo.objects.filter(patente='ZZ-9999').exists())
+        self.assertFalse(LecturaOdometro.objects.filter(vehiculo__codigo='VH-03').exists())

@@ -28,7 +28,7 @@ def _filtrar_tecnico(user, tabla, rows):
     if tabla in ('hojas', 'retiros', 'asistencia'):
         return [r for r in rows if r.get('tecnico_id') == fid]
     if tabla == 'flota':
-        sin_gestion = ('vencimiento_revision', 'vencimiento_seguro')
+        sin_gestion = ('ultima_revision', 'vencimiento_revision', 'vencimiento_permiso', 'vencimiento_seguro')
         return [{k: v for k, v in r.items() if k not in sin_gestion} for r in rows if r.get('activo') and r.get('estado') == 'ACTIVO']
     return rows
 
@@ -41,7 +41,7 @@ CAMPOS_SENSIBLES = {
         'costo_hora_hombre': ['personal.ver', 'costos.ver'],
     },
     'hojas': {'costo_hora_hombre': ['costos.ver']},
-    'flota': {'vencimiento_revision': ['personal.ver'], 'vencimiento_seguro': ['personal.ver']},
+    'flota': {'ultima_revision': ['personal.ver'], 'vencimiento_revision': ['personal.ver'], 'vencimiento_permiso': ['personal.ver'], 'vencimiento_seguro': ['personal.ver']},
     'obras': {},
 }
 

@@ -52,11 +52,23 @@ def siguiente_id(tabla):
     return f"{cfg['prefijo']}{str(Registro.objects.filter(tabla=tabla).count() + 1).zfill(cfg['ancho'])}"
 
 
+def _personal_por_usuario():
+    """{'U-004': 'T-01'}: de la cuenta a su ficha de personal del ERP."""
+    return {r.datos['usuario_id']: r.rid for r in Registro.objects.filter(tabla='personal') if r.datos.get('usuario_id')}
+
+
 def filas(tabla):
+    if tabla == 'flota':  # la flota ya no es JSON: vive en tablas relacionales propias (app `flota`)
+        from flota import servicio
+        from flota.models import Vehiculo
+        mapa = _personal_por_usuario()
+        return [servicio.fila_erp(v, mapa) for v in Vehiculo.objects.select_related('tecnico').prefetch_related('documentos').order_by('codigo')]
     return [r.fila() for r in Registro.objects.filter(tabla=tabla)]
 
 
 def fila(tabla, rid):
+    if tabla == 'flota':
+        return next((f for f in filas('flota') if f['id'] == rid), None) if rid else None
     r = Registro.objects.filter(tabla=tabla, rid=rid).first() if rid else None
     return r.fila() if r else None
 
@@ -359,9 +371,31 @@ class Lote:
                  rol=tablas.ROL_UI[self.user.role], ip=self.ip, fecha=ahora())
 
     # ═════════════ CAMBIOS ═════════════
+    def _parchar_flota(self, rid, cambios):
+        """Estado (activo/en taller) y avance del odómetro desde la hoja de servicio. Se guardan en las tablas del vehículo, no en JSON."""
+        from flota import servicio
+        from flota.models import LecturaOdometro, Vehiculo
+        try:
+            v = Vehiculo.objects.select_for_update().get(codigo=rid)
+        except Vehiculo.DoesNotExist:
+            raise ReglaError('Registro no encontrado.', 404, 'not_found')
+        actual = fila('flota', rid)
+        cambios = self._patch_flota(actual, dict(cambios))
+        if 'estado' in cambios:
+            v.estado = cambios['estado']
+            v.save(update_fields=['estado'])
+        if 'km_actual' in cambios:
+            try:
+                servicio.registrar_km(v, int(cambios['km_actual']), LecturaOdometro.Origen.HOJA_SERVICIO, self.user)
+            except servicio.FlotaError as e:
+                raise ReglaError(str(e), 403, 'permission_denied')
+        return fila('flota', rid)
+
     def parchar(self, tabla, rid, cambios):
         if tabla not in tablas.TABLAS:
             raise ReglaError('Tabla desconocida.', 404, 'not_found')
+        if tabla == 'flota':
+            return self._parchar_flota(rid, cambios)
         try:
             reg = Registro.objects.select_for_update().get(tabla=tabla, rid=rid)
         except Registro.DoesNotExist:
