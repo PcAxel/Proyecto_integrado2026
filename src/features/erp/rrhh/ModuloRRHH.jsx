@@ -9,6 +9,7 @@ import { can } from '@/domain/rbac'
 import { formatFecha, fechaLocal } from '@/domain/format'
 import { CAUSALES, TIPOS_CONTRATO, TIPOS_DOCUMENTO, causalIndemniza, estadoContractual, pesos, validarArchivo, ESTADO_PAGO } from '@/domain/rrhh'
 import { rrhhService } from '@/services'
+import { FichasTab } from './FichasTab'
 
 const errorDe = (err) => (err.data && typeof err.data === 'object' ? Object.fromEntries(Object.entries(err.data).map(([k, v]) => [k, [].concat(v)[0]])) : { _: err.message })
 
@@ -80,7 +81,7 @@ function FiniquitoModal({ persona, onClose, onSaved }) {
 }
 
 function ContratoModal({ persona, onClose, onSaved }) {
-  const [f, setF] = useState({ tipo_contrato: 'INDEFINIDO', fecha_inicio: fechaLocal(), fecha_termino: '', sueldo_base: '' })
+  const [f, setF] = useState({ fecha_inicio: fechaLocal(), fecha_termino: '', sueldo_base: '' })
   const [errores, setErrores] = useState({})
   const [guardando, setGuardando] = useState(false)
   const set = (k) => (ev) => setF({ ...f, [k]: ev.target.value })
@@ -99,10 +100,11 @@ function ContratoModal({ persona, onClose, onSaved }) {
     <Modal open onClose={onClose} title={`Nuevo contrato · ${persona.nombre}`}
       footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-contrato" loading={guardando}>Crear contrato</Button></>}>
       <form id="form-contrato" onSubmit={guardar} className="space-y-4">
-        <Select label="Tipo de contrato" value={f.tipo_contrato} onChange={set('tipo_contrato')} options={TIPOS_CONTRATO} error={errores.tipo_contrato} />
+        {/* El tipo de contrato no se elige aquí: sale de la ficha del trabajador (única fuente de verdad). */}
+        <div className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm"><span className="text-ink-soft">Tipo de contrato (según su ficha): </span><span className="font-medium">{TIPOS_CONTRATO.find((t) => t.value === persona.tipo_contrato)?.label ?? '—'}</span></div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Fecha de inicio" type="date" required value={f.fecha_inicio} onChange={set('fecha_inicio')} error={errores.fecha_inicio} />
-          <Input label="Fecha de término" type="date" required={f.tipo_contrato === 'PLAZO_FIJO'} value={f.fecha_termino} onChange={set('fecha_termino')} error={errores.fecha_termino} />
+          <Input label="Fecha de término" type="date" required={persona.tipo_contrato === 'PLAZO_FIJO'} value={f.fecha_termino} onChange={set('fecha_termino')} error={errores.fecha_termino} />
         </div>
         <Input label="Sueldo base mensual (CLP)" type="number" min="1" required value={f.sueldo_base} onChange={set('sueldo_base')} error={errores.sueldo_base} />
         {(errores._ || errores.empleado) && <p role="alert" className="text-sm font-medium text-crit">{errores._ ?? errores.empleado}</p>}
@@ -148,6 +150,8 @@ function DocumentoModal({ personal, onClose, onSaved }) {
 export function ModuloRRHH() {
   const rol = useAuthStore((s) => s.user?.rol)
   const gestiona = can(rol, 'rrhh.gestionar')
+  // La ficha la completan RR. HH. y el Administrador: los mismos dos roles que pueden entrar a este módulo (rrhh.ver). El servidor lo exige igual.
+  const verFichas = can(rol, 'rrhh.ver')
   const [tab, setTab] = useState('personal')
   const [modal, setModal] = useState(null) // { tipo: 'contrato'|'finiquito'|'documento', persona? }
   const personal = useResource(() => rrhhService.personal(), [])
@@ -163,7 +167,9 @@ export function ModuloRRHH() {
     { key: 'estado', header: 'Estado contractual', render: (p) => { const e = estadoContractual(p.contrato); return <Badge tone={e.tone}>{e.label}</Badge> } },
     ...(gestiona ? [{ key: 'acc', header: '', align: 'right', render: (p) => (
       <div className="flex justify-end gap-2" onClick={(ev) => ev.stopPropagation()}>
-        {(!p.contrato || p.contrato.estado === 'FINIQUITADO') && <Button size="sm" variant="secondary" icon={FilePlus2} onClick={() => setModal({ tipo: 'contrato', persona: p })}>Nuevo contrato</Button>}
+        {(!p.contrato || p.contrato.estado === 'FINIQUITADO') && (p.ficha_id
+          ? <Button size="sm" variant="secondary" icon={FilePlus2} onClick={() => setModal({ tipo: 'contrato', persona: p })}>Nuevo contrato</Button>
+          : <Button size="sm" variant="ghost" onClick={() => setTab('fichas')} title="Antes de crear el contrato hay que completar la ficha">Completar ficha</Button>)}
         {p.contrato?.estado === 'ACTIVO' && !p.contrato.finiquito_id && <Button size="sm" variant="secondary" onClick={() => setModal({ tipo: 'finiquito', persona: p })}>Generar finiquito</Button>}
       </div>) }] : []),
   ]
@@ -185,9 +191,10 @@ export function ModuloRRHH() {
       <PageHeader title="Contratos y Finiquitos" description={gestiona ? 'Contratos, documentos laborales y finiquitos. El pago lo registra Finanzas.' : 'Supervisión de contratos, documentos y finiquitos (solo lectura).'}
         actions={gestiona && tab === 'documentos' ? <Button icon={FileText} onClick={() => setModal({ tipo: 'documento' })} disabled={!personal.data?.length}>Subir documento</Button> : null} />
       <Card>
-        <Tabs value={tab} onChange={setTab} tabs={[{ id: 'personal', label: 'Personal', count: personal.data?.length }, { id: 'documentos', label: 'Documentos', count: documentos.data?.length }, { id: 'finiquitos', label: 'Finiquitos', count: finiquitos.data?.length }]} />
+        <Tabs value={tab} onChange={setTab} tabs={[{ id: 'personal', label: 'Personal', count: personal.data?.length }, ...(verFichas ? [{ id: 'fichas', label: 'Fichas', count: personal.data?.filter((p) => !p.ficha_id).length || undefined }] : []), { id: 'documentos', label: 'Documentos', count: documentos.data?.length }, { id: 'finiquitos', label: 'Finiquitos', count: finiquitos.data?.length }]} />
         <div className="pt-2">
           {tab === 'personal' && (personal.error ? <ErrorEstado error={personal.error} onRetry={personal.reload} /> : <DataTable columns={colPersonal} rows={personal.data ?? []} loading={personal.loading && !personal.data} rowKey={(p) => p.id} emptyTitle="Sin personal" />)}
+          {tab === 'fichas' && verFichas && <FichasTab personal={personal.data ?? []} onCambio={personal.reload} />}
           {tab === 'documentos' && (documentos.error ? <ErrorEstado error={documentos.error} onRetry={documentos.reload} /> : <DataTable columns={colDocs} rows={documentos.data ?? []} loading={documentos.loading && !documentos.data} rowKey={(d) => d.id} emptyTitle="Sin documentos" emptyHint="Aquí quedan las amonestaciones, anexos y cartas." />)}
           {tab === 'finiquitos' && (finiquitos.error ? <ErrorEstado error={finiquitos.error} onRetry={finiquitos.reload} /> : <DataTable columns={colFin} rows={finiquitos.data ?? []} loading={finiquitos.loading && !finiquitos.data} rowKey={(f) => f.id} emptyTitle="Sin finiquitos" />)}
         </div>

@@ -6,6 +6,12 @@ import { api, descargarArchivo, bytesProtegidos } from './api'
  */
 export const rrhhService = {
   personal: () => api.get('/rrhh/personal/'),
+  // ── Ficha del trabajador (RUT, AFP, salud, tipo de contrato, ingreso): solo RR. HH. y Administrador ──
+  fichas: () => api.get('/rrhh/fichas/'),
+  /** Listas cerradas del servidor para los selectores: { afp, sistema_salud, isapre, tipo_contrato } (cada una [{value,label}]). */
+  opcionesFicha: () => api.get('/rrhh/fichas/opciones/'),
+  crearFicha: (datos) => api.post('/rrhh/fichas/', datos),
+  actualizarFicha: (id, datos) => api.patch(`/rrhh/fichas/${id}/`, datos),
   contratos: () => api.get('/rrhh/contratos/'),
   crearContrato: (datos) => api.post('/rrhh/contratos/', datos),
   documentos: (empleado) => api.get(`/rrhh/documentos/${empleado ? `?empleado=${empleado}` : ''}`),
