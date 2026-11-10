@@ -6,23 +6,18 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import Role
+from accounts.models import CustomUser, Role
 from accounts.permissions import RolePermission
-from personal.models import Trabajador
 
 from . import reglas
 from .models import MarcaAsistencia
 from .serializers import MarcaSerializer
 
 
-def _ficha(user):
-    return Trabajador.objects.filter(usuario=user, activo=True).first()
-
-
-def _marcas_del_dia(trabajador, dia):
+def _marcas_del_dia(usuario, dia):
     # Rango explícito del día local: `fecha__date` exige tablas de zona horaria cargadas en MySQL.
     inicio = timezone.make_aware(datetime.combine(dia, time.min))
-    marcas = list(MarcaAsistencia.objects.filter(trabajador=trabajador, fecha__gte=inicio, fecha__lt=inicio + timedelta(days=1)))
+    marcas = list(MarcaAsistencia.objects.filter(usuario=usuario, fecha__gte=inicio, fecha__lt=inicio + timedelta(days=1)))
     for m in marcas:
         m.fecha_local = timezone.localtime(m.fecha)
     return marcas
@@ -34,11 +29,8 @@ class MiDiaView(APIView):
     role_access = {'read': {Role.TECNICO}}
 
     def get(self, request):
-        ficha = _ficha(request.user)
-        if not ficha:
-            return Response({'detail': 'El usuario no tiene ficha de personal.'}, status=status.HTTP_403_FORBIDDEN)
-        marcas = _marcas_del_dia(ficha, timezone.localdate())
-        return Response({'tecnico_id': ficha.pk, 'marcas': [MarcaSerializer(m).data for m in marcas]})
+        marcas = _marcas_del_dia(request.user, timezone.localdate())
+        return Response({'tecnico_id': request.user.pk, 'marcas': [MarcaSerializer(m).data for m in marcas]})
 
 
 class MarcarView(APIView):
@@ -48,12 +40,10 @@ class MarcarView(APIView):
 
     @transaction.atomic
     def post(self, request):
-        ficha = _ficha(request.user)
-        if not ficha:
-            return Response({'detail': 'El usuario no tiene ficha de personal.'}, status=status.HTTP_403_FORBIDDEN)
+        usuario = request.user
         client_id = request.data.get('client_id')
         if client_id:
-            previa = MarcaAsistencia.objects.filter(trabajador=ficha, client_id=client_id).first()
+            previa = MarcaAsistencia.objects.filter(usuario=usuario, client_id=client_id).first()
             if previa:
                 return Response(MarcaSerializer(previa).data)
 
@@ -61,12 +51,12 @@ class MarcarView(APIView):
         s.is_valid(raise_exception=True)
         fecha = s.validated_data.get('fecha') or timezone.now()
         dia = timezone.localtime(fecha).date()
-        # Bloqueo de la ficha para que dos marcas simultáneas no rompan la secuencia entrada/salida.
-        Trabajador.objects.select_for_update().get(pk=ficha.pk)
-        error = reglas.validar_marca(s.validated_data['tipo'], _marcas_del_dia(ficha, dia))
+        # Bloqueo de la cuenta para que dos marcas simultáneas no rompan la secuencia entrada/salida.
+        type(usuario).objects.select_for_update().get(pk=usuario.pk)
+        error = reglas.validar_marca(s.validated_data['tipo'], _marcas_del_dia(usuario, dia))
         if error:
             return Response({'detail': error}, status=status.HTTP_409_CONFLICT)
-        marca = s.save(trabajador=ficha, fecha=fecha)
+        marca = s.save(usuario=usuario, fecha=fecha)
         return Response(MarcaSerializer(marca).data, status=status.HTTP_201_CREATED)
 
 
@@ -81,13 +71,13 @@ class AsistenciaHoyView(APIView):
     def get(self, request):
         ahora = timezone.localtime()
         filas = []
-        for t in Trabajador.objects.filter(activo=True):
+        for t in CustomUser.objects.filter(role=Role.TECNICO, is_active=True).order_by('first_name', 'last_name', 'email'):
             marcas = _marcas_del_dia(t, ahora.date())
             entrada = next((m for m in marcas if m.tipo == reglas.ENTRADA), None)
             salida = next((m for m in reversed(marcas) if m.tipo == reglas.SALIDA), None)
             estado = reglas.estado_del_dia(marcas, ahora.time())
             filas.append({
-                'tecnico_id': t.pk, 'nombre': f'{t.nombres} {t.apellidos}', 'cargo': t.cargo, 'estado': estado,
+                'tecnico_id': t.pk, 'nombre': t.full_name or t.email, 'cargo': t.get_role_display(), 'estado': estado,
                 'entrada': entrada.fecha_local.isoformat() if entrada else None,
                 'salida': salida.fecha_local.isoformat() if salida and estado == 'FINALIZADA' else None,
                 'horas': reglas.horas_trabajadas(marcas, ahora.time()) if marcas else 0,

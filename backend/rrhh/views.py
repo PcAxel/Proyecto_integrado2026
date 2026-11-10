@@ -22,10 +22,10 @@ from rest_framework.response import Response
 
 from accounts.models import CustomUser, Role
 
-from .models import Contrato, DocumentoLaboral, DocumentoRRHH, Finiquito
+from .models import Contrato, DocumentoLaboral, DocumentoRRHH, FichaTrabajador, Finiquito
 from . import sellado
 from .permissions import AccionesPorRol, acciones
-from .serializers import (CalculoSerializer, ContratoSerializer, DocumentoLaboralSerializer, DocumentoSerializer, FirmaSerializer, MiDocumentoSerializer, FiniquitoSerializer, PersonalSerializer,
+from .serializers import (CalculoSerializer, ContratoSerializer, FichaTrabajadorSerializer, DocumentoLaboralSerializer, DocumentoSerializer, FirmaSerializer, MiDocumentoSerializer, FiniquitoSerializer, PersonalSerializer,
                           serializer_de_edicion)
 
 CRUD = acciones('list', 'retrieve', 'create', 'partial_update', 'destroy')
@@ -151,7 +151,37 @@ class PersonalViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
 
     def get_queryset(self):
         contratos = Prefetch('contratos', queryset=Contrato.objects.select_related('finiquito').order_by('-fecha_inicio', '-id'))
-        return CustomUser.objects.filter(is_active=True).prefetch_related(contratos).order_by('first_name', 'last_name', 'email')
+        return CustomUser.objects.filter(is_active=True).select_related('ficha').prefetch_related(contratos).order_by('first_name', 'last_name', 'email')
+
+
+class FichaTrabajadorViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    """Ficha laboral y previsional (RUT, AFP, salud, tipo de contrato, ingreso). La cuenta de acceso la crea el Administrador; esta ficha la
+    completa y edita RR. HH. (o el Administrador). Contiene datos personales y previsionales: no la ven Finanzas, Operaciones ni los técnicos.
+    Las fichas no se eliminan."""
+    serializer_class = FichaTrabajadorSerializer
+    permission_classes = [AccionesPorRol]
+    acciones_por_rol = {Role.ADMIN: acciones('list', 'retrieve', 'create', 'update', 'partial_update', 'opciones'),
+                        Role.RRHH: acciones('list', 'retrieve', 'create', 'update', 'partial_update', 'opciones')}
+
+    def get_queryset(self):
+        qs = FichaTrabajador.objects.select_related('usuario')
+        if u := self.request.query_params.get('usuario'):
+            qs = qs.filter(usuario_id=u)
+        return qs
+
+    def perform_create(self, s):
+        s.save(actualizado_por=self.request.user)
+
+    def perform_update(self, s):
+        s.save(actualizado_por=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def opciones(self, request):
+        """Listas cerradas para los formularios: AFP, sistema de salud, isapres y tipos de contrato."""
+        def lista(choices):
+            return [{'value': v, 'label': l} for v, l in choices]
+        return Response({'afp': lista(FichaTrabajador.AFP.choices), 'sistema_salud': lista(FichaTrabajador.SistemaSalud.choices),
+                         'isapre': lista(FichaTrabajador.Isapre.choices), 'tipo_contrato': lista(FichaTrabajador.TipoContrato.choices)})
 
 
 class DocumentoLaboralViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):

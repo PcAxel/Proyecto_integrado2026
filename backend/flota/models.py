@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -11,7 +12,7 @@ class Vehiculo(models.Model):
     modelo = models.CharField(max_length=50)
     anio = models.PositiveSmallIntegerField(null=True, blank=True)
     estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.ACTIVO)
-    tecnico = models.ForeignKey('personal.Trabajador', null=True, blank=True, on_delete=models.SET_NULL, related_name='vehiculos')
+    tecnico = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='vehiculos')
     kilometraje = models.PositiveIntegerField(default=0)
     activo = models.BooleanField(default=True)
     venc_revision_tecnica = models.DateField(null=True, blank=True)

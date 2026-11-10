@@ -11,7 +11,8 @@ from accounts.models import CustomUser, Role
 
 from .archivos import sha256
 from .calculo import calcular_finiquito
-from .models import Contrato, DocumentoLaboral, Finiquito
+from .models import Contrato, DocumentoLaboral, FichaTrabajador, Finiquito
+from .validadores import digito_verificador
 
 SUELDOS = {'admin@fyag.cl': 2_800_000, 'finanzas@fyag.cl': 1_600_000, 'operaciones@fyag.cl': 1_500_000,
            'tecnico@fyag.cl': 950_000, 'rrhh@fyag.cl': 1_400_000}
@@ -21,6 +22,15 @@ EX_PERSONAL = [
     ('matias.ibanez@demo.fyag.cl', 'Matías', 'Ibáñez', 980_000, date(2023, 6, 12), 'RENUNCIA', date(2026, 11, 20), '12', True, False),
     ('daniela.soto@demo.fyag.cl', 'Daniela', 'Soto', 1_250_000, date(2019, 2, 4), 'NECESIDADES_EMPRESA', date(2026, 11, 30), '5', False, False),
 ]
+
+
+def _ficha(usuario, n, ingreso):
+    """Ficha de demostración con un RUT válido pero ficticio (módulo 11) y datos previsionales de ejemplo."""
+    cuerpo = str(15_000_000 + n * 111_117)
+    con_isapre = n % 3 == 0
+    return FichaTrabajador.objects.create(
+        usuario=usuario, rut=f'{cuerpo}-{digito_verificador(cuerpo)}', afp=list(FichaTrabajador.AFP.values)[n % 7],
+        sistema_salud='ISAPRE' if con_isapre else 'FONASA', isapre='CONSALUD' if con_isapre else '', tipo_contrato='INDEFINIDO', fecha_ingreso=ingreso)
 
 
 def _pdf(titulo, lineas):
@@ -47,14 +57,19 @@ def cargar_demo_rrhh():
     finanzas = CustomUser.objects.get(email='finanzas@fyag.cl')
     hoy, creados = timezone.localdate(), 0
     for i, (email, sueldo) in enumerate(SUELDOS.items()):
-        Contrato.objects.create(empleado=CustomUser.objects.get(email=email), tipo_contrato='INDEFINIDO', sueldo_base=sueldo,
-                                fecha_inicio=date(2022, 1, 10) + timedelta(days=200 * i))
+        u = CustomUser.objects.get(email=email)
+        inicio = date(2022, 1, 10) + timedelta(days=200 * i)
+        if not hasattr(u, 'ficha'):  # el tipo de contrato vive en la ficha: se completa antes de crear el contrato
+            _ficha(u, i + 1, inicio)
+            creados += 1
+        Contrato.objects.create(empleado=u, sueldo_base=sueldo, fecha_inicio=inicio)
         creados += 1
-    for email, nombre, apellido, sueldo, inicio, causal, termino, dias, aviso, pagado in EX_PERSONAL:
+    for n, (email, nombre, apellido, sueldo, inicio, causal, termino, dias, aviso, pagado) in enumerate(EX_PERSONAL, start=10):
         u = CustomUser(email=email, first_name=nombre, last_name=apellido, role=Role.TECNICO, is_active=not pagado)
         u.set_unusable_password()  # persona de la demo: no inicia sesión
         u.save()
-        c = Contrato.objects.create(empleado=u, tipo_contrato='INDEFINIDO', sueldo_base=sueldo, fecha_inicio=inicio)
+        _ficha(u, n, inicio)
+        c = Contrato.objects.create(empleado=u, sueldo_base=sueldo, fecha_inicio=inicio)
         m = calcular_finiquito(causal=causal, sueldo_base=sueldo, fecha_inicio=inicio, fecha_termino=termino, dias_vacaciones_pendientes=dias,
                                aviso_previo_dado=aviso, valor_uf=settings.VALOR_UF)
         f = Finiquito(contrato=c, causal_despido=causal, fecha_termino=termino, aviso_previo_dado=aviso, dias_vacaciones_pendientes=dias,
@@ -65,7 +80,7 @@ def cargar_demo_rrhh():
             c.estado, c.fecha_termino = Contrato.Estado.FINIQUITADO, termino
             c.save()
         f.save()
-        creados += 2
+        creados += 3
     # Un anexo por firmar para el técnico: aparece el aviso en su app.
     pdf = _pdf('Anexo de contrato de trabajo', ['Entre Frío y Agroindustria SpA y Jorge Quezada se acuerda:', '', '1. Modificar la jornada a 40 horas semanales.',
                                                  '2. Mantener las demás cláusulas del contrato.', '', f'Fecha: {hoy:%d-%m-%Y}'])

@@ -12,7 +12,8 @@ from accounts.models import Role
 from accounts.tests.base import RoleTestCase
 from rrhh.archivos import almacen_privado
 from rrhh.calculo import anios_de_servicio, calcular_finiquito
-from rrhh.models import Contrato, Finiquito
+from rrhh.models import Contrato, FichaTrabajador, Finiquito
+from rrhh.tests.helpers import crear_ficha
 
 PDF = b'%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF'
 
@@ -50,7 +51,8 @@ class RRHHApiTest(RoleTestCase):
         self.addCleanup(p.stop)
         self.addCleanup(shutil.rmtree, self.dir, True)
         self.emp = self.users[Role.TECNICO]
-        self.contrato = Contrato.objects.create(empleado=self.emp, tipo_contrato='INDEFINIDO', fecha_inicio=date(2022, 1, 1), sueldo_base=900000)
+        crear_ficha(self.emp)  # el tipo de contrato sale de la ficha del trabajador
+        self.contrato = Contrato.objects.create(empleado=self.emp, fecha_inicio=date(2022, 1, 1), sueldo_base=900000)
 
     def datos_finiquito(self, **extra):
         return {'contrato': self.contrato.id, 'causal_despido': 'NECESIDADES_EMPRESA', 'fecha_termino': '2025-01-01',
@@ -65,10 +67,11 @@ class RRHHApiTest(RoleTestCase):
     # --- contratos ---
     def test_rrhh_y_admin_crud_contratos(self):
         otro = self.users[Role.OPERACIONES]
+        crear_ficha(otro)
         for rol in (Role.RRHH, Role.ADMIN):
             self.as_role(rol)
             Contrato.objects.filter(empleado=otro).delete()
-            r = self.client.post('/api/rrhh/contratos/', {'empleado': otro.id, 'tipo_contrato': 'INDEFINIDO', 'fecha_inicio': '2025-03-01', 'sueldo_base': 1200000}, format='json')
+            r = self.client.post('/api/rrhh/contratos/', {'empleado': otro.id, 'fecha_inicio': '2025-03-01', 'sueldo_base': 1200000}, format='json')
             self.assertEqual(r.status_code, 201, rol)
             self.assertEqual(self.client.patch(f'/api/rrhh/contratos/{r.data["id"]}/', {'sueldo_base': 1300000}, format='json').status_code, 200)
             self.assertEqual(self.client.delete(f'/api/rrhh/contratos/{r.data["id"]}/').status_code, 204)
@@ -76,7 +79,7 @@ class RRHHApiTest(RoleTestCase):
     def test_finanzas_solo_lee_contratos(self):
         self.as_role(Role.FINANZAS)
         self.assertEqual(self.client.get('/api/rrhh/contratos/').status_code, 200)
-        nuevo = {'empleado': self.users[Role.OPERACIONES].id, 'tipo_contrato': 'INDEFINIDO', 'fecha_inicio': '2025-03-01', 'sueldo_base': 1}
+        nuevo = {'empleado': self.users[Role.OPERACIONES].id, 'fecha_inicio': '2025-03-01', 'sueldo_base': 1}
         self.assertEqual(self.client.post('/api/rrhh/contratos/', nuevo, format='json').status_code, 403)
         self.assertEqual(self.client.patch(f'/api/rrhh/contratos/{self.contrato.id}/', {'sueldo_base': 5}, format='json').status_code, 403)
         self.assertEqual(self.client.delete(f'/api/rrhh/contratos/{self.contrato.id}/').status_code, 403)
@@ -92,16 +95,33 @@ class RRHHApiTest(RoleTestCase):
 
     def test_un_solo_contrato_activo_en_api_y_en_base(self):
         self.as_role(Role.RRHH)
-        r = self.client.post('/api/rrhh/contratos/', {'empleado': self.emp.id, 'tipo_contrato': 'INDEFINIDO', 'fecha_inicio': '2025-01-01', 'sueldo_base': 1}, format='json')
+        r = self.client.post('/api/rrhh/contratos/', {'empleado': self.emp.id, 'fecha_inicio': '2025-01-01', 'sueldo_base': 1}, format='json')
         self.assertEqual(r.status_code, 400)
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Contrato.objects.create(empleado=self.emp, tipo_contrato='INDEFINIDO', fecha_inicio=date(2025, 1, 1), sueldo_base=1)
+            Contrato.objects.create(empleado=self.emp, fecha_inicio=date(2025, 1, 1), sueldo_base=1)
 
     def test_plazo_fijo_exige_termino(self):
+        crear_ficha(self.users[Role.OPERACIONES], 'PLAZO_FIJO')  # el plazo fijo lo define la ficha
         self.as_role(Role.RRHH)
-        r = self.client.post('/api/rrhh/contratos/', {'empleado': self.users[Role.OPERACIONES].id, 'tipo_contrato': 'PLAZO_FIJO', 'fecha_inicio': '2025-01-01', 'sueldo_base': 1}, format='json')
+        r = self.client.post('/api/rrhh/contratos/', {'empleado': self.users[Role.OPERACIONES].id, 'fecha_inicio': '2025-01-01', 'sueldo_base': 1}, format='json')
         self.assertEqual(r.status_code, 400)
         self.assertIn('fecha_termino', r.data)
+        r = self.client.post('/api/rrhh/contratos/', {'empleado': self.users[Role.OPERACIONES].id, 'fecha_inicio': '2025-01-01', 'fecha_termino': '2025-12-31', 'sueldo_base': 1}, format='json')
+        self.assertEqual((r.status_code, r.data['tipo_contrato']), (201, 'PLAZO_FIJO'))
+
+    def test_el_contrato_exige_ficha_y_no_guarda_el_tipo(self):
+        """Fuente de verdad única: sin ficha no hay contrato, y el tipo se lee de la ficha (enviarlo en el contrato se ignora)."""
+        self.as_role(Role.RRHH)
+        sin_ficha = self.users[Role.OPERACIONES]
+        r = self.client.post('/api/rrhh/contratos/', {'empleado': sin_ficha.id, 'fecha_inicio': '2025-01-01', 'sueldo_base': 1}, format='json')
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('empleado', r.data)
+        self.assertNotIn('tipo_contrato', [f.name for f in Contrato._meta.get_fields()])
+        crear_ficha(sin_ficha, 'INDEFINIDO')
+        r = self.client.post('/api/rrhh/contratos/', {'empleado': sin_ficha.id, 'tipo_contrato': 'PLAZO_FIJO', 'fecha_inicio': '2025-01-01', 'sueldo_base': 1}, format='json')
+        self.assertEqual((r.status_code, r.data['tipo_contrato']), (201, 'INDEFINIDO'))
+        FichaTrabajador.objects.filter(usuario=sin_ficha).update(tipo_contrato='OBRA_FAENA')
+        self.assertEqual(self.client.get(f'/api/rrhh/contratos/{r.data["id"]}/').data['tipo_contrato'], 'OBRA_FAENA')
 
     def test_estado_del_contrato_no_se_fija_desde_el_cliente(self):
         self.as_role(Role.RRHH)
