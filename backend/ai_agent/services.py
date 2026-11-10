@@ -71,6 +71,7 @@ def _completar(usuario, rol, tarea, mensajes, *, json_mode=False, temperature=0.
     logger.info('ai_call user=%s rol=%s tarea=%s tokens=%s', usuario.pk, rol, tarea, getattr(uso, 'total_tokens', None))
     texto_respuesta = (r.choices[0].message.content or '').strip() if r.choices else ''
     if not texto_respuesta:
+        logger.warning('ai_empty user=%s tarea=%s json_mode=%s finish=%s', usuario.pk, tarea, json_mode, getattr(r.choices[0], 'finish_reason', None) if r.choices else None)
         raise ServicioIAError('El agente no devolvió una respuesta.', 502, 'ai_empty')
     return texto_respuesta
 
@@ -119,7 +120,14 @@ def conversar(usuario, rol, historial, rutas=()):
     ni acceso a la base de datos; solo propone una acción que la interfaz ejecuta. El system prompt lo elige el servidor según el rol;
     el cliente solo aporta el historial (turnos `user` y `assistant`, nunca `system`). La conversación no se guarda en el servidor."""
     mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas)}, *({'role': m['role'], 'content': m['content']} for m in historial)]
-    crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=True, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
+    try:
+        crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=True, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
+    except ServicioIAError as e:
+        if e.code != 'ai_empty':
+            raise
+        # El modo JSON estricto de DeepSeek a veces responde vacío (más seguido con historiales largos). Se reintenta una vez sin forzarlo:
+        # el prompt igual exige JSON y `interpretar_respuesta_agente` tolera texto plano, así que el usuario no ve el fallo.
+        crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=False, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
     return interpretar_respuesta_agente(crudo, rutas)
 
 

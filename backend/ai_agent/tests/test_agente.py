@@ -481,3 +481,47 @@ class AgenteNavegacionTests(AgenteBase):
             self.chat(texto='elimina todas las obras')
         escrituras = [x['sql'] for x in q.captured_queries if x['sql'].lstrip().upper().startswith(('INSERT', 'UPDATE', 'DELETE'))]
         self.assertEqual([s for s in escrituras if 'django_session' not in s and 'last_login' not in s], [])
+
+
+class FakeIASecuencia(FakeIA):
+    """Responde en orden lo que se le configure (para simular una respuesta vacía seguida de una buena)."""
+
+    def __init__(self, respuestas):
+        super().__init__('')
+        self.respuestas = list(respuestas)
+
+    def _create(self, **kw):
+        self.respuesta = self.respuestas.pop(0)
+        return super()._create(**kw)
+
+
+class RespuestaVaciaTests(AgenteBase):
+    def chat(self):
+        self.as_role('ADMIN')
+        return self.client.post('/api/ai/chat/', {'mensajes': [{'role': 'user', 'content': 'hola'}], 'rutas': RUTAS}, format='json')
+
+    def fake(self, respuestas):
+        f = FakeIASecuencia(respuestas)
+        p = patch('ai_agent.services.get_client', return_value=f)
+        p.start()
+        self.addCleanup(p.stop)
+        return f
+
+    def test_una_respuesta_vacia_se_reintenta_sin_modo_json_y_el_usuario_no_ve_el_fallo(self):
+        f = self.fake(['', {'respuesta_texto': 'Hola, ¿en qué te ayudo?', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}])
+        r = self.chat()
+        self.assertEqual((r.status_code, r.data['respuesta']), (200, 'Hola, ¿en qué te ayudo?'))
+        self.assertEqual(len(f.llamadas), 2)
+        self.assertIn('response_format', f.llamadas[0])
+        self.assertNotIn('response_format', f.llamadas[1])
+
+    def test_si_vuelve_a_venir_vacia_se_informa_sin_reintentar_de_nuevo(self):
+        f = self.fake(['', ''])
+        r = self.chat()
+        self.assertEqual((r.status_code, r.data['code']), (502, 'ai_empty'))
+        self.assertEqual(len(f.llamadas), 2)  # un solo reintento: cada llamada se paga
+
+    def test_otros_errores_no_se_reintentan(self):
+        f = self.ia(error=RateLimitError('x', response=httpx.Response(429, request=httpx.Request('POST', 'https://api.deepseek.com')), body=None))
+        self.assertEqual(self.chat().status_code, 503)
+        self.assertEqual(len(f.llamadas), 1)
