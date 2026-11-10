@@ -173,10 +173,38 @@ El modelo de usuario (`CustomUser`) queda **estrictamente para el acceso y el ro
 
 ---
 
-## 8. Pendientes
+## 8. Flota en tablas relacionales
+
+**Problema.** La flota del ERP vivía como documentos JSON en una tabla genérica (`erp_registro`). Nadie podía crear un vehículo ni registrar una revisión técnica: la pantalla solo mostraba un vencimiento sembrado de antemano y permitía mandar el vehículo a taller. Tampoco quedaba cuándo se hizo cada revisión ni de dónde salía cada kilometraje.
+
+**Decisión.** La flota tiene su propio espacio relacional en el módulo `flota`, con historial. El ERP la lee y la escribe desde ahí (ya no hay una segunda copia).
+
+| Tabla | Qué guarda |
+|---|---|
+| `Vehiculo` | patente, marca, modelo, año, estado (activo o en taller), técnico asignado, kilometraje actual, activo. El código público (`VH-01`) se asigna solo. |
+| `DocumentoVehiculo` | revisión técnica, permiso de circulación y seguro obligatorio: **el día en que se hizo** y **el día en que vence**, número de certificado o póliza, observación y quién lo registró. Cada renovación es un registro nuevo: el historial no se edita. |
+| `LecturaOdometro` | cada kilometraje que tuvo el vehículo: de dónde vino (lectura inicial, hoja de servicio o registro manual), quién y cuándo. |
+
+**Reglas**
+- El vencimiento vigente de cada documento es el del registro más reciente. Un vehículo no guarda fechas sueltas.
+- **El odómetro solo avanza.** Una lectura menor a la actual se rechaza; una igual no agrega nada.
+- **Quién ingresa qué:** RR. HH. y el Administrador crean y editan vehículos y registran revisiones y lecturas. Finanzas solo consulta. El técnico no ve vencimientos; su hoja de servicio hace avanzar el kilometraje sola.
+- Los vehículos no se eliminan: se mandan a taller o se desactivan. Un vehículo con historial no se puede borrar.
+- La patente se valida (formato antiguo `AB-1234` y vigente `ABCD-12`) y no se repite.
+- Los técnicos solo ven los vehículos activos y operativos, sin vencimientos ni datos de gestión.
+
+**Interfaz.** En Personal y Flota, pestaña Flota: "Nuevo vehículo", y por fila: historial, registrar revisión o documento, actualizar kilometraje, editar y taller. La tabla muestra la última revisión hecha y los tres vencimientos con su color, y las alertas incluyen ahora el permiso de circulación.
+
+**Migración de datos.** Los vehículos que estaban como JSON pasaron a las tablas conservando su código (`VH-01` a `VH-07`); los que ya estaban en la tabla antigua recibieron los siguientes códigos. Los vencimientos pasaron a documentos (sin el día en que se hicieron, dato que nunca se guardó) y cada kilometraje quedó como lectura inicial. Se probó antes sobre una copia de la base local. No se puede deshacer automáticamente.
+
+---
+
+## 9. Pendientes
 
 1. **Completar fichas existentes:** los contratos que ya existían (por ejemplo los de la base local) quedan sin tipo de contrato hasta que RR. HH. complete la ficha de cada persona.
 2. **Cargo, tarifa por hora y vencimiento de licencia:** si se quieren conservar en el servidor, hay que decidir dónde viven (la ficha u otro módulo).
 3. **Matriz del frontend:** alinear la descripción y los botones del Administrador con la regla del salvavidas (sección 4).
 4. **Resto de la auditoría:** ALTA-02 (validación TLS de Valkey; requiere subir el certificado de Aiven antes), MEDIA-01 a MEDIA-05 (agente de IA), MEDIA-07 y las de severidad baja.
 5. **Revisión legal** de los campos y del tratamiento de datos personales (sección 5.6).
+6. **Licencia de conducir:** su vencimiento todavía vive en la ficha antigua del ERP (JSON) y no hay dónde registrarlo ni corregirlo. Falta llevarlo a un registro relacional propio, como se hizo con la flota.
+7. **Otras tablas del ERP** (personal, obras, bodega…) siguen como documentos JSON; pasarlas a relacional es un proyecto aparte.
