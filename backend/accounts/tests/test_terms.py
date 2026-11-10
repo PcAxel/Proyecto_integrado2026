@@ -62,31 +62,20 @@ class TermsTests(RoleTestCase):
         self.assertEqual(self.client.post('/api/evidencias/', {}, format='multipart').status_code, 403)
         self.assertEqual(self.client.get('/api/evidencias/abc/foto/').status_code, 403)
 
-    def test_blocks_even_admin_until_accepted(self):
-        admin = CustomUser.objects.create_user('a2@fyag.cl', 'Clave-Segura-123', role=Role.ADMIN)
-        self.client.force_authenticate(admin)
-        self.assertEqual(self.client.post('/api/users/', {}, format='json').status_code, 403)
-        self.assertEqual(self.client.get('/api/obras/').status_code, 403)
+    def test_otros_roles_no_necesitan_aceptar_terminos(self):
+        """Solo el Técnico acepta términos: Administrador, Finanzas, Operaciones y RR. HH. entran al ERP sin esa pantalla."""
+        for rol in (Role.ADMIN, Role.FINANZAS, Role.OPERACIONES, Role.RRHH):
+            u = CustomUser.objects.create_user(f'{rol.lower()}-sin-terminos@fyag.cl', 'Clave-Segura-123', role=rol)
+            self.assertIsNone(u.terms_accepted_at)
+            self.client.force_authenticate(u)
+            self.assertEqual(self.client.get('/api/erp/snapshot/').status_code, 200, rol)
 
-    def test_me_is_available_without_terms_and_reports_state(self):
+    def test_el_tecnico_sigue_bloqueado_hasta_aceptar(self):
         self.client.force_authenticate(self.nuevo)
-        r = self.client.get('/api/auth/me/')
-        self.assertEqual(r.status_code, 200)
-        self.assertIsNone(r.data['terms_accepted_at'])
-
-    def test_unblocked_after_accepting(self):
-        self.client.force_authenticate(self.nuevo)
-        self.accept()
-        self.assertEqual(self.client.get('/api/obras/').status_code, 200)
-
-    def test_real_jwt_flow_blocks_then_unblocks(self):
-        """Extremo a extremo con tokens reales (sin force_authenticate)."""
-        from rest_framework_simplejwt.tokens import RefreshToken
-        token = str(RefreshToken.for_user(self.nuevo).access_token)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-        self.assertEqual(self.client.get('/api/obras/').status_code, 403)
-        self.assertEqual(self.accept().status_code, 200)
-        self.assertEqual(self.client.get('/api/obras/').status_code, 200)
+        r = self.client.get('/api/erp/snapshot/')
+        self.assertEqual((r.status_code, r.data['detail'].code), (403, 'terms_not_accepted'))
+        self.assertEqual(self.accept().status_code, 200)  # al aceptar, el Técnico entra
+        self.assertEqual(self.client.get('/api/erp/snapshot/').status_code, 200)
 
 
 class ErrorCodeAndHealthTests(RoleTestCase):
