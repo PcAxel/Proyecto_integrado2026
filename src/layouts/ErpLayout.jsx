@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Search, Sun, X } from 'lucide-react'
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
-import { useTemaStore } from '@/stores/temaStore'
+import { PanelApariencia } from '@/components/PanelApariencia'
+import { useApariencia } from '@/hooks/useApariencia'
 import { can } from '@/domain/rbac'
 import { ROL_API_LABEL } from '@/components/domain'
 import { cn } from '@/components/ui'
@@ -144,13 +145,8 @@ export function ErpLayout() {
     return () => document.documentElement.classList.remove('tema-erp')
   }, [])
 
-  // El tema se recuerda por persona; al cambiar de cuenta se carga el suyo.
-  const { tema, cargar: cargarTema, alternar: alternarTema } = useTemaStore()
-  useEffect(() => { cargarTema(user.id) }, [user.id, cargarTema])
-  useEffect(() => {
-    document.documentElement.classList.toggle('tema-claro', tema === 'claro')
-    return () => document.documentElement.classList.remove('tema-claro')
-  }, [tema])
+  // Día/noche, paleta y tamaño de letra: se recuerdan por persona; el ERP empieza oscuro mientras no elija otra cosa.
+  useApariencia(user.id, 100)
 
   // Ctrl+K (Windows/Linux) o ⌘K (Mac) abren y cierran la búsqueda desde cualquier pantalla del ERP.
   useEffect(() => {
@@ -191,15 +187,7 @@ export function ErpLayout() {
           <button type="button" aria-label="Abrir menú" onClick={() => setMobileSidebar(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-fyag-ice hover:bg-fyag-deep/30 hover:text-fyag-cream sm:hidden"><Menu className="h-5 w-5" /></button>
           <BotonBuscar onClick={() => setBuscando(true)} />
           <div className="ml-auto flex items-center gap-3">
-            <button
-              type="button"
-              onClick={alternarTema}
-              aria-label={tema === 'claro' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
-              title={tema === 'claro' ? 'Modo oscuro' : 'Modo claro'}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-fyag-ice/15 text-fyag-ice transition-colors hover:bg-fyag-deep/30 hover:text-fyag-cream"
-            >
-              {tema === 'claro' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-            </button>
+            <PanelApariencia nivelDefecto={100} />
             <div className="flex items-center gap-2 sm:hidden"><Avatar nombre={user.nombre} rol={user.rol} size="sm" /></div>
           </div>
         </header>

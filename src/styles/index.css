@@ -118,7 +118,7 @@ html.tema-erp.tema-claro * { scrollbar-color: #CBBFA8 transparent; }
 html.tema-erp.tema-claro *::-webkit-scrollbar-thumb { background: #CBBFA8; background-clip: padding-box; }
 html.tema-erp.tema-claro *::-webkit-scrollbar-thumb:hover { background: #8FA3A1; background-clip: padding-box; }
 html.tema-erp.tema-claro ::selection { background: #CFE3E0; color: #12302F; }
-html.tema-erp .bg-white { background-color: rgb(var(--c-surface)); }
+html.tema-vars .bg-white, html.tema-erp .bg-white { background-color: rgb(var(--c-surface)); }
 html.tema-erp * { scrollbar-color: #26404A transparent; }
 html.tema-erp *::-webkit-scrollbar-thumb { background: #26404A; background-clip: padding-box; }
 html.tema-erp *::-webkit-scrollbar-thumb:hover { background: #5E7F86; background-clip: padding-box; }

@@ -4,6 +4,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSyncStore } from '@/stores/syncStore'
 import { cn } from '@/components/ui'
 import { BrandMark } from '@/components/domain'
+import { PanelApariencia } from '@/components/PanelApariencia'
+import { useApariencia } from '@/hooks/useApariencia'
 import { AsistenteIA } from '@/features/ia/AsistenteIA'
 import { SyncManager } from './SyncManager'
 
@@ -33,7 +35,8 @@ function Senal() {
 
 /** Marco de la app de terreno: logo arriba, una sola acción por pantalla y un botón grande para volver al inicio. */
 export function PwaLayout() {
-  const { logout } = useAuthStore()
+  const { user, logout } = useAuthStore()
+  useApariencia(user?.id, 0)  // la app de terreno empieza clara (se lee mejor al sol); cada persona puede cambiarla
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const titulo = TITULOS[pathname]
@@ -41,10 +44,12 @@ export function PwaLayout() {
   return (
     // En teléfono ocupa toda la pantalla; en computador se muestra como un teléfono centrado (demostración).
     <div className="flex h-full items-center justify-center bg-deep sm:p-6">
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#F4F7F9] sm:h-[min(52.75rem,calc(100vh-3rem))] sm:w-[390px] sm:rounded-[2.5rem] sm:border-[10px] sm:border-[#05151F] sm:shadow-pop">
+      <div className="relative flex h-full w-full flex-col overflow-hidden bg-canvas sm:h-[min(52.75rem,calc(100vh-3rem))] sm:w-[390px] sm:rounded-[2.5rem] sm:border-[10px] sm:border-[#05151F] sm:shadow-pop">
         <SyncManager />
         <header className="flex shrink-0 items-center justify-between border-b-4 border-brand bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <BrandMark height={60} />
+          <div className="flex items-center gap-2">
+          <PanelApariencia nivelDefecto={0} grande />
           <button
             type="button"
             onClick={() => { logout(); navigate('/login', { replace: true }) }}
@@ -52,6 +57,7 @@ export function PwaLayout() {
           >
             <LogOut className="h-5 w-5" />Salir
           </button>
+          </div>
         </header>
         <Senal />
         <main className="terreno flex-1 overflow-y-auto p-4">
