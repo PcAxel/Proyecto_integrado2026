@@ -44,11 +44,15 @@ class AcceptTermsSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     role_label = serializers.CharField(source='get_role_display', read_only=True)
+    bloqueada = serializers.SerializerMethodField()  # bloqueada por intentos fallidos: el Administrador la reactiva
+
+    def get_bloqueada(self, u):
+        return u.bloqueada_en is not None
 
     class Meta:
         model = CustomUser
         fields = ('id', 'email', 'first_name', 'last_name', 'role', 'role_label', 'is_active', 'is_2fa_enabled',
-                  'terms_accepted_at', 'date_joined', 'deactivated_at')
+                  'terms_accepted_at', 'date_joined', 'deactivated_at', 'bloqueada')
         read_only_fields = fields
 
 
@@ -62,3 +66,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if CustomUser.objects.filter(email=value).exists():
             raise serializers.ValidationError('Ya existe un usuario con este correo.')
         return value
+
+
+class RecuperarSolicitudSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class RecuperarConfirmarSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    codigo = serializers.RegexField(**CODE_FIELD)
+    password = serializers.CharField(write_only=True, trim_whitespace=False)

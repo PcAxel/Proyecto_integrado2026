@@ -30,7 +30,7 @@ class DesactivacionDeUsuariosTests(RoleTestCase):
         self.client.force_authenticate(None)
         r = self.client.post('/api/auth/login/', {'email': 'tecnico@fyag.cl', 'password': 'Clave-Segura-123'}, format='json')
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(r.data['non_field_errors'][0] if 'non_field_errors' in r.data else r.data, 'Credenciales inválidas.')
+        self.assertEqual(r.data['detail'], 'Credenciales inválidas.')
 
     def test_desactivar_corta_las_sesiones_abiertas(self):
         refresco = RefreshToken.for_user(self.users['OPERACIONES'])

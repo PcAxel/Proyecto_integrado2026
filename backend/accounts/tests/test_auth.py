@@ -91,7 +91,10 @@ class AuthFlowTests(APITestCase):
         self.assertEqual(r.status_code, 401)
 
     def test_login_throttle_5_per_minute(self):
-        codes = [self.login('mala').status_code for _ in range(7)]
+        codes = []
+        for _ in range(7):
+            CustomUser.objects.update(bloqueo_hasta=None)  # la espera entre intentos es otra defensa (ver test_bloqueo); aquí se prueba el límite por IP
+            codes.append(self.login('mala').status_code)
         self.assertEqual(codes[:5], [400] * 5)
         self.assertEqual(codes[5:], [429, 429])
 

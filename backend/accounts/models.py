@@ -66,6 +66,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     deactivated_at = models.DateTimeField(null=True, blank=True)
     deactivated_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
 
+    # Defensa contra adivinar contraseñas (ver accounts/bloqueo.py). Se reinician con un ingreso correcto, al recuperar la contraseña
+    # o cuando el Administrador reactiva la cuenta.
+    intentos_fallidos = models.PositiveSmallIntegerField(default=0)
+    ultimo_fallo_en = models.DateTimeField(null=True, blank=True)
+    bloqueo_hasta = models.DateTimeField(null=True, blank=True)  # espera entre intentos
+    bloqueada_en = models.DateTimeField(null=True, blank=True)   # cuenta de oficina bloqueada por intentos: solo el Administrador la reactiva
+
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'
@@ -80,3 +87,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f'{self.first_name} {self.last_name}'.strip()
+
+
+class RecuperacionPassword(models.Model):
+    """Código de 6 dígitos enviado al correo para elegir una contraseña nueva. Se guarda solo su huella, vence a los 15 minutos y sirve una vez."""
+    usuario = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='recuperaciones')
+    codigo_hash = models.CharField(max_length=64)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    expira_en = models.DateTimeField()
+    intentos = models.PositiveSmallIntegerField(default=0)
+    usado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-creado_en']

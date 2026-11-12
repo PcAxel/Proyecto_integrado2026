@@ -62,33 +62,3 @@ class SesionCookieTests(APITestCase):
         self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)  # la cookie no autentica la API
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
         self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)
-
-
-class BloqueoCuentaTests(APITestCase):
-    def setUp(self):
-        cache.clear()
-        CustomUser.objects.create_user('a@fyag.cl', 'Clave-Segura-123', role=Role.TECNICO)
-
-    def intento(self, clave):
-        cache.delete('throttle_login_127.0.0.1')  # el límite por IP es otra defensa; aquí se prueba el de la cuenta
-        return self.client.post('/api/auth/login/', {'email': 'a@fyag.cl', 'password': clave}, format='json').status_code
-
-    def test_cinco_fallos_bloquean_la_cuenta_aunque_luego_acierte(self):
-        from rest_framework.throttling import SimpleRateThrottle
-        SimpleRateThrottle.THROTTLE_RATES = {**SimpleRateThrottle.THROTTLE_RATES, 'login': '1000/min'}
-        try:
-            self.assertEqual([self.intento('mala') for _ in range(5)], [400] * 5)
-            self.assertEqual(self.intento('Clave-Segura-123'), 429)  # ya bloqueada
-        finally:
-            SimpleRateThrottle.THROTTLE_RATES = {**SimpleRateThrottle.THROTTLE_RATES, 'login': '5/min'}
-
-    def test_un_acierto_reinicia_el_contador(self):
-        from rest_framework.throttling import SimpleRateThrottle
-        SimpleRateThrottle.THROTTLE_RATES = {**SimpleRateThrottle.THROTTLE_RATES, 'login': '1000/min'}
-        try:
-            for _ in range(4):
-                self.intento('mala')
-            self.assertEqual(self.intento('Clave-Segura-123'), 200)
-            self.assertEqual([self.intento('mala') for _ in range(4)], [400] * 4)
-        finally:
-            SimpleRateThrottle.THROTTLE_RATES = {**SimpleRateThrottle.THROTTLE_RATES, 'login': '5/min'}

@@ -8,6 +8,10 @@ export const authService = {
   verify2fa: (challenge_token, code) => request('/auth/2fa/verify/', { method: 'POST', body: { challenge_token, code }, auth: false }),
   /** Primer ingreso: primer código contra el secreto temporal → activa el 2FA y entrega los tokens JWT. */
   verifySetup2fa: (temp_token, code) => request('/auth/verify-setup-2fa/', { method: 'POST', body: { temp_token, code }, auth: false }),
+  /** Pide el código de recuperación por correo. La respuesta es la misma exista o no el correo. */
+  solicitarRecuperacion: (email) => request('/auth/recuperar/', { method: 'POST', body: { email }, auth: false }),
+  /** Con el código recibido por correo fija la contraseña nueva (y cierra todas las sesiones). */
+  confirmarRecuperacion: (email, codigo, password) => request('/auth/recuperar/confirmar/', { method: 'POST', body: { email, codigo, password }, auth: false }),
   /** Restaura la sesión desde la cookie HttpOnly (al abrir la app). Rota la cookie. */
   refresh: () => request('/auth/refresh/', { method: 'POST', auth: false }),
   logout: () => request('/auth/logout/', { method: 'POST', auth: false }),

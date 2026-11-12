@@ -59,19 +59,19 @@ export function UsuariosList() {
   const [procesando, setProcesando] = useState(false)
   const confirmarCambio = async () => {
     setProcesando(true)
-    const r = await runAction(cambio.is_active ? usuariosService.desactivar(cambio.id) : usuariosService.reactivar(cambio.id), cambio.is_active ? 'Acceso desactivado' : 'Acceso reactivado')
+    const r = await runAction(cambio.is_active ? usuariosService.desactivar(cambio.id) : usuariosService.reactivar(cambio.id), cambio.is_active ? 'Acceso desactivado' : cambio.bloqueada ? 'Cuenta desbloqueada' : 'Acceso reactivado')
     setProcesando(false)
     if (r) { setCambio(null); reload() }
   }
   const columns = [
     { key: 'nombre', header: 'Usuario', render: (u) => <div><p className="font-medium">{`${u.first_name} ${u.last_name}`.trim() || '—'}</p><p className="text-xs text-ink-soft">{u.email}</p></div> },
-    { key: 'acceso', header: 'Acceso', render: (u) => (u.is_active ? <Badge tone="ok">Activo</Badge> : <div><Badge tone="crit">Desactivado</Badge>{u.deactivated_at && <p className="mt-0.5 text-[11px] text-ink-soft">{formatFechaHora(u.deactivated_at)}</p>}</div>) },
+    { key: 'acceso', header: 'Acceso', render: (u) => (u.is_active ? <Badge tone="ok">Activo</Badge> : <div>{u.bloqueada ? <Badge tone="crit">Bloqueada por intentos fallidos</Badge> : <Badge tone="crit">Desactivado</Badge>}{u.deactivated_at && <p className="mt-0.5 text-[11px] text-ink-soft">{formatFechaHora(u.deactivated_at)}</p>}</div>) },
     { key: 'role', header: 'Rol', render: (u) => <RolBadge rol={u.role} /> },
     { key: '2fa', header: '2FA', render: (u) => (u.is_2fa_enabled ? <Badge tone="ok" icon={ShieldCheck}>Vinculado</Badge> : <Badge tone="warn" icon={ShieldOff}>Pendiente</Badge>) },
     { key: 'terms', header: 'Términos', render: (u) => (u.terms_accepted_at ? <Mono className="text-xs">{formatFechaHora(u.terms_accepted_at)}</Mono> : <Badge tone="warn">Sin aceptar</Badge>) },
     // Nunca se elimina un usuario (trazabilidad): solo se desactiva el acceso o se devuelve. Nadie puede desactivarse a sí mismo.
     { key: 'acciones', header: '', align: 'right', render: (u) => (u.id === yo ? <span className="text-xs text-ink-soft">Tu cuenta</span> : (
-      <Button size="sm" variant="secondary" icon={u.is_active ? UserX : UserCheck} onClick={() => setCambio(u)}>{u.is_active ? 'Desactivar' : 'Reactivar'}</Button>
+      <Button size="sm" variant="secondary" icon={u.is_active ? UserX : UserCheck} onClick={() => setCambio(u)}>{u.is_active ? 'Desactivar' : u.bloqueada ? 'Desbloquear' : 'Reactivar'}</Button>
     )) },
   ]
   return (
@@ -88,11 +88,13 @@ export function UsuariosList() {
       <ConfirmDialog
         open={Boolean(cambio)} onClose={() => setCambio(null)} onConfirm={confirmarCambio} loading={procesando}
         tone={cambio?.is_active ? 'danger' : 'primary'}
-        title={cambio?.is_active ? 'Desactivar acceso' : 'Reactivar acceso'}
+        title={cambio?.is_active ? 'Desactivar acceso' : cambio?.bloqueada ? 'Desbloquear cuenta' : 'Reactivar acceso'}
         message={cambio?.is_active
           ? `${cambio?.email} dejará de poder entrar y se cerrarán sus sesiones abiertas. La cuenta no se elimina: su historial y sus registros se conservan, y puedes reactivarla cuando quieras.`
-          : `${cambio?.email} volverá a poder entrar con su contraseña y su 2FA actuales.`}
-        confirmLabel={cambio?.is_active ? 'Desactivar' : 'Reactivar'}
+          : cambio?.bloqueada
+            ? `${cambio?.email} se bloqueó por demasiados intentos fallidos. Al desbloquearla vuelve a poder entrar, con su contraseña y su 2FA actuales y los intentos en cero.`
+            : `${cambio?.email} volverá a poder entrar con su contraseña y su 2FA actuales.`}
+        confirmLabel={cambio?.is_active ? 'Desactivar' : cambio?.bloqueada ? 'Desbloquear' : 'Reactivar'}
       />
     </div>
   )

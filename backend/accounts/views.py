@@ -4,6 +4,8 @@ from urllib.parse import quote
 
 import pyotp
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.cache import cache
 from django.core import signing
 from django.utils import timezone
@@ -17,6 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from config.ip import ip_cliente
 
+from . import bloqueo, recuperacion
 from .emails import send_onboarding_email
 from .models import CustomUser, Role
 from .permissions import IsAdminRole
@@ -24,17 +27,18 @@ from .serializers import (
     AcceptTermsSerializer,
     LoginSerializer,
     OTPVerifySerializer,
+    RecuperarConfirmarSerializer,
+    RecuperarSolicitudSerializer,
     SetupConfirmSerializer,
     UserCreateSerializer,
     UserSerializer,
 )
-from .throttles import LoginRateThrottle, RefreshRateThrottle
+from .throttles import LoginRateThrottle, RecuperarRateThrottle, RefreshRateThrottle
 
 logger = logging.getLogger(__name__)
 
 CHALLENGE_SALT = 'fyag.2fa.challenge'
-MAX_FALLOS_LOGIN = 5
-BLOQUEO_SEGUNDOS = 15 * 60
+MENSAJE_BLOQUEADA = 'Tu cuenta fue bloqueada por demasiados intentos fallidos. Comunícate con el administrador para que la desbloquee.'
 
 
 def make_challenge(user):
@@ -94,16 +98,25 @@ class LoginView(APIView):
 
     def post(self, request):
         correo = str(request.data.get('email', '')).strip().lower()
-        clave = f'login_fallos:{correo}'
-        if cache.get(clave, 0) >= MAX_FALLOS_LOGIN:
-            return Response({'detail': 'Cuenta bloqueada temporalmente por intentos fallidos. Inténtalo en 15 minutos.', 'code': 'locked'},
+        cuenta = CustomUser.objects.filter(email__iexact=correo).first() if correo else None
+        if (cuenta and cuenta.bloqueada_en) or (not cuenta and correo and bloqueo.bloqueada_sin_cuenta(correo)):
+            return Response({'detail': MENSAJE_BLOQUEADA, 'code': 'account_locked', 'bloqueada': True}, status=status.HTTP_423_LOCKED)
+        contable = cuenta if cuenta and cuenta.is_active else None  # una cuenta desactivada por el admin no acumula fallos
+        espera = bloqueo.espera_restante(contable, correo)
+        if espera:
+            # Mientras dura la espera ni siquiera se mira la contraseña: así no hay intentos «gratis» insistiendo.
+            return Response({'detail': f'Espera {espera} s antes de volver a intentarlo.', 'code': 'wait', **bloqueo.estado_actual(contable, correo)},
                             status=status.HTTP_429_TOO_MANY_REQUESTS)
         s = LoginSerializer(data=request.data, context={'request': request})
         if not s.is_valid():
-            # Bloqueo por cuenta (además del límite por IP): frena la fuerza bruta distribuida sobre un mismo correo.
-            cache.set(clave, cache.get(clave, 0) + 1, BLOQUEO_SEGUNDOS)
-            s.is_valid(raise_exception=True)
-        cache.delete(clave)
+            estado = bloqueo.registrar_fallo(contable, correo)
+            if estado['bloqueada']:
+                if contable:
+                    bloqueo.bloquear_cuenta(contable)
+                    logger.warning('cuenta_bloqueada id=%s por intentos fallidos', contable.pk)
+                return Response({'detail': MENSAJE_BLOQUEADA, 'code': 'account_locked', **estado}, status=status.HTTP_423_LOCKED)
+            return Response({'detail': 'Credenciales inválidas.', 'code': 'invalid_credentials', **estado}, status=status.HTTP_400_BAD_REQUEST)
+        bloqueo.limpiar(s.validated_data['user'], correo)
         user = s.validated_data['user']
         if user.is_2fa_enabled:
             return Response({'step': 'verify_2fa', 'challenge_token': make_challenge(user)})
@@ -210,7 +223,7 @@ class UserDesactivarView(APIView):
 
 
 class UserReactivarView(APIView):
-    """POST /api/users/<id>/reactivar/ — solo el Administrador. Devuelve el acceso; su 2FA y su historial siguen como estaban."""
+    """POST /api/users/<id>/reactivar/ — solo el Administrador. Devuelve el acceso (también a una cuenta bloqueada por intentos fallidos); su 2FA y su historial siguen como estaban."""
     permission_classes = [IsAdminRole]
 
     def post(self, request, pk):
@@ -221,6 +234,7 @@ class UserReactivarView(APIView):
             user.deactivated_by = None
             user.save(update_fields=['is_active', 'deactivated_at', 'deactivated_by'])
             logger.info('usuario_reactivado id=%s por=%s', user.pk, request.user.pk)
+        bloqueo.limpiar(user)  # reactivar también devuelve a cero los intentos fallidos y la espera (cuenta bloqueada o no)
         return Response(UserSerializer(user).data)
 
 
@@ -313,3 +327,52 @@ class LogoutView(APIView):
         resp = Response(status=status.HTTP_204_NO_CONTENT)
         resp.delete_cookie(settings.REFRESH_COOKIE_NAME, path=settings.REFRESH_COOKIE_PATH)
         return resp
+
+
+RESPUESTA_RECUPERAR = {'detail': 'Si el correo está registrado, te enviamos un código de 6 dígitos. Vence en 15 minutos.'}
+
+
+class RecuperarSolicitarView(APIView):
+    """POST /api/auth/recuperar/ — pide el código por correo. La respuesta es SIEMPRE la misma: no revela qué correos existen.
+    No se envía nada a cuentas desactivadas o bloqueadas (esas las devuelve el Administrador) ni a quien ya pidió 3 códigos en la última hora."""
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [RecuperarRateThrottle]
+
+    def post(self, request):
+        s = RecuperarSolicitudSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        correo = s.validated_data['email'].lower()
+        cuenta = CustomUser.objects.filter(email__iexact=correo, is_active=True, bloqueada_en__isnull=True).first()
+        if cuenta and recuperacion.puede_solicitar(correo):
+            recuperacion.enviar_codigo(cuenta)
+        return Response(RESPUESTA_RECUPERAR)
+
+
+class RecuperarConfirmarView(APIView):
+    """POST /api/auth/recuperar/confirmar/ — {email, codigo, password}: con el código correcto fija la contraseña nueva, cierra todas las sesiones
+    y reinicia los intentos fallidos. No toca el autenticador (2FA): quien entra sigue necesitando su celular."""
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request):
+        s = RecuperarConfirmarSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        correo = s.validated_data['email'].lower()
+        cuenta = CustomUser.objects.filter(email__iexact=correo, is_active=True, bloqueada_en__isnull=True).first()
+        r = recuperacion.verificar_codigo(cuenta, s.validated_data['codigo']) if cuenta else None
+        if r is None:
+            return Response({'detail': 'El código es incorrecto o ya venció. Pide uno nuevo.', 'code': 'invalid_code'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_password(s.validated_data['password'], cuenta)
+        except DjangoValidationError as e:
+            return Response({'detail': ' '.join(e.messages), 'code': 'weak_password'}, status=status.HTTP_400_BAD_REQUEST)  # el código no se gasta
+        cuenta.set_password(s.validated_data['password'])
+        cuenta.save(update_fields=['password'])
+        r.usado_en = timezone.now()
+        r.save(update_fields=['usado_en'])
+        bloqueo.limpiar(cuenta, correo)
+        _cortar_sesiones(cuenta)
+        logger.info('password_recuperada id=%s', cuenta.pk)
+        return Response({'detail': 'Contraseña actualizada. Ya puedes iniciar sesión.'})

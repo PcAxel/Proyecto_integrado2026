@@ -8,3 +8,7 @@ class LoginRateThrottle(AnonRateThrottle):
 
 class RefreshRateThrottle(AnonRateThrottle):
     scope = 'refresh'
+
+
+class RecuperarRateThrottle(AnonRateThrottle):
+    scope = 'recuperar'
