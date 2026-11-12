@@ -111,7 +111,7 @@ export function EtiquetasTab() {
     try { await fn(etiquetas, formato, ambiente) } catch (e) { toast.error(e.message || 'No se pudo generar el PDF.') } finally { setTrabajando(false) }
   }
 
-  const cabecera = <Casilla marcada={todosVisibles} onChange={alternarVisibles} etiqueta="Elegir todos los visibles" />
+  const cabecera = <Casilla marcada={todosVisibles} onChange={alternarVisibles} etiqueta="Elegir todos los resultados" />
   const columns = porLote ? [
     { key: 'sel', header: cabecera, render: (l) => <Casilla marcada={elegidos.has(l.id)} onChange={() => alternar(l.id)} etiqueta={`Elegir ${l.codigo}`} /> },
     { key: 'codigo', header: 'Código', mono: true },
@@ -146,10 +146,10 @@ export function EtiquetasTab() {
             <>
               <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
                 <Input label="Buscar" placeholder={porLote ? 'Código, artículo o N° del proveedor' : 'SKU o nombre'} value={q} onChange={(e) => setQ(e.target.value)} className="w-full sm:w-72" />
-                <Mono className="ml-auto pb-2 text-xs text-ink-soft">{seleccion.length} elegidos · {filas.length} visibles</Mono>
+                <Mono className="ml-auto pb-2 text-xs text-ink-soft">{seleccion.length} elegidos · {filas.length} resultados</Mono>
               </div>
               <DataTable columns={columns} rows={filas} rowKey={(x) => x.id} loading={recurso.loading && !recurso.data}
-                emptyTitle={porLote ? 'Sin lotes ni cilindros' : 'Sin artículos'} emptyHint={porLote ? 'Crea uno desde una compra recibida.' : 'No hay artículos para mostrar.'} />
+                pageSize={50} emptyTitle={porLote ? 'Sin lotes ni cilindros' : 'Sin artículos'} emptyHint={porLote ? 'Crea uno desde una compra recibida.' : 'No hay artículos para mostrar.'} />
             </>
           )}
         </Card>

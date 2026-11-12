@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { cn } from './cn'
+import { Pagination } from './Pagination'
 import { Skeleton } from './Skeleton'
 import { EmptyState } from './EmptyState'
 
@@ -8,13 +10,19 @@ import { EmptyState } from './EmptyState'
  * @param {{
  *  columns: Array<{key:string, header:string, render?:(row:any)=>import('react').ReactNode, align?:'left'|'right', mono?:boolean, className?:string}>,
  *  rows: any[], rowKey: (row:any)=>string, loading?: boolean,
- *  onRowClick?: (row:any)=>void, emptyTitle?: string, emptyHint?: string
+ *  onRowClick?: (row:any)=>void, emptyTitle?: string, emptyHint?: string,
+ *  pageSize?: number  // si se indica, la tabla se parte en páginas de ese tamaño (para listas largas)
  * }} props
  */
-export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTitle = 'Sin registros', emptyHint }) {
+export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTitle = 'Sin registros', emptyHint, pageSize }) {
+  const [pagina, setPagina] = useState(0)
+  const total = rows.length
+  // Al filtrar o cambiar la lista se vuelve a la primera página (y nunca se queda en una que ya no existe).
+  useEffect(() => { setPagina(0) }, [total])
   if (loading) return <Skeleton rows={6} />
   if (!rows.length) return <EmptyState title={emptyTitle} hint={emptyHint} />
 
+  const visibles = pageSize ? rows.slice(pagina * pageSize, (pagina + 1) * pageSize) : rows
   const celda = (c, row) => (c.render ? c.render(row) : row[c.key])
   const [titulo, ...detalle] = columns.filter((c) => c.header)
   const acciones = columns.filter((c) => !c.header)
@@ -33,7 +41,7 @@ export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTit
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {visibles.map((row) => (
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -51,7 +59,7 @@ export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTit
       </div>
 
       <ul className="divide-y divide-line sm:hidden">
-        {rows.map((row) => (
+        {visibles.map((row) => (
           <li
             key={rowKey(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -74,6 +82,7 @@ export function DataTable({ columns, rows, rowKey, loading, onRowClick, emptyTit
           </li>
         ))}
       </ul>
+      {pageSize && total > pageSize && <Pagination page={pagina} pageSize={pageSize} total={total} onChange={setPagina} />}
     </>
   )
 }

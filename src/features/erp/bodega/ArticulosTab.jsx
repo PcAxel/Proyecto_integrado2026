@@ -92,7 +92,7 @@ export function ArticulosTab({ onVerKardex }) {
             {gestiona && <Button icon={Plus} onClick={() => setModal({})}>Nuevo artículo</Button>}
           </div>
         </div>
-        <DataTable columns={columns} rows={filas} rowKey={(a) => a.id} loading={loading && !data} emptyTitle="Sin artículos" emptyHint="Ajusta los filtros de búsqueda." />
+        <DataTable columns={columns} rows={filas} rowKey={(a) => a.id} loading={loading && !data} emptyTitle="Sin artículos" emptyHint="Ajusta los filtros de búsqueda." pageSize={50} />
       </Card>
 
       {modal && <ArticuloModal open onClose={() => setModal(null)} articulo={modal.articulo} categorias={categorias} onSaved={reload} />}
