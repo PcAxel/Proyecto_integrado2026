@@ -411,7 +411,8 @@ class AgenteNavegacionTests(AgenteBase):
         self.assertIn('ÚNICAMENTE UN OBJETO JSON VÁLIDO', sistema)
         self.assertIn('- /erp/obras: Obras [admite búsqueda]', sistema)
         self.assertIn('- /erp/compras: Compras\n', sistema + '\n')
-        self.assertEqual(fake.llamadas[0]['response_format'], {'type': 'json_object'})
+        self.assertNotIn('response_format', fake.llamadas[0])  # con herramientas (Function Calling) no se fuerza el modo JSON; el prompt sigue exigiendo JSON
+        self.assertEqual(fake.llamadas[0]['tools'][0]['function']['name'], 'generar_reporte')
 
     def test_navegar_devuelve_la_ruta(self):
         self.ia({'respuesta_texto': 'Te llevo a Obras.', 'accion': 'navegar', 'ruta': '/erp/obras', 'termino_busqueda': None})
@@ -512,7 +513,8 @@ class RespuestaVaciaTests(AgenteBase):
         r = self.chat()
         self.assertEqual((r.status_code, r.data['respuesta']), (200, 'Hola, ¿en qué te ayudo?'))
         self.assertEqual(len(f.llamadas), 2)
-        self.assertIn('response_format', f.llamadas[0])
+        self.assertIn('tools', f.llamadas[0])
+        self.assertNotIn('tools', f.llamadas[1])  # el reintento va limpio: sin herramientas ni modo JSON
         self.assertNotIn('response_format', f.llamadas[1])
 
     def test_si_vuelve_a_venir_vacia_se_informa_sin_reintentar_de_nuevo(self):

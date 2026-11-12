@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
+from . import herramientas
 from .prompts import SYSTEM_PROMPTS, system_prompt, system_prompt_agente, system_prompt_chat  # noqa: F401  (SYSTEM_PROMPTS se expone para pruebas y documentación)
 
 logger = logging.getLogger('ai_agent')
@@ -49,13 +50,15 @@ def construir_mensajes(rol, tarea, etiqueta, texto, imagen_b64=None):
     ]
 
 
-def _completar(usuario, rol, tarea, mensajes, *, json_mode=False, temperature=0.1, max_tokens=None):
-    """Llama al modelo y devuelve el texto de la respuesta. Registra uso (sin el contenido, que puede ser sensible)."""
+def _pedir(usuario, rol, tarea, mensajes, *, json_mode=False, temperature=0.1, max_tokens=None, tools=None):
+    """Llama al modelo y devuelve la respuesta completa. Registra uso (sin el contenido, que puede ser sensible)."""
     cliente = get_client()
+    extra = {'response_format': {'type': 'json_object'}} if json_mode else {}
+    if tools:
+        extra['tools'] = tools
     try:
         r = cliente.chat.completions.create(
-            model=settings.DEEPSEEK_MODEL, messages=mensajes, temperature=temperature, max_tokens=max_tokens or settings.AI_MAX_TOKENS_RESPUESTA,
-            **({'response_format': {'type': 'json_object'}} if json_mode else {}),
+            model=settings.DEEPSEEK_MODEL, messages=mensajes, temperature=temperature, max_tokens=max_tokens or settings.AI_MAX_TOKENS_RESPUESTA, **extra,
         )
     except APITimeoutError:
         raise ServicioIAError('El agente tardó demasiado en responder. Inténtalo de nuevo.', 504, 'ai_timeout')
@@ -69,11 +72,20 @@ def _completar(usuario, rol, tarea, mensajes, *, json_mode=False, temperature=0.
         raise ServicioIAError('El servicio de IA no está disponible por ahora.', 503, 'ai_unavailable')
     uso = getattr(r, 'usage', None)
     logger.info('ai_call user=%s rol=%s tarea=%s tokens=%s', usuario.pk, rol, tarea, getattr(uso, 'total_tokens', None))
+    return r
+
+
+def _texto_de(r, usuario, tarea, json_mode):
     texto_respuesta = (r.choices[0].message.content or '').strip() if r.choices else ''
     if not texto_respuesta:
         logger.warning('ai_empty user=%s tarea=%s json_mode=%s finish=%s', usuario.pk, tarea, json_mode, getattr(r.choices[0], 'finish_reason', None) if r.choices else None)
         raise ServicioIAError('El agente no devolvió una respuesta.', 502, 'ai_empty')
     return texto_respuesta
+
+
+def _completar(usuario, rol, tarea, mensajes, *, json_mode=False, temperature=0.1, max_tokens=None):
+    """Llama al modelo y devuelve solo el texto de la respuesta."""
+    return _texto_de(_pedir(usuario, rol, tarea, mensajes, json_mode=json_mode, temperature=temperature, max_tokens=max_tokens), usuario, tarea, json_mode)
 
 
 def chat(usuario, rol, tarea, etiqueta, texto, *, json_mode=False, imagen_b64=None):
@@ -116,10 +128,14 @@ def interpretar_respuesta_agente(crudo, rutas):
 
 
 def conversar(usuario, rol, historial, rutas=()):
-    """Conversación abierta con capacidad de NAVEGAR y BUSCAR, estrictamente de solo lectura: el modelo no tiene herramientas
-    ni acceso a la base de datos; solo propone una acción que la interfaz ejecuta. El system prompt lo elige el servidor según el rol;
-    el cliente solo aporta el historial (turnos `user` y `assistant`, nunca `system`). La conversación no se guarda en el servidor."""
-    mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas)}, *({'role': m['role'], 'content': m['content']} for m in historial)]
+    """Conversación abierta con capacidad de NAVEGAR, BUSCAR y GENERAR REPORTES, sin acceso del modelo a la base de datos: solo propone
+    una acción de interfaz o pide una herramienta de la lista cerrada de `herramientas`, que el servidor ejecuta con los permisos del usuario.
+    El system prompt lo elige el servidor según el rol; el cliente solo aporta el historial (turnos `user` y `assistant`, nunca `system`).
+    La conversación no se guarda en el servidor."""
+    mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas, con_reportes=bool(tools := herramientas.herramientas_para(usuario)))},
+                *({'role': m['role'], 'content': m['content']} for m in historial)]
+    if tools:
+        return _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools)
     try:
         crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=True, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
     except ServicioIAError as e:
@@ -129,6 +145,42 @@ def conversar(usuario, rol, historial, rutas=()):
         # el prompt igual exige JSON y `interpretar_respuesta_agente` tolera texto plano, así que el usuario no ve el fallo.
         crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=False, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
     return interpretar_respuesta_agente(crudo, rutas)
+
+
+def _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools):
+    """Function Calling en dos tiempos. 1) El modelo responde o pide la herramienta (sin modo JSON, que no se combina bien con tools).
+    2) Si la pidió, el servidor la ejecuta con el usuario autenticado, devuelve al modelo solo un resumen (sin la URL) y el modelo redacta
+    el aviso. La URL de descarga la adjunta el servidor en `archivo`; el modelo nunca la ve."""
+    r = _pedir(usuario, rol, 'chat', mensajes, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT, tools=tools)
+    msg = r.choices[0].message if r.choices else None
+    llamadas = (getattr(msg, 'tool_calls', None) or [])[:herramientas.MAX_LLAMADAS_POR_TURNO]
+    if not llamadas:
+        try:
+            crudo = _texto_de(r, usuario, 'chat', False)
+        except ServicioIAError as e:
+            if e.code != 'ai_empty':
+                raise
+            crudo = _completar(usuario, rol, 'chat', mensajes, json_mode=False, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
+        return interpretar_respuesta_agente(crudo, rutas)
+
+    seguimiento = [*mensajes, {'role': 'assistant', 'content': msg.content or '', 'tool_calls': [
+        {'id': tc.id, 'type': 'function', 'function': {'name': tc.function.name, 'arguments': tc.function.arguments}} for tc in llamadas]}]
+    archivo = None
+    for tc in llamadas:
+        resultado, archivo = herramientas.ejecutar(usuario, tc.function.name, tc.function.arguments)
+        seguimiento.append({'role': 'tool', 'tool_call_id': tc.id, 'content': json.dumps(resultado, ensure_ascii=False)})
+    try:
+        crudo = _completar(usuario, rol, 'chat', seguimiento, json_mode=False, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
+        salida = interpretar_respuesta_agente(crudo, rutas)
+    except ServicioIAError as e:
+        if archivo is None or e.code not in ('ai_empty', 'ai_timeout'):
+            raise
+        salida = {'respuesta_texto': '', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
+    if archivo:
+        # Con un archivo listo no se navega: el aviso y el enlace son la respuesta. El texto lo escribe el modelo; si falla, hay uno de reserva.
+        texto = salida['respuesta_texto'] if salida['respuesta_texto'] not in ('', 'Listo.') else 'Aquí tienes tu reporte.'
+        return {**salida, 'respuesta_texto': texto, 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None, 'archivo': archivo}
+    return {**salida, 'respuesta_texto': salida['respuesta_texto'] or 'No pude generar el reporte. Inténtalo de nuevo.'}
 
 
 # ───────────────────────── Facturas ─────────────────────────

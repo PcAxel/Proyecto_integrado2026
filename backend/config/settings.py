@@ -1,5 +1,6 @@
 """Configuración de Django para el backend del ERP de FYAG."""
 import os
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -139,6 +140,7 @@ REST_FRAMEWORK = {
         'anon': '20/min',
         'user': '120/min',
         'login': '5/min',
+        'recuperar': '10/hour',  # solicitudes de código de recuperación, por IP
         'refresh': '60/min',
         'ai': '15/min',      # ráfaga por usuario (una conversación hace varias consultas seguidas)
         'firma': '10/min',   # intentos de firma por usuario (cada uno exige un código 2FA)
@@ -190,6 +192,9 @@ AI_CHAT_MAX_CHARS_TOTAL = 20_000
 AI_MAX_CHARS_TEXTO = 20_000
 AI_MAX_CHARS_NOTAS = 2_000
 AI_MAX_BYTES_IMAGEN = 5 * 1024 * 1024
+# Reportes (xlsx/docx/pptx) que genera el agente: carpeta PRIVADA fuera de static/media, servidos solo por una vista autenticada.
+REPORTES_IA_DIR = os.getenv('REPORTES_IA_DIR', str(Path(tempfile.gettempdir()) / 'fyag_reportes_ia'))
+REPORTES_IA_HORAS = int(os.getenv('REPORTES_IA_HORAS', '24'))  # los archivos se borran pasado este tiempo
 
 # --- 2FA ---
 OTP_ISSUER = 'FYAG ERP'
@@ -197,7 +202,8 @@ OTP_ISSUER = 'FYAG ERP'
 TWO_FA_CHALLENGE_MAX_AGE = 300
 
 # --- Correo / onboarding ---
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')  # correo por HTTP: Render gratis bloquea SMTP (ver accounts/email_backend.py)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'accounts.email_backend.BrevoEmailBackend' if BREVO_API_KEY else 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')

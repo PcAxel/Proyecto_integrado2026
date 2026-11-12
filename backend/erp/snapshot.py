@@ -53,21 +53,25 @@ def _sin_campos_sensibles(user, tabla, rows):
     return [{k: v for k, v in r.items() if k not in ocultar} for r in rows]
 
 
+def tabla_para(user, tabla):
+    """Filas de UNA tabla tal como las vería este usuario: misma regla de lectura, de técnico, de costos y de campos sensibles que el snapshot.
+    Es la única puerta de lectura que usan los reportes de la IA: ninguna consulta propia se salta los permisos."""
+    if not tablas.puede_leer(user, tabla):
+        return []
+    rows = filas(tabla)
+    if user.role == 'TECNICO':
+        rows = _filtrar_tecnico(user, tabla, rows)
+    if not tablas.ver_costos(user):
+        for campo in tablas.TABLAS[tabla].get('costos', ()):
+            rows = [{k: v for k, v in r.items() if k != campo} for r in rows]
+    return _sin_campos_sensibles(user, tabla, rows)
+
+
 def construir(user):
     snap = {'usuarios': _usuarios(user)}
     # Cantidad REAL de filas por tabla, también de las que este rol no puede leer: el cliente la necesita para proponer el
     # siguiente id (p. ej. un técnico no ve la auditoría, pero cada acción suya escribe una fila allí).
     snap['_contadores'] = {t: Registro.objects.filter(tabla=t).count() for t in tablas.TABLAS}
-    costos = tablas.ver_costos(user)
-    for tabla, cfg in tablas.TABLAS.items():
-        if not tablas.puede_leer(user, tabla):
-            snap[tabla] = []
-            continue
-        rows = filas(tabla)
-        if user.role == 'TECNICO':
-            rows = _filtrar_tecnico(user, tabla, rows)
-        if not costos:
-            for campo in cfg.get('costos', ()):
-                rows = [{k: v for k, v in r.items() if k != campo} for r in rows]
-        snap[tabla] = _sin_campos_sensibles(user, tabla, rows)
+    for tabla in tablas.TABLAS:
+        snap[tabla] = tabla_para(user, tabla)
     return snap

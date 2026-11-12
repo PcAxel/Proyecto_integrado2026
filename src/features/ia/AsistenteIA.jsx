@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Compass, X, Copy, RotateCcw, FilePlus2, AlertTriangle, ShieldCheck, SendHorizontal, MessageSquarePlus } from 'lucide-react'
+import { Sparkles, Compass, X, Copy, RotateCcw, FilePlus2, AlertTriangle, ShieldCheck, SendHorizontal, MessageSquarePlus, Download, FileSpreadsheet } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, Textarea, cn } from '@/components/ui'
 import { iaService, proveedoresService } from '@/services'
@@ -14,6 +14,32 @@ import { catalogoDeRutas, resolverAccion } from './agente'
 
 const copiar = async (texto) => {
   try { await navigator.clipboard.writeText(texto); toast.success('Copiado') } catch { toast.error('No se pudo copiar') }
+}
+
+const FORMATO_REPORTE = { xlsx: 'Excel', docx: 'Word', pptx: 'PowerPoint' }
+
+/** Botón de descarga de un reporte generado por el agente (se baja con la sesión; el enlace directo no la llevaría). */
+function BotonReporte({ archivo }) {
+  const [bajando, setBajando] = useState(false)
+  const descargar = async () => {
+    setBajando(true)
+    try {
+      await iaService.descargarReporte(archivo)
+    } catch (err) {
+      toast.error(err?.message || 'No se pudo descargar el archivo.')
+    } finally {
+      setBajando(false)
+    }
+  }
+  return (
+    <button type="button" onClick={descargar} disabled={bajando}
+      className="mt-2 flex w-full items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-left text-sm font-semibold text-brand hover:bg-brand/10 disabled:opacity-60">
+      <FileSpreadsheet className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1 truncate">{archivo.nombre}<span className="block text-[11px] font-normal text-ink-soft">{FORMATO_REPORTE[archivo.formato] ?? archivo.formato} · {archivo.filas} filas</span></span>
+      <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="sr-only">{bajando ? 'Descargando…' : 'Descargar reporte'}</span>
+    </button>
+  )
 }
 
 const Dato = ({ etiqueta, valor }) => (
@@ -110,7 +136,7 @@ function Conversacion({ activo }) {
       const catalogo = catalogoDeRutas(user)
       const r = await iaService.conversar(historialParaEnviar(lista), catalogo)
       const accion = resolverAccion(r, catalogo)
-      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion }])
+      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion, archivo: r.archivo ?? null }])
       if (accion) navigate(accion.url)
     } catch (err) {
       setError(mensajeErrorIA(err))
@@ -130,6 +156,7 @@ function Conversacion({ activo }) {
           <div key={m.id ?? m.content} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
             <div className={cn('max-w-[88%] rounded-2xl px-3.5 py-2.5', m.role === 'user' ? 'rounded-br-md bg-brand text-white' : 'rounded-bl-md border border-line bg-white text-ink')}>
               {m.role === 'user' ? <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</p> : <TextoMarkdown texto={m.content} />}
+              {m.archivo && <BotonReporte archivo={m.archivo} />}
               {m.accion && (
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-brand"><Compass className="h-3 w-3" />{m.accion.busqueda ? `Busqué «${m.accion.busqueda}» en ${m.accion.etiqueta}` : `Te llevé a ${m.accion.etiqueta}`}</p>
               )}

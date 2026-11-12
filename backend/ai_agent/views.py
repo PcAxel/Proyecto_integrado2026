@@ -1,3 +1,6 @@
+from datetime import date
+
+from django.http import FileResponse, Http404
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -8,6 +11,7 @@ from accounts.models import Role
 from .permissions import SoloRoles
 from .prompts import ROLES_CON_CHAT
 from .serializers import ChatEntradaSerializer, FacturaEntradaSerializer, ReporteEntradaSerializer
+from .reportes import generadores
 from .services import ServicioIAError, conversar, extraer_factura, redactar_reporte
 from .throttles import IADiarioThrottle, IARafagaThrottle
 
@@ -55,3 +59,20 @@ class ChatView(_AgenteView):
         # Solo lectura: la respuesta trae texto y, como mucho, una pantalla a la que ir o un texto a buscar. Nada se modifica aquí.
         r = conversar(user, rol, datos['mensajes'], datos.get('rutas', []))
         return {'respuesta': r['respuesta_texto'], **r}
+
+
+class DescargarReporteView(APIView):
+    """GET /api/ai/reportes/<token>/?formato=xlsx|docx|pptx — descarga un reporte que el agente generó PARA ESTE USUARIO.
+    El archivo se busca en la carpeta privada del usuario autenticado: el token de otra persona no sirve (404, sin distinguir si existe)."""
+    permission_classes = [SoloRoles]
+    roles_permitidos = ROLES_CON_CHAT
+
+    def get(self, request, token):
+        formato = request.query_params.get('formato', '')
+        ruta = generadores.ruta_de(request.user, token, formato)
+        if ruta is None:
+            raise Http404
+        respuesta = FileResponse(open(ruta, 'rb'), as_attachment=True, filename=f'reporte_fyag_{date.today():%Y%m%d}.{formato}', content_type=generadores.FORMATOS[formato])
+        respuesta['Cache-Control'] = 'private, no-store'
+        respuesta['X-Content-Type-Options'] = 'nosniff'
+        return respuesta
