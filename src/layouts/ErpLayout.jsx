@@ -183,7 +183,7 @@ export function ErpLayout() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-fyag-ice/10 bg-fyag-bg/90 px-4 backdrop-blur sm:px-6 lg:px-10">
+        <header className="relative z-40 flex h-16 shrink-0 items-center gap-3 border-b border-fyag-ice/10 bg-fyag-bg/90 px-4 backdrop-blur sm:px-6 lg:px-10">
           <button type="button" aria-label="Abrir menú" onClick={() => setMobileSidebar(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-fyag-ice hover:bg-fyag-deep/30 hover:text-fyag-cream sm:hidden"><Menu className="h-5 w-5" /></button>
           <BotonBuscar onClick={() => setBuscando(true)} />
           <div className="ml-auto flex items-center gap-3">

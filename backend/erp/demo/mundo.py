@@ -167,7 +167,8 @@ class Mundo:
         from rrhh.demo import cargar_demo_rrhh
         from rrhh.models import Contrato, FichaTrabajador
         try:
-            cargar_demo_rrhh()
+            with transaction.atomic():  # punto de guardado: en PostgreSQL un error de base dentro de la transacción la dejaría inutilizable
+                cargar_demo_rrhh()
         except Exception as e:  # el PDF de ejemplo usa el almacenamiento privado: si no está disponible no se detiene el resto
             self.out(f'  (RR. HH. de demostración omitido: {type(e).__name__})')
         rrhh_user = self.staff['rrhh@fyag.cl']

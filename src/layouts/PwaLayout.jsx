@@ -46,7 +46,7 @@ export function PwaLayout() {
     <div className="flex h-full items-center justify-center bg-deep sm:p-6">
       <div className="relative flex h-full w-full flex-col overflow-hidden bg-canvas sm:h-[min(52.75rem,calc(100vh-3rem))] sm:w-[390px] sm:rounded-[2.5rem] sm:border-[10px] sm:border-[#05151F] sm:shadow-pop">
         <SyncManager />
-        <header className="flex shrink-0 items-center justify-between border-b-4 border-brand bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <header className="relative z-40 flex shrink-0 items-center justify-between border-b-4 border-brand bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <BrandMark height={60} />
           <div className="flex items-center gap-2">
           <PanelApariencia nivelDefecto={0} grande />
