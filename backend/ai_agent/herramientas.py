@@ -9,6 +9,8 @@ Qué ve y qué puede hacer el modelo:
 import json
 import logging
 
+from django.utils import timezone
+
 from .reportes import datos, generadores
 
 logger = logging.getLogger('ai_agent')
@@ -35,6 +37,10 @@ def herramientas_para(usuario):
                 'properties': {
                     'conjunto': {'type': 'string', 'enum': conjuntos, 'description': 'Qué datos incluir.'},
                     'formato': {'type': 'string', 'enum': list(generadores.FORMATOS), 'description': 'xlsx = Excel, docx = Word, pptx = PowerPoint.'},
+                    'mes': {'type': 'integer', 'minimum': 1, 'maximum': 12, 'description': 'Opcional. Mes del filtro (1 = enero … 12 = diciembre). Úsalo cuando pidan «solo de octubre». Sin anio se asume el año en curso.'},
+                    'anio': {'type': 'integer', 'minimum': datos.ANIO_MIN, 'maximum': datos.ANIO_MAX, 'description': 'Opcional. Año del filtro. Solo, sirve para pedir un año completo.'},
+                    'fecha_inicio': {'type': 'string', 'description': 'Opcional. Inicio de un rango, formato AAAA-MM-DD. No se combina con mes/anio.'},
+                    'fecha_fin': {'type': 'string', 'description': 'Opcional. Fin de un rango (inclusive), formato AAAA-MM-DD. No se combina con mes/anio.'},
                 },
                 'required': ['conjunto', 'formato'],
                 'additionalProperties': False,
@@ -52,15 +58,24 @@ def ejecutar(usuario, nombre, argumentos_json):
             args = json.loads(argumentos_json or '{}')
         except ValueError:
             return {'ok': False, 'error': 'Argumentos inválidos.'}, None
-        conjunto, formato = (args.get('conjunto'), args.get('formato')) if isinstance(args, dict) else (None, None)
-        if conjunto not in datos.disponibles(usuario) or formato not in generadores.FORMATOS:
+        args = args if isinstance(args, dict) else {}
+        conjunto, formato = args.get('conjunto'), args.get('formato')
+        if not isinstance(conjunto, str) or conjunto not in datos.disponibles(usuario) or formato not in generadores.FORMATOS:
             return {'ok': False, 'error': 'Conjunto o formato no permitido para este usuario.'}, None
-        info = generadores.generar(formato, datos.extraer(usuario, conjunto), usuario)
+        # Los filtros de fecha del modelo se validan aquí; el filtro lo aplica el servidor sobre lo que el usuario ya puede ver.
+        periodo = datos.periodo_de(args.get('mes'), args.get('anio'), args.get('fecha_inicio'), args.get('fecha_fin'), hoy=timezone.localdate())
+        contenido = datos.extraer(usuario, conjunto, periodo)
+        if not contenido.filas:
+            donde = f' en {periodo.etiqueta}' if periodo else ''
+            return {'ok': False, 'error': f'No hay registros de {conjunto}{donde}. No se generó ningún archivo: díselo al usuario y ofrécele otro período.'}, None
+        info = generadores.generar(formato, contenido, usuario)
+    except datos.PeriodoInvalido as e:
+        return {'ok': False, 'error': f'Filtro de fecha inválido: {e}'}, None
     except datos.SinPermiso:
         return {'ok': False, 'error': 'Este usuario no tiene acceso a esos datos.'}, None
     except Exception:  # un fallo al armar el archivo no debe tumbar el chat
         logger.exception('ai_reporte_error user=%s', usuario.pk)
         return {'ok': False, 'error': 'No se pudo generar el archivo.'}, None
-    logger.info('ai_reporte user=%s rol=%s conjunto=%s formato=%s filas=%s', usuario.pk, usuario.role, conjunto, formato, info['filas'])
+    logger.info('ai_reporte user=%s rol=%s conjunto=%s formato=%s periodo=%s filas=%s', usuario.pk, usuario.role, conjunto, formato, periodo.slug if periodo else '-', info['filas'])
     archivo = {'nombre': info['nombre'], 'formato': formato, 'filas': info['filas'], 'url': URL_DESCARGA.format(token=info['token'], formato=formato)}
     return {'ok': True, 'filas': info['filas'], 'nota': 'Archivo listo. El enlace de descarga se le muestra al usuario automáticamente: no lo escribas ni lo inventes.'}, archivo

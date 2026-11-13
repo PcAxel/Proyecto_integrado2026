@@ -142,12 +142,17 @@ PROMPT_REPORTES = """
 
 REPORTES DESCARGABLES:
 - Si el usuario pide un reporte, informe, planilla o presentación con datos del sistema, llama a la herramienta generar_reporte con el conjunto y el formato (Excel = xlsx, Word = docx, PowerPoint = pptx). Si no dice el formato, pregúntaselo; si no dice los datos, pregúntaselos.
+- Si piden un período («solo de octubre», «del 2025», «entre el 1 y el 15 de marzo»), pásalo con mes y anio, solo anio, o fecha_inicio y fecha_fin (AAAA-MM-DD): no pidas todo el historial si pidieron un período. No mezcles mes/anio con fechas. Hoy es {hoy}: úsalo para «este mes», «el mes pasado» o un mes sin año.
+- Si la herramienta responde que no hay registros o que el filtro es inválido, díselo al usuario con claridad y ofrécele otro período; no digas que el archivo está listo.
 - Generar un archivo solo LEE datos: no cambia nada en el sistema. Solo tienes los conjuntos que la herramienta lista; si piden otros, explica que no puedes.
 - Tras llamar a la herramienta, avisa en una frase corta que el archivo está listo. NO escribas enlaces ni URL: el sistema muestra el botón de descarga solo. No inventes cifras ni resumas datos que no hayas recibido.
 - Sin herramienta, mantén el formato JSON de arriba."""
 
 
-def system_prompt_agente(rol: str, rutas, con_reportes: bool = False) -> str:
+def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None) -> str:
     """Prompt de conversación + reglas de solo lectura + catálogo de pantallas que este usuario puede abrir (+ reportes si su rol los tiene)."""
+    from django.utils import timezone
+    hoy = hoy or timezone.localdate()
     lista = '\n'.join(f'- {r["ruta"]}: {r["label"]}{" [admite búsqueda]" if r.get("buscable") else ""}' for r in rutas) or '- (ninguna: responde solo con accion "ninguna")'
-    return f'{system_prompt_chat(rol)}{PROMPT_AGENTE}{PROMPT_REPORTES if con_reportes else ""}\n\nPANTALLAS DISPONIBLES PARA ESTE USUARIO:\n{lista}'
+    reportes = PROMPT_REPORTES.replace('{hoy}', hoy.isoformat()) if con_reportes else ''
+    return f'{system_prompt_chat(rol)}{PROMPT_AGENTE}{reportes}\n\nPANTALLAS DISPONIBLES PARA ESTE USUARIO:\n{lista}'

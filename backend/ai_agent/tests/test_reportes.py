@@ -14,6 +14,7 @@ from accounts.models import CustomUser
 from accounts.tests.base import RoleTestCase
 from ai_agent import herramientas
 from ai_agent.reportes import datos, generadores
+from ai_agent.reportes.datos import PeriodoInvalido, periodo_de
 from erp.models import Registro
 
 
@@ -170,7 +171,7 @@ class ChatConReportesTests(ReportesBase):
         d = self.client.get('/api' + archivo['url'])
         self.assertEqual(d.status_code, 200)
         self.assertIn('attachment', d['Content-Disposition'])
-        self.assertEqual(load_workbook(io.BytesIO(b''.join(d.streaming_content))).active['A1'].value, 'Resumen de presupuestos')
+        self.assertEqual(load_workbook(io.BytesIO(b''.join(d.streaming_content))).active['A2'].value, 'Resumen de presupuestos')
 
     def test_otro_usuario_no_puede_descargar_el_reporte(self):
         self.ia(mensaje(tool_calls=[llamada()]), mensaje('Listo'))
@@ -231,3 +232,166 @@ class ChatConReportesTests(ReportesBase):
         self.assertEqual(self.client.get('/api/ai/reportes/' + 'a' * 32 + '/?formato=xlsx').status_code, 401)
         self.as_role('FINANZAS')
         self.assertEqual(self.client.get('/api/ai/reportes/' + 'a' * 32 + '/?formato=py').status_code, 404)
+
+
+HOY = __import__('datetime').date(2026, 11, 13)
+
+
+class PeriodoTests(ReportesBase):
+    def setUp(self):
+        super().setUp()
+        for rid, fecha in (('PRE-0002', '2026-10-05'), ('PRE-0003', '2026-10-31'), ('PRE-0004', '2026-09-30'), ('PRE-0005', '2025-10-10'), ('PRE-0006', None)):
+            Registro.objects.create(tabla='presupuestos', rid=rid, datos={'titulo': rid, 'estado': 'APROBADO', 'fecha': fecha, 'precio_venta_neto': 100})
+
+    def ids(self, **kw):
+        c = datos.extraer(self.users['FINANZAS'], 'presupuestos', periodo_de(hoy=HOY, **kw))
+        return sorted(f['id'] for f in c.filas)
+
+    def test_mes_y_anio_filtran_solo_ese_mes(self):
+        self.assertEqual(self.ids(mes=10, anio=2026), ['PRE-0002', 'PRE-0003'])  # incluye el 31; deja fuera el 30 de septiembre y octubre de 2025
+
+    def test_solo_el_mes_asume_el_anio_en_curso_y_acepta_el_nombre(self):
+        self.assertEqual(self.ids(mes='octubre'), ['PRE-0002', 'PRE-0003'])
+        self.assertEqual(self.ids(mes='10'), ['PRE-0002', 'PRE-0003'])
+
+    def test_solo_el_anio_trae_el_ano_completo(self):
+        self.assertEqual(self.ids(anio=2025), ['PRE-0005'])
+        self.assertEqual(len(self.ids(anio=2026)), 4)  # el de 2026 sin fecha y el de 2025 quedan fuera; los que no tienen fecha no entran al filtrar
+
+    def test_rango_de_fechas_inclusivo_y_abierto_por_un_lado(self):
+        self.assertEqual(self.ids(fecha_inicio='2026-09-30', fecha_fin='2026-10-05'), ['PRE-0002', 'PRE-0004'])
+        self.assertEqual(self.ids(fecha_inicio='2026-10-31'), ['PRE-0003'])
+        self.assertEqual(self.ids(fecha_fin='2025-12-31'), ['PRE-0005'])
+
+    def test_sin_filtro_trae_todo_incluso_lo_sin_fecha(self):
+        c = datos.extraer(self.users['FINANZAS'], 'presupuestos')
+        self.assertEqual(len(c.filas), 6)
+        self.assertEqual((c.periodo, c.periodo_slug), ('', ''))
+
+    def test_el_periodo_queda_en_el_resumen_y_el_titulo_del_archivo(self):
+        c = datos.extraer(self.users['FINANZAS'], 'presupuestos', periodo_de(mes=10, anio=2026, hoy=HOY))
+        self.assertEqual(c.resumen[0], ('Período', 'octubre de 2026', 'texto'))
+        info = generadores.generar('xlsx', c, self.users['FINANZAS'])
+        self.assertIn('_202610_', info['nombre'])
+
+    def test_filtros_invalidos(self):
+        for kw in ({'mes': 13}, {'mes': 0, 'anio': 2026}, {'mes': 'brumario'}, {'anio': 1800}, {'anio': 'x'}, {'mes': True}, {'fecha_inicio': '10/10/2026'},
+                   {'fecha_inicio': '2026-10-31', 'fecha_fin': '2026-10-01'}, {'mes': 10, 'fecha_inicio': '2026-10-01'}, {'anio': 2026, 'fecha_fin': '2026-10-01'}):
+            with self.assertRaises(PeriodoInvalido, msg=str(kw)):
+                periodo_de(hoy=HOY, **kw)
+
+    def test_el_filtro_respeta_los_permisos_el_personal_sin_fecha_de_ingreso_no_se_filtra(self):
+        with self.assertRaises(PeriodoInvalido):
+            datos.extraer(self.users['OPERACIONES'], 'personal', periodo_de(anio=2026, hoy=HOY))  # Operaciones no ve fecha de ingreso
+
+    def test_obras_se_filtran_por_inicio(self):
+        Registro.objects.create(tabla='obras', rid='OB-1', datos={'nombre': 'A', 'estado': 'EN_CURSO', 'tipo': 'MANTENCION', 'fecha_inicio': '2026-10-02'})
+        Registro.objects.create(tabla='obras', rid='OB-2', datos={'nombre': 'B', 'estado': 'EN_CURSO', 'tipo': 'MANTENCION', 'fecha_inicio': '2026-08-02'})
+        c = datos.extraer(self.users['ADMIN'], 'obras', periodo_de(mes=10, anio=2026, hoy=HOY))
+        self.assertEqual([f['id'] for f in c.filas], ['OB-1'])
+
+
+class HerramientaConFiltrosTests(ReportesBase):
+    def test_el_esquema_de_la_tool_acepta_los_filtros_de_fecha_como_opcionales(self):
+        f = herramientas.herramientas_para(self.users['FINANZAS'])[0]['function']['parameters']
+        self.assertEqual(set(f['properties']), {'conjunto', 'formato', 'mes', 'anio', 'fecha_inicio', 'fecha_fin'})
+        self.assertEqual(f['required'], ['conjunto', 'formato'])
+        self.assertEqual((f['properties']['mes']['minimum'], f['properties']['mes']['maximum']), (1, 12))
+
+    def test_el_prompt_explica_los_filtros_y_trae_la_fecha_de_hoy(self):
+        from ai_agent import prompts
+        p = prompts.system_prompt_agente('FINANZAS', [], con_reportes=True, hoy=HOY)
+        self.assertIn('fecha_inicio', p)
+        self.assertIn('Hoy es 2026-11-13', p)
+
+    def test_con_filtro_solo_se_genera_lo_del_periodo(self):
+        Registro.objects.create(tabla='presupuestos', rid='PRE-0002', datos={'titulo': 'otro', 'estado': 'APROBADO', 'fecha': '2025-01-05', 'precio_venta_neto': 5})
+        fake = self.ia(mensaje(tool_calls=[llamada(crudo=json.dumps({'conjunto': 'presupuestos', 'formato': 'xlsx', 'mes': 9, 'anio': 2026}))]), mensaje('Listo'))
+        r = self.pedir('FINANZAS', 'solo de septiembre')
+        self.assertEqual(r.data['archivo']['filas'], 1)  # el presupuesto de la fixture es del 2026-09-08
+        self.assertIn('202609', r.data['archivo']['nombre'])
+
+    def test_periodo_sin_registros_no_genera_archivo_y_se_lo_dice_al_modelo(self):
+        fake = self.ia(mensaje(tool_calls=[llamada(crudo=json.dumps({'conjunto': 'presupuestos', 'formato': 'docx', 'mes': 2, 'anio': 2020}))]), mensaje('No hay datos en ese mes.'))
+        r = self.pedir('FINANZAS', 'febrero 2020')
+        self.assertNotIn('archivo', r.data)
+        tool_msg = next(m for m in fake.llamadas[1]['messages'] if m['role'] == 'tool')
+        self.assertIn('No hay registros de presupuestos en febrero de 2020', tool_msg['content'])
+
+    def test_filtro_invalido_del_modelo_vuelve_como_error_y_no_genera_nada(self):
+        for args in ({'mes': 13}, {'mes': 10, 'fecha_inicio': '2026-10-01'}, {'fecha_inicio': 'ayer'}, {'anio': '2026; DROP TABLE'}):
+            fake = self.ia(mensaje(tool_calls=[llamada(crudo=json.dumps({'conjunto': 'presupuestos', 'formato': 'xlsx', **args}))]), mensaje('Corrijo.'))
+            r = self.pedir('FINANZAS')
+            self.assertNotIn('archivo', r.data, args)
+            tool_msg = next(m for m in fake.llamadas[1]['messages'] if m['role'] == 'tool')
+            self.assertIn('Filtro de fecha inválido', tool_msg['content'])
+
+
+class FormatoCorporativoTests(ReportesBase):
+    def setUp(self):
+        super().setUp()
+        for i in range(2, 6):
+            Registro.objects.create(tabla='presupuestos', rid=f'PRE-{i:04d}', datos={'titulo': f'P{i}', 'estado': 'APROBADO', 'fecha': '2026-10-0%d' % i, 'precio_venta_neto': 100_000 * i,
+                                                                                    'materiales': [{'cantidad': 1, 'costo_unitario': 10_000 * i}]})
+
+    def generar(self, formato):
+        u = self.users['FINANZAS']
+        c = datos.get_resumen_presupuestos(u)
+        info = generadores.generar(formato, c, u)
+        return c, generadores.ruta_de(u, info['token'], formato)
+
+    def test_excel_tiene_tabla_nativa_encabezados_en_negrita_y_fila_de_totales(self):
+        c, ruta = self.generar('xlsx')
+        ws = load_workbook(ruta).active
+        self.assertEqual(len(ws.tables), 1)
+        tabla = next(iter(ws.tables.values()))
+        n = len(c.filas)
+        cab = int(tabla.ref.split(':')[0][1:])
+        self.assertEqual(tabla.ref, f'A{cab}:H{cab + n}')  # 8 columnas con costo y margen
+        self.assertTrue(all(ws.cell(cab, j).font.bold for j in range(1, 9)))
+        self.assertEqual(ws.cell(cab, 1).fill.fgColor.rgb[-6:], '0B2A3F')
+        total = ws.cell(cab + n + 1, 1)
+        self.assertEqual(total.value, 'TOTAL')
+        self.assertTrue(total.font.bold)
+        # la suma de los montos (precio de venta, costo y margen) es una fórmula SUBTOTAL sobre las filas de datos
+        self.assertEqual(ws.cell(cab + n + 1, 6).value, f'=SUBTOTAL(109,F{cab + 1}:F{cab + n})')
+        self.assertEqual(ws.cell(cab + n + 1, 6).number_format, '"$"#,##0')
+        self.assertEqual(ws.freeze_panes, f'A{cab + 1}')
+
+    def test_excel_ajusta_el_ancho_de_las_columnas(self):
+        _, ruta = self.generar('xlsx')
+        ws = load_workbook(ruta).active
+        anchos = {k: d.width for k, d in ws.column_dimensions.items()}
+        self.assertGreater(anchos['B'], anchos['A'])  # el título es más largo que el código
+        self.assertTrue(all(10 <= w <= 55 for w in anchos.values()))
+
+    def test_excel_sin_columnas_de_monto_igual_lleva_su_fila_total(self):
+        u = self.users['ADMIN']
+        Registro.objects.create(tabla='obras', rid='OB-1', datos={'nombre': 'A', 'estado': 'EN_CURSO', 'tipo': 'MANTENCION', 'fecha_inicio': '2026-10-02'})
+        info = generadores.generar('xlsx', datos.get_listado_obras(u), u)
+        ws = load_workbook(generadores.ruta_de(u, info['token'], 'xlsx')).active
+        self.assertEqual([ws.cell(r, 1).value for r in range(1, ws.max_row + 1) if ws.cell(r, 1).value == 'TOTAL'], ['TOTAL'])
+
+    def test_word_tiene_tabla_real_con_bordes_encabezado_sombreado_y_total(self):
+        from docx.oxml.ns import qn
+        c, ruta = self.generar('docx')
+        d = Document(str(ruta))
+        self.assertEqual(len(d.tables), 1)
+        t = d.tables[0]
+        self.assertEqual(t.style.name, 'Table Grid')  # bordes en todas las celdas
+        cab = t.rows[0]
+        self.assertTrue(all(cel.paragraphs[0].runs[0].bold for cel in cab.cells))
+        self.assertTrue(all(cel._tc.tcPr.find(qn('w:shd')).get(qn('w:fill')) == '0B2A3F' for cel in cab.cells))
+        self.assertIsNotNone(cab._tr.trPr.find(qn('w:tblHeader')))  # el encabezado se repite en cada página
+        ultima = t.rows[-1]
+        self.assertEqual(ultima.cells[0].text, 'TOTAL')
+        venta = sum(f['venta'] for f in c.filas)
+        self.assertEqual(ultima.cells[5].text, '$' + f'{venta:,}'.replace(',', '.'))
+        self.assertTrue(ultima.cells[5].paragraphs[0].runs[0].bold)
+        self.assertEqual(len(t.rows), len(c.filas) + 2)  # encabezado + datos + total
+
+    def test_word_lleva_membrete_y_numero_de_pagina(self):
+        _, ruta = self.generar('docx')
+        d = Document(str(ruta))
+        self.assertIn('Frío y Agroindustria', d.sections[0].header.paragraphs[0].text)
+        self.assertIn('PAGE', d.sections[0].footer._element.xml)

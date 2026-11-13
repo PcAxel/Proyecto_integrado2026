@@ -55,31 +55,59 @@ def _filas_a_incluir(conjunto, formato):
 
 
 # ───────────────────────── Excel ─────────────────────────
+MARINO, TEAL, CLARO = '0B2A3F', '2E6F73', 'E6EEF1'
+
+
+def _titulo_hoja(texto):
+    return re.sub(r'[\[\]:*?/\\]', ' ', texto)[:31]
+
+
+def _montos(conjunto):
+    """Columnas con montos en pesos (las que se suman en la fila de totales)."""
+    return [i for i, (_, _, tipo) in enumerate(conjunto.columnas) if tipo == 'clp']
+
+
+def _totales(conjunto, filas):
+    return {clave: sum(r.get(clave) or 0 for r in filas if isinstance(r.get(clave), (int, float))) for clave, _, tipo in conjunto.columnas if tipo == 'clp'}
+
+
 def _xlsx(ruta, conjunto, usuario):
+    """Libro corporativo: membrete, resumen, TABLA NATIVA de Excel (filtros y orden), encabezados en negrita, anchos automáticos,
+    fila final con la suma de los montos (SUBTOTAL: respeta los filtros) y configuración de impresión."""
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.table import Table, TableStyleInfo
 
     wb = Workbook()
     ws = wb.active
-    ws.title = conjunto.titulo[:31]
-    ws['A1'] = conjunto.titulo
-    ws['A1'].font = Font(bold=True, size=14, color='0B2A3F')
-    ws['A2'] = _pie(usuario)
-    ws['A2'].font = Font(italic=True, size=9, color='666666')
-    fila = 4
+    ws.title = _titulo_hoja(conjunto.titulo)
+    ws.sheet_properties.tabColor = MARINO
+    wb.properties.creator, wb.properties.title = 'FYAG ERP', conjunto.titulo
+    ws['A1'] = 'FYAG · Frío y Agroindustria SpA'
+    ws['A1'].font = Font(bold=True, size=11, color=TEAL)
+    ws['A2'] = conjunto.titulo
+    ws['A2'].font = Font(bold=True, size=16, color=MARINO)
+    ws['A3'] = _pie(usuario)
+    ws['A3'].font = Font(italic=True, size=9, color='666666')
+    fila = 5
     for etiqueta, valor, tipo in conjunto.resumen:
-        ws.cell(fila, 1, etiqueta).font = Font(bold=True)
-        ws.cell(fila, 2, valor).number_format = '"$"#,##0' if tipo == 'clp' else '#,##0'
+        ws.cell(fila, 1, etiqueta).font = Font(bold=True, color=MARINO)
+        c = ws.cell(fila, 2, valor)
+        c.alignment = Alignment(horizontal='left')
+        if isinstance(valor, (int, float)):
+            c.number_format = '"$"#,##0' if tipo == 'clp' else '#,##0'
         fila += 1
-    fila += 1
-    cabecera = fila
+    cab = fila + 1
+    n = len(conjunto.columnas)
+    borde = Border(top=Side(style='medium', color=MARINO), bottom=Side(style='double', color=MARINO))
     for j, (_, etiqueta, _) in enumerate(conjunto.columnas, 1):
-        c = ws.cell(cabecera, j, etiqueta)
-        c.font, c.fill = Font(bold=True, color='FFFFFF'), PatternFill('solid', fgColor='0B2A3F')
+        c = ws.cell(cab, j, etiqueta)
+        c.font, c.fill = Font(bold=True, color='FFFFFF'), PatternFill('solid', fgColor=MARINO)
         c.alignment = Alignment(vertical='center', wrap_text=True)
     filas, _ = _filas_a_incluir(conjunto, 'xlsx')
-    for i, r in enumerate(filas, cabecera + 1):
+    ini = cab + 1
+    for i, r in enumerate(filas, ini):
         for j, (clave, _, tipo) in enumerate(conjunto.columnas, 1):
             v = r.get(clave)
             c = ws.cell(i, j)
@@ -95,47 +123,143 @@ def _xlsx(ruta, conjunto, usuario):
                 # Un texto que empieza por = + - @ lo interpretaría Excel como fórmula: se fuerza a texto (inyección de fórmulas).
                 if c.value[:1] in ('=', '+', '-', '@'):
                     c.data_type = 's'
-    for j, (clave, etiqueta, tipo) in enumerate(conjunto.columnas, 1):
-        ancho = max([len(etiqueta)] + [len(_texto(r.get(clave), tipo)) for r in filas[:200]])
-        ws.column_dimensions[get_column_letter(j)].width = min(max(ancho + 2, 10), 50)
-    ws.freeze_panes = ws.cell(cabecera + 1, 1)
+    fin = ini + len(filas) - 1
+    totales = _totales(conjunto, filas)
     if filas:
-        ws.auto_filter.ref = f'A{cabecera}:{get_column_letter(len(conjunto.columnas))}{cabecera + len(filas)}'
+        tabla = Table(displayName='Reporte', ref=f'A{cab}:{get_column_letter(n)}{fin}')
+        tabla.tableStyleInfo = TableStyleInfo(name='TableStyleMedium2', showRowStripes=True, showColumnStripes=False)
+        ws.add_table(tabla)
+        # Fila de totales justo debajo de la tabla. SUBTOTAL(109) suma solo lo visible: si se filtra la tabla, el total acompaña.
+        fT = fin + 1
+        for j, (clave, _, tipo) in enumerate(conjunto.columnas, 1):
+            c = ws.cell(fT, j)
+            c.font, c.fill, c.border = Font(bold=True, color=MARINO), PatternFill('solid', fgColor=CLARO), borde
+            if j == 1:
+                c.value = 'TOTAL'
+            elif tipo == 'clp':
+                col = get_column_letter(j)
+                c.value, c.number_format = f'=SUBTOTAL(109,{col}{ini}:{col}{fin})', '"$"#,##0'
+    # Anchos automáticos según el contenido (con tope), incluida la fila de totales.
+    for j, (clave, etiqueta, tipo) in enumerate(conjunto.columnas, 1):
+        largo = max([len(etiqueta) + 3] + [len(_texto(r.get(clave), tipo)) for r in filas[:300]] + ([len(_texto(totales[clave], 'clp'))] if clave in totales else []))
+        ws.column_dimensions[get_column_letter(j)].width = min(max(largo + 2, 10), 55)
+    ws.freeze_panes = ws.cell(ini, 1)
+    ws.sheet_view.showGridLines = False
+    ws.page_setup.orientation = 'landscape' if n > 5 else 'portrait'
+    ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_title_rows = f'{cab}:{cab}'
+    ws.oddFooter.center.text = 'FYAG · Página &P de &N'
     wb.save(ruta)
 
 
 # ───────────────────────── Word ─────────────────────────
+def _sombrear(celda, hex_):
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    tc = celda._tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:color'), 'auto')
+    shd.set(qn('w:fill'), hex_)
+    tc.append(shd)
+
+
+def _repetir_cabecera(fila):
+    """La fila de encabezados se repite al inicio de cada página."""
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    h = OxmlElement('w:tblHeader')
+    h.set(qn('w:val'), 'true')
+    fila._tr.get_or_add_trPr().append(h)
+
+
+def _numero_de_pagina(parrafo):
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    run = parrafo.add_run()
+    for tipo, texto in (('begin', None), (None, 'PAGE'), ('end', None)):
+        if tipo:
+            e = OxmlElement('w:fldChar')
+            e.set(qn('w:fldCharType'), tipo)
+        else:
+            e = OxmlElement('w:instrText')
+            e.set(qn('xml:space'), 'preserve')
+            e.text = texto
+        run._r.append(e)
+
+
 def _docx(ruta, conjunto, usuario):
+    """Documento corporativo: membrete, título, resumen y una TABLA REAL con bordes, encabezados sombreados y en negrita (se repiten en cada
+    página), filas alternadas, montos alineados a la derecha y una fila final de totales."""
     from docx import Document
     from docx.enum.section import WD_ORIENT
-    from docx.shared import Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
 
     doc = Document()
+    doc.core_properties.author, doc.core_properties.title = 'FYAG ERP', conjunto.titulo
+    normal = doc.styles['Normal']
+    normal.font.name, normal.font.size = 'Calibri', Pt(10)
     sec = doc.sections[0]
     if len(conjunto.columnas) > 5:  # tablas anchas: hoja apaisada
         sec.orientation = WD_ORIENT.LANDSCAPE
         sec.page_width, sec.page_height = sec.page_height, sec.page_width
-    doc.add_heading(conjunto.titulo, level=1)
-    doc.add_paragraph(_pie(usuario)).runs[0].font.size = Pt(9)
+    encabezado = sec.header.paragraphs[0]
+    r = encabezado.add_run('FYAG · Frío y Agroindustria SpA')
+    r.bold, r.font.size, r.font.color.rgb = True, Pt(10), RGBColor.from_string(TEAL)
+    pie = sec.footer.paragraphs[0]
+    pie.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pie.add_run('FYAG ERP · Página ').font.size = Pt(8)
+    _numero_de_pagina(pie)
+    h = doc.add_heading(conjunto.titulo, level=1)
+    for run in h.runs:
+        run.font.color.rgb, run.font.size = RGBColor.from_string(MARINO), Pt(20)
+    sub = doc.add_paragraph()
+    run = sub.add_run(f'{conjunto.periodo.capitalize() if conjunto.periodo else "Todos los registros"} · {_pie(usuario)}')
+    run.italic, run.font.size, run.font.color.rgb = True, Pt(9), RGBColor(0x66, 0x66, 0x66)
     for etiqueta, valor, tipo in conjunto.resumen:
+        if etiqueta == 'Período':
+            continue  # ya está en la línea de arriba
         p = doc.add_paragraph()
+        p.paragraph_format.space_after = Pt(0)
         p.add_run(f'{etiqueta}: ').bold = True
         p.add_run(_texto(valor, tipo))
+    doc.add_paragraph()
+
     filas, omitidas = _filas_a_incluir(conjunto, 'docx')
-    t = doc.add_table(rows=1, cols=len(conjunto.columnas), style='Light Grid Accent 1')
-    for c, (_, etiqueta, _) in zip(t.rows[0].cells, conjunto.columnas):
-        c.text = etiqueta
-        c.paragraphs[0].runs[0].bold = True
-    for r in filas:
-        for c, (clave, _, tipo) in zip(t.add_row().cells, conjunto.columnas):
-            c.text = _texto(r.get(clave), tipo)
-    for fila in t.rows:
-        for c in fila.cells:
-            for par in c.paragraphs:
-                for run in par.runs:
-                    run.font.size = Pt(8 if len(conjunto.columnas) > 5 else 10)
+    cols = conjunto.columnas
+    t = doc.add_table(rows=1, cols=len(cols), style='Table Grid')  # 'Table Grid' = bordes en todas las celdas
+    t.alignment = 1
+    tam = Pt(8 if len(cols) > 5 else 10)
+
+    def escribir(celda, texto, *, negrita=False, derecha=False, blanco=False):
+        par = celda.paragraphs[0]
+        par.clear()  # sin runs vacíos previos: el primer run es el texto
+        run = par.add_run(texto)
+        run.bold, run.font.size = negrita, tam
+        if blanco:
+            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        if derecha:
+            par.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    for celda, (_, etiqueta, tipo) in zip(t.rows[0].cells, cols):
+        escribir(celda, etiqueta, negrita=True, blanco=True, derecha=tipo in ('clp', 'num'))
+        _sombrear(celda, MARINO)
+    _repetir_cabecera(t.rows[0])
+    for i, r in enumerate(filas):
+        for celda, (clave, _, tipo) in zip(t.add_row().cells, cols):
+            escribir(celda, _texto(r.get(clave), tipo), derecha=tipo in ('clp', 'num'))
+            if i % 2:
+                _sombrear(celda, 'F2F6F8')
+    totales = _totales(conjunto, filas)
+    if filas:
+        fila_t = t.add_row()
+        for j, (celda, (clave, _, tipo)) in enumerate(zip(fila_t.cells, cols)):
+            escribir(celda, 'TOTAL' if j == 0 else _texto(totales[clave], 'clp') if clave in totales else '', negrita=True, derecha=tipo in ('clp', 'num'))
+            _sombrear(celda, 'DCE6EA')
     if omitidas:
-        doc.add_paragraph(f'… y {omitidas} filas más (descarga el Excel para verlas todas).')
+        doc.add_paragraph(f'… y {omitidas} filas más (descarga el Excel para verlas todas). El total solo suma las filas mostradas.')
     doc.save(ruta)
 
 
@@ -206,7 +330,8 @@ def generar(formato, conjunto, usuario):
     token = secrets.token_hex(16)
     _GENERADORES[formato](_carpeta(usuario) / f'{token}.{formato}', conjunto, usuario)
     base = re.sub(r'[^a-z0-9]+', '_', conjunto.clave.lower()).strip('_')
-    return {'token': token, 'formato': formato, 'nombre': f'reporte_{base}_{date.today():%Y%m%d}.{formato}', 'filas': len(conjunto.filas)}
+    periodo = f'_{conjunto.periodo_slug}' if conjunto.periodo_slug else ''
+    return {'token': token, 'formato': formato, 'nombre': f'reporte_{base}{periodo}_{date.today():%Y%m%d}.{formato}', 'filas': len(conjunto.filas)}
 
 
 def ruta_de(usuario, token, formato):
