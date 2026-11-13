@@ -149,10 +149,27 @@ REPORTES DESCARGABLES:
 - Sin herramienta, mantén el formato JSON de arriba."""
 
 
-def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None) -> str:
+PROMPT_STOCK = """
+
+PROYECCIÓN DE STOCK (herramienta analizar_proyeccion_stock):
+- Si preguntan cuánto durará el stock de un producto o cuándo se agota, llama a la herramienta con el nombre o SKU que dijo el usuario. TÚ NO CALCULAS NADA: el sistema devuelve un texto ya calculado.
+- Presenta ese texto de forma amable y breve, SIN cambiar, redondear ni recalcular ninguna cifra ni fecha. Si el texto trae varias líneas, conserva todos sus datos.
+- Si piden un reporte visual, gráfico o archivo, vuelve a llamarla incluyendo el formato (xlsx, docx o pptx).
+- Si la herramienta dice que hay varios productos o ninguno, pídele al usuario que precise; no adivines."""
+
+PROMPT_COMPRAS = """
+
+COMPRAS CRÍTICAS (herramienta generar_borrador_compra_critico):
+- Si piden preparar compras, reponer stock o una orden de compra, ejecuta la herramienta de inmediato, SIN pedir datos: no tiene parámetros obligatorios. Solo agrega el formato si lo dijeron (Excel = xlsx, Word = docx).
+- El sistema decide qué productos y qué cantidades: tú no decides ni modificas nada. Es un borrador, no una orden emitida.
+- Avisa en una frase que el borrador está listo y resume lo que dice el resultado, sin cambiar cifras. No escribas enlaces: el botón de descarga aparece solo."""
+
+
+def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None, con_stock: bool = False, con_compras: bool = False) -> str:
     """Prompt de conversación + reglas de solo lectura + catálogo de pantallas que este usuario puede abrir (+ reportes si su rol los tiene)."""
     from django.utils import timezone
     hoy = hoy or timezone.localdate()
     lista = '\n'.join(f'- {r["ruta"]}: {r["label"]}{" [admite búsqueda]" if r.get("buscable") else ""}' for r in rutas) or '- (ninguna: responde solo con accion "ninguna")'
     reportes = PROMPT_REPORTES.replace('{hoy}', hoy.isoformat()) if con_reportes else ''
+    reportes += (PROMPT_STOCK if con_stock else '') + (PROMPT_COMPRAS if con_compras else '')
     return f'{system_prompt_chat(rol)}{PROMPT_AGENTE}{reportes}\n\nPANTALLAS DISPONIBLES PARA ESTE USUARIO:\n{lista}'

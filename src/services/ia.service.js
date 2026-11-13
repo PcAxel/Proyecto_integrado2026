@@ -8,6 +8,7 @@ export const iaService = {
   /**
    * Conversación con el agente de navegación y búsqueda (solo lectura). `mensajes`: [{role:'user'|'assistant', content}] terminando en un mensaje del usuario;
    * `rutas`: pantallas a las que esta persona puede ir (el servidor descarta cualquier otra). La petición lleva el token de sesión (api.js).
+   * `calculo` trae el texto que calculó el servidor (proyección de stock, resumen de compra): se muestra tal cual, sin pasar por el modelo.
    * `archivo` llega solo cuando el agente generó un reporte (Excel, Word o PowerPoint): lo entrega el servidor, nunca el modelo.
    * @returns {Promise<{respuesta:string, respuesta_texto:string, accion:'navegar'|'buscar'|'ninguna', ruta:string|null, termino_busqueda:string|null, archivo?:{nombre:string, formato:'xlsx'|'docx'|'pptx', filas:number, url:string}}>}
    */

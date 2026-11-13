@@ -106,6 +106,11 @@ class Conjunto:
     resumen: list = field(default_factory=list)   # [(etiqueta, valor, tipo)] mostrado sobre la tabla
     periodo: str = ''        # texto del filtro de fechas aplicado («octubre de 2026»); vacío = sin filtro
     periodo_slug: str = ''   # para el nombre del archivo
+    subtitulo: str = ''      # reemplaza a «Todos los registros»/período bajo el título (p. ej. «Borrador generado automáticamente»)
+    totales: bool = True     # fila final con la suma de los montos (columnas de tipo 'clp')
+    firmas: list = field(default_factory=list)   # etiquetas de las firmas al pie («Solicitado por», «Aprobado por»); vacío = sin bloque de firmas
+    nota: str = ''           # nota al pie de la tabla
+    grafico: dict | None = None  # {'titulo','categoria': clave de columna,'series':[{'nombre','columna','color','punteada'}],'eje_y'}: se dibuja con las mismas filas
 
 
 def _exigir(user, tabla):

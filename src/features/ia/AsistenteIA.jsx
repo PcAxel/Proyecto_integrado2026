@@ -136,7 +136,7 @@ function Conversacion({ activo }) {
       const catalogo = catalogoDeRutas(user)
       const r = await iaService.conversar(historialParaEnviar(lista), catalogo)
       const accion = resolverAccion(r, catalogo)
-      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion, archivo: r.archivo ?? null }])
+      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion, archivo: r.archivo ?? null, calculo: r.calculo ?? null }])
       if (accion) navigate(accion.url)
     } catch (err) {
       setError(mensajeErrorIA(err))
@@ -156,6 +156,13 @@ function Conversacion({ activo }) {
           <div key={m.id ?? m.content} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
             <div className={cn('max-w-[88%] rounded-2xl px-3.5 py-2.5', m.role === 'user' ? 'rounded-br-md bg-brand text-white' : 'rounded-bl-md border border-line bg-white text-ink')}>
               {m.role === 'user' ? <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</p> : <TextoMarkdown texto={m.content} />}
+              {m.calculo && (
+                // Cifras calculadas por el servidor, mostradas tal cual: no dependen de cómo las redacte el modelo.
+                <div className="mt-2 rounded-lg border border-line bg-slate-50 p-2.5">
+                  <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink-faint"><ShieldCheck className="h-3 w-3" />Cálculo del sistema</p>
+                  <p className="whitespace-pre-line text-xs leading-relaxed text-ink">{m.calculo}</p>
+                </div>
+              )}
               {m.archivo && <BotonReporte archivo={m.archivo} />}
               {m.accion && (
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-brand"><Compass className="h-3 w-3" />{m.accion.busqueda ? `Busqué «${m.accion.busqueda}» en ${m.accion.etiqueta}` : `Te llevé a ${m.accion.etiqueta}`}</p>

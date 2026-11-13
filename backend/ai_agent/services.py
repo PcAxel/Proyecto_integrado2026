@@ -132,7 +132,10 @@ def conversar(usuario, rol, historial, rutas=()):
     una acción de interfaz o pide una herramienta de la lista cerrada de `herramientas`, que el servidor ejecuta con los permisos del usuario.
     El system prompt lo elige el servidor según el rol; el cliente solo aporta el historial (turnos `user` y `assistant`, nunca `system`).
     La conversación no se guarda en el servidor."""
-    mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas, con_reportes=bool(tools := herramientas.herramientas_para(usuario)))},
+    tools = herramientas.herramientas_para(usuario)
+    nombres = {t['function']['name'] for t in tools}
+    mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas, con_reportes=herramientas.NOMBRE_REPORTE in nombres, con_stock=herramientas.NOMBRE_PROYECCION in nombres,
+                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres)},
                 *({'role': m['role'], 'content': m['content']} for m in historial)]
     if tools:
         return _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools)
@@ -165,22 +168,28 @@ def _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools):
 
     seguimiento = [*mensajes, {'role': 'assistant', 'content': msg.content or '', 'tool_calls': [
         {'id': tc.id, 'type': 'function', 'function': {'name': tc.function.name, 'arguments': tc.function.arguments}} for tc in llamadas]}]
-    archivo = None
+    archivo = calculo = None
     for tc in llamadas:
         resultado, archivo = herramientas.ejecutar(usuario, tc.function.name, tc.function.arguments)
+        calculo = resultado.pop('_calculo', None)  # el texto calculado va tal cual al chat; al modelo le llega en `texto`
         seguimiento.append({'role': 'tool', 'tool_call_id': tc.id, 'content': json.dumps(resultado, ensure_ascii=False)})
     try:
         crudo = _completar(usuario, rol, 'chat', seguimiento, json_mode=False, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
         salida = interpretar_respuesta_agente(crudo, rutas)
     except ServicioIAError as e:
-        if archivo is None or e.code not in ('ai_empty', 'ai_timeout'):
+        if (archivo is None and calculo is None) or e.code not in ('ai_empty', 'ai_timeout'):
             raise
         salida = {'respuesta_texto': '', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
+    if calculo:
+        salida['calculo'] = calculo
     if archivo:
         # Con un archivo listo no se navega: el aviso y el enlace son la respuesta. El texto lo escribe el modelo; si falla, hay uno de reserva.
         texto = salida['respuesta_texto'] if salida['respuesta_texto'] not in ('', 'Listo.') else 'Aquí tienes tu reporte.'
         return {**salida, 'respuesta_texto': texto, 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None, 'archivo': archivo}
-    return {**salida, 'respuesta_texto': salida['respuesta_texto'] or 'No pude generar el reporte. Inténtalo de nuevo.'}
+    if calculo:
+        texto = salida['respuesta_texto'] if salida['respuesta_texto'] not in ('', 'Listo.') else 'Este es el cálculo del sistema.'
+        return {**salida, 'respuesta_texto': texto, 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
+    return {**salida, 'respuesta_texto': salida['respuesta_texto'] or 'No pude completar la acción. Inténtalo de nuevo.'}
 
 
 # ───────────────────────── Facturas ─────────────────────────

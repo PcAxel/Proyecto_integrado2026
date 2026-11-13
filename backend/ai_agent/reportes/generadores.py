@@ -32,17 +32,26 @@ def _fecha(v):
         return str(v)
 
 
+PESOS, NUMERICOS = ('clp', 'clpu'), ('clp', 'clpu', 'num')  # 'clp' se suma en la fila de totales; 'clpu' (costo unitario) es pesos pero no se suma
+
+
 def _texto(v, tipo):
     """Valor tal como se imprime en Word y PowerPoint."""
     if v is None or v == '':
         return '—'
-    if tipo == 'clp':
+    if tipo in PESOS:
         return _clp(v)
     if tipo == 'fecha':
         return _fecha(v)
     if tipo == 'num':
+        if isinstance(v, float) and v == int(v):
+            v = int(v)
         return f'{v:,}'.replace(',', '.') if isinstance(v, (int, float)) else str(v)
     return str(v)
+
+
+def _subtitulo(c):
+    return c.subtitulo or (c.periodo.capitalize() if c.periodo else 'Todos los registros')
 
 
 def _pie(usuario):
@@ -71,6 +80,47 @@ def _totales(conjunto, filas):
     return {clave: sum(r.get(clave) or 0 for r in filas if isinstance(r.get(clave), (int, float))) for clave, _, tipo in conjunto.columnas if tipo == 'clp'}
 
 
+def _grafico_xlsx(ws, c, cab, ini, fin, n):
+    """Gráfico NATIVO de líneas de Excel sobre las mismas filas de la tabla (cambia si se edita la tabla)."""
+    from openpyxl.chart import LineChart, Reference
+    from openpyxl.utils import get_column_letter
+    g, claves = c.grafico, [k for k, _, _ in c.columnas]
+    ch = LineChart()
+    ch.title, ch.height, ch.width = g['titulo'], 9.5, 22
+    ch.y_axis.title, ch.y_axis.number_format = g.get('eje_y', ''), '#,##0'
+    ch.x_axis.number_format = 'dd-mm'
+    ch.x_axis.delete = ch.y_axis.delete = False  # sin esto algunos Excel no dibujan los ejes
+    ch.legend.position = 'b'
+    for s in g['series']:
+        col = claves.index(s['columna']) + 1
+        ch.add_data(Reference(ws, min_col=col, min_row=cab, max_row=fin), titles_from_data=True)
+    ch.set_categories(Reference(ws, min_col=claves.index(g['categoria']) + 1, min_row=ini, max_row=fin))
+    for serie, s in zip(ch.series, g['series']):
+        serie.graphicalProperties.line.solidFill, serie.graphicalProperties.line.width, serie.smooth = s['color'], 28575, False
+        if s.get('punteada'):
+            serie.graphicalProperties.line.dashStyle = 'dash'
+    ch.display_blanks = 'gap'  # los días sin dato (real o proyectado) quedan en blanco, sin unir con cero
+    ws.add_chart(ch, f'{get_column_letter(n + 2)}{cab}')
+
+
+def _fijar_valores(ruta, valores):
+    """openpyxl escribe las fórmulas sin su resultado: Excel las calcula al abrir, pero los visores que no calculan (vista previa de macOS, algunos
+    navegadores de archivos) mostrarían $0. Aquí se guarda dentro de cada fórmula el valor ya calculado en Python (Excel lo recalcula igual)."""
+    import shutil
+    import zipfile
+    tmp = f'{ruta}.tmp'
+    with zipfile.ZipFile(ruta) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            datos = zin.read(item.filename)
+            if item.filename == 'xl/worksheets/sheet1.xml':
+                xml = datos.decode('utf-8')
+                for celda, valor in valores.items():
+                    xml = re.sub(rf'(<c r="{celda}"[^>]*><f>[^<]*</f>)<v\s*/?>(?:</v>)?', rf'\g<1><v>{valor}</v>', xml)
+                datos = xml.encode('utf-8')
+            zout.writestr(item, datos)
+    shutil.move(tmp, ruta)
+
+
 def _xlsx(ruta, conjunto, usuario):
     """Libro corporativo: membrete, resumen, TABLA NATIVA de Excel (filtros y orden), encabezados en negrita, anchos automáticos,
     fila final con la suma de los montos (SUBTOTAL: respeta los filtros) y configuración de impresión."""
@@ -88,7 +138,7 @@ def _xlsx(ruta, conjunto, usuario):
     ws['A1'].font = Font(bold=True, size=11, color=TEAL)
     ws['A2'] = conjunto.titulo
     ws['A2'].font = Font(bold=True, size=16, color=MARINO)
-    ws['A3'] = _pie(usuario)
+    ws['A3'] = f'{_subtitulo(conjunto)} · {_pie(usuario)}'
     ws['A3'].font = Font(italic=True, size=9, color='666666')
     fila = 5
     for etiqueta, valor, tipo in conjunto.resumen:
@@ -96,7 +146,7 @@ def _xlsx(ruta, conjunto, usuario):
         c = ws.cell(fila, 2, valor)
         c.alignment = Alignment(horizontal='left')
         if isinstance(valor, (int, float)):
-            c.number_format = '"$"#,##0' if tipo == 'clp' else '#,##0'
+            c.number_format = '"$"#,##0' if tipo in PESOS else '#,##0'
         fila += 1
     cab = fila + 1
     n = len(conjunto.columnas)
@@ -106,6 +156,7 @@ def _xlsx(ruta, conjunto, usuario):
         c.font, c.fill = Font(bold=True, color='FFFFFF'), PatternFill('solid', fgColor=MARINO)
         c.alignment = Alignment(vertical='center', wrap_text=True)
     filas, _ = _filas_a_incluir(conjunto, 'xlsx')
+    cache = {}  # celda → valor calculado de cada fórmula de totales
     ini = cab + 1
     for i, r in enumerate(filas, ini):
         for j, (clave, _, tipo) in enumerate(conjunto.columnas, 1):
@@ -113,11 +164,11 @@ def _xlsx(ruta, conjunto, usuario):
             c = ws.cell(i, j)
             if tipo == 'fecha' and v:
                 try:
-                    c.value, c.number_format = datetime.strptime(str(v)[:10], '%Y-%m-%d'), 'DD-MM-YYYY'
+                    c.value, c.number_format = datetime.strptime(str(v)[:10], '%Y-%m-%d'), 'dd-mm-yyyy'
                 except ValueError:
                     c.value = str(v)
-            elif tipo in ('clp', 'num') and isinstance(v, (int, float)):
-                c.value, c.number_format = v, '"$"#,##0' if tipo == 'clp' else '#,##0'
+            elif tipo in NUMERICOS and isinstance(v, (int, float)):
+                c.value, c.number_format = v, '"$"#,##0' if tipo in PESOS else '#,##0'
             else:
                 c.value = '' if v is None else str(v)
                 # Un texto que empieza por = + - @ lo interpretaría Excel como fórmula: se fuerza a texto (inyección de fórmulas).
@@ -131,7 +182,7 @@ def _xlsx(ruta, conjunto, usuario):
         ws.add_table(tabla)
         # Fila de totales justo debajo de la tabla. SUBTOTAL(109) suma solo lo visible: si se filtra la tabla, el total acompaña.
         fT = fin + 1
-        for j, (clave, _, tipo) in enumerate(conjunto.columnas, 1):
+        for j, (clave, _, tipo) in enumerate(conjunto.columnas if conjunto.totales else [], 1):
             c = ws.cell(fT, j)
             c.font, c.fill, c.border = Font(bold=True, color=MARINO), PatternFill('solid', fgColor=CLARO), borde
             if j == 1:
@@ -139,9 +190,26 @@ def _xlsx(ruta, conjunto, usuario):
             elif tipo == 'clp':
                 col = get_column_letter(j)
                 c.value, c.number_format = f'=SUBTOTAL(109,{col}{ini}:{col}{fin})', '"$"#,##0'
+                cache[f'{col}{fT}'] = round(totales[clave])
+    siguiente = fin + (3 if conjunto.totales else 2)
+    if conjunto.nota:
+        ws.cell(siguiente, 1, conjunto.nota).font = Font(italic=True, size=9, color='666666')
+        siguiente += 2
+    if conjunto.firmas:  # espacio para firmar: una línea por firma, con su rol debajo
+        linea = Side(style='thin', color=MARINO)
+        for k, rol in enumerate(conjunto.firmas):
+            col = 1 + k * 3 if n >= 3 * len(conjunto.firmas) else 1 + k * 2
+            for dc in (0, 1):
+                ws.cell(siguiente + 2, col + dc).border = Border(bottom=linea)
+            ws.cell(siguiente + 3, col, rol).font = Font(bold=True, color=MARINO)
+            ws.cell(siguiente + 4, col, 'Nombre, firma y fecha').font = Font(size=8, color='666666')
+    if conjunto.grafico and filas:
+        _grafico_xlsx(ws, conjunto, cab, ini, fin, n)
     # Anchos automáticos según el contenido (con tope), incluida la fila de totales.
     for j, (clave, etiqueta, tipo) in enumerate(conjunto.columnas, 1):
         largo = max([len(etiqueta) + 3] + [len(_texto(r.get(clave), tipo)) for r in filas[:300]] + ([len(_texto(totales[clave], 'clp'))] if clave in totales else []))
+        if j == 1:  # la columna A también lleva los rótulos del resumen sobre la tabla
+            largo = max([largo] + [len(e) + 1 for e, _, _ in conjunto.resumen])
         ws.column_dimensions[get_column_letter(j)].width = min(max(largo + 2, 10), 55)
     ws.freeze_panes = ws.cell(ini, 1)
     ws.sheet_view.showGridLines = False
@@ -151,6 +219,8 @@ def _xlsx(ruta, conjunto, usuario):
     ws.print_title_rows = f'{cab}:{cab}'
     ws.oddFooter.center.text = 'FYAG · Página &P de &N'
     wb.save(ruta)
+    if cache:
+        _fijar_valores(ruta, cache)
 
 
 # ───────────────────────── Word ─────────────────────────
@@ -163,6 +233,20 @@ def _sombrear(celda, hex_):
     shd.set(qn('w:color'), 'auto')
     shd.set(qn('w:fill'), hex_)
     tc.append(shd)
+
+
+def _bordes(tabla, color='9FB3BD'):
+    """Bordes explícitos en toda la tabla (no dependen de que el programa conozca el estilo «Table Grid»)."""
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    pr = tabla._tbl.tblPr
+    b = OxmlElement('w:tblBorders')
+    for lado in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+        e = OxmlElement(f'w:{lado}')
+        for k, v in (('val', 'single'), ('sz', '6'), ('space', '0'), ('color', color)):
+            e.set(qn(f'w:{k}'), v)
+        b.append(e)
+    pr.append(b)
 
 
 def _repetir_cabecera(fila):
@@ -216,7 +300,7 @@ def _docx(ruta, conjunto, usuario):
     for run in h.runs:
         run.font.color.rgb, run.font.size = RGBColor.from_string(MARINO), Pt(20)
     sub = doc.add_paragraph()
-    run = sub.add_run(f'{conjunto.periodo.capitalize() if conjunto.periodo else "Todos los registros"} · {_pie(usuario)}')
+    run = sub.add_run(f'{_subtitulo(conjunto)} · {_pie(usuario)}')
     run.italic, run.font.size, run.font.color.rgb = True, Pt(9), RGBColor(0x66, 0x66, 0x66)
     for etiqueta, valor, tipo in conjunto.resumen:
         if etiqueta == 'Período':
@@ -231,6 +315,7 @@ def _docx(ruta, conjunto, usuario):
     cols = conjunto.columnas
     t = doc.add_table(rows=1, cols=len(cols), style='Table Grid')  # 'Table Grid' = bordes en todas las celdas
     t.alignment = 1
+    _bordes(t)
     tam = Pt(8 if len(cols) > 5 else 10)
 
     def escribir(celda, texto, *, negrita=False, derecha=False, blanco=False):
@@ -244,26 +329,136 @@ def _docx(ruta, conjunto, usuario):
             par.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
     for celda, (_, etiqueta, tipo) in zip(t.rows[0].cells, cols):
-        escribir(celda, etiqueta, negrita=True, blanco=True, derecha=tipo in ('clp', 'num'))
+        escribir(celda, etiqueta, negrita=True, blanco=True, derecha=tipo in NUMERICOS)
         _sombrear(celda, MARINO)
     _repetir_cabecera(t.rows[0])
     for i, r in enumerate(filas):
         for celda, (clave, _, tipo) in zip(t.add_row().cells, cols):
-            escribir(celda, _texto(r.get(clave), tipo), derecha=tipo in ('clp', 'num'))
+            escribir(celda, _texto(r.get(clave), tipo), derecha=tipo in NUMERICOS)
             if i % 2:
                 _sombrear(celda, 'F2F6F8')
     totales = _totales(conjunto, filas)
-    if filas:
+    if filas and conjunto.totales:
         fila_t = t.add_row()
         for j, (celda, (clave, _, tipo)) in enumerate(zip(fila_t.cells, cols)):
-            escribir(celda, 'TOTAL' if j == 0 else _texto(totales[clave], 'clp') if clave in totales else '', negrita=True, derecha=tipo in ('clp', 'num'))
+            escribir(celda, 'TOTAL' if j == 0 else _texto(totales[clave], 'clp') if clave in totales else '', negrita=True, derecha=tipo in NUMERICOS)
             _sombrear(celda, 'DCE6EA')
     if omitidas:
         doc.add_paragraph(f'… y {omitidas} filas más (descarga el Excel para verlas todas). El total solo suma las filas mostradas.')
+    if conjunto.nota:
+        n = doc.add_paragraph()
+        n.paragraph_format.space_before = Pt(6)
+        r = n.add_run(conjunto.nota)
+        r.italic, r.font.size, r.font.color.rgb = True, Pt(8), RGBColor(0x66, 0x66, 0x66)
+    if conjunto.grafico and filas:
+        _grafico_word(doc, conjunto)
+    if conjunto.firmas:
+        _firmas_word(doc, conjunto.firmas)
     doc.save(ruta)
 
 
+def _firmas_word(doc, firmas):
+    """Bloque de firmas: una columna por firma, con espacio para firmar, la línea y el rol debajo."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
+    doc.add_paragraph()
+    doc.add_paragraph()
+    t = doc.add_table(rows=1, cols=len(firmas))
+    for celda, rol in zip(t.rows[0].cells, firmas):
+        celda.text = ''
+        p = celda.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.add_run('\n\n______________________________\n')
+        r = p.add_run(rol)
+        r.bold, r.font.color.rgb = True, RGBColor.from_string(MARINO)
+        p.add_run('\n')
+        r2 = p.add_run('Nombre, firma y fecha')
+        r2.font.size, r2.font.color.rgb = Pt(8), RGBColor(0x66, 0x66, 0x66)
+
+
+def _puntos_grafico(c, maximo=14):
+    """Categorías y series del gráfico de barras, reducidas a ~14 puntos para que se lean (se conserva siempre el último)."""
+    g, filas = c.grafico, c.filas
+    paso = max(1, -(-len(filas) // maximo))
+    idx = sorted(set(range(0, len(filas), paso)) | {len(filas) - 1})
+    cats = [_fecha(filas[i][g['categoria']])[:5] for i in idx]
+    series = [(s['nombre'], [filas[i].get(s['columna']) for i in idx], s['color']) for s in g['series']]
+    return cats, series
+
+
+def _grafico_word(doc, c):
+    """Gráfico de BARRAS NATIVO de Word (un objeto de gráfico de Office con su hoja de datos incrustada, editable con «Editar datos»).
+    python-docx no trae gráficos: se arma el XML con el generador de python-pptx y se agrega como parte del documento."""
+    from docx.opc.constants import RELATIONSHIP_TYPE as RT
+    from docx.opc.packuri import PackURI
+    from docx.opc.part import Part
+    from docx.oxml import parse_xml
+    from docx.shared import Emu, Pt
+    from lxml import etree
+    from pptx.chart.data import CategoryChartData
+    from pptx.enum.chart import XL_CHART_TYPE
+
+    cats, series = _puntos_grafico(c)
+    datos = CategoryChartData()
+    datos.categories = cats
+    for nombre, valores, _ in series:
+        datos.add_series(nombre, valores)
+    raiz = etree.fromstring(datos.xml_bytes(XL_CHART_TYPE.COLUMN_CLUSTERED))
+    ns = {'c': 'http://schemas.openxmlformats.org/drawingml/2006/chart', 'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
+    for ser, (_, _, color) in zip(raiz.iterfind('.//c:ser', ns), series):  # color de cada serie
+        sp = etree.fromstring(f'<c:spPr xmlns:c="{ns["c"]}" xmlns:a="{ns["a"]}"><a:solidFill><a:srgbClr val="{color}"/></a:solidFill></c:spPr>')
+        ser.find('c:tx', ns).addnext(sp)
+    paquete = doc.part.package
+    n = 1
+    while any(str(p.partname) == f'/word/charts/chart{n}.xml' for p in paquete.iter_parts()):
+        n += 1
+    hoja = Part(PackURI(f'/word/embeddings/Microsoft_Excel_Sheet{n}.xlsx'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', datos.xlsx_blob, paquete)
+    # La parte del gráfico se crea con el XML final; su relación con la hoja de datos se agrega al terminar.
+    pieza = Part(PackURI(f'/word/charts/chart{n}.xml'), 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml', b'', paquete)
+    rid_hoja = pieza.relate_to(hoja, RT.PACKAGE)
+    ext = etree.fromstring(f'<c:externalData xmlns:c="{ns["c"]}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="{rid_hoja}"><c:autoUpdate val="0"/></c:externalData>')
+    ultimo = [e for e in raiz if etree.QName(e).localname in ('chart', 'spPr', 'txPr')][-1]
+    ultimo.addnext(ext)  # el orden del esquema: ... chart, spPr, txPr, externalData
+    pieza._blob = etree.tostring(raiz, xml_declaration=True, encoding='UTF-8', standalone=True)
+    rid = doc.part.relate_to(pieza, RT.CHART)
+    titulo = doc.add_paragraph()
+    r = titulo.add_run(c.grafico['titulo'])
+    r.bold, r.font.size = True, Pt(11)
+    p = doc.add_paragraph()
+    ancho, alto = Emu(5_900_000), Emu(3_100_000)
+    dibujo = parse_xml(
+        '<w:drawing xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+        f'xmlns:a="{ns["a"]}" xmlns:c="{ns["c"]}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        f'<wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="{int(ancho)}" cy="{int(alto)}"/><wp:docPr id="{100 + n}" name="Gráfico {n}"/>'
+        f'<a:graphic><a:graphicData uri="{ns["c"]}"><c:chart r:id="{rid}"/></a:graphicData></a:graphic></wp:inline></w:drawing>')
+    p.add_run()._r.append(dibujo)
+
+
 # ───────────────────────── PowerPoint ─────────────────────────
+def _grafico_pptx(prs, c):
+    """Lámina con un gráfico de BARRAS nativo de PowerPoint (editable con «Editar datos»)."""
+    from pptx.chart.data import CategoryChartData
+    from pptx.dml.color import RGBColor
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+    from pptx.util import Inches, Pt
+    s = prs.slides.add_slide(prs.slide_layouts[5])
+    s.shapes.title.text = c.grafico['titulo']
+    s.shapes.title.text_frame.paragraphs[0].font.size = Pt(26)
+    cats, series = _puntos_grafico(c)
+    datos = CategoryChartData()
+    datos.categories = cats
+    for nombre, valores, _ in series:
+        datos.add_series(nombre, valores)
+    ch = s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(0.7), Inches(1.5), Inches(11.9), Inches(5.5), datos).chart
+    ch.has_legend, ch.legend.position, ch.legend.include_in_layout = True, XL_LEGEND_POSITION.BOTTOM, False
+    ch.value_axis.has_title = True
+    ch.value_axis.axis_title.text_frame.text = c.grafico.get('eje_y', '')
+    ch.value_axis.tick_labels.number_format, ch.value_axis.tick_labels.number_format_is_linked = '#,##0', False
+    for plot_serie, (_, _, color) in zip(ch.plots[0].series, series):
+        plot_serie.format.fill.solid()
+        plot_serie.format.fill.fore_color.rgb = RGBColor.from_string(color)
+
+
 def _pptx(ruta, conjunto, usuario):
     from pptx import Presentation
     from pptx.dml.color import RGBColor
@@ -274,6 +469,14 @@ def _pptx(ruta, conjunto, usuario):
     portada = prs.slides.add_slide(prs.slide_layouts[0])
     portada.shapes.title.text = conjunto.titulo
     portada.placeholders[1].text = '\n'.join([f'{e}: {_texto(v, tipo)}' for e, v, tipo in conjunto.resumen] + [_pie(usuario)])
+    portada.shapes.title.text_frame.paragraphs[0].font.size = Pt(34)
+    for par in portada.placeholders[1].text_frame.paragraphs:  # el texto de la portada es largo: letra chica y alineado a la izquierda
+        par.font.size = Pt(15)
+        par.alignment = 1
+    if conjunto.grafico and conjunto.filas:
+        _grafico_pptx(prs, conjunto)
+        prs.save(ruta)  # con gráfico, la lámina de datos diarios sobra: el detalle va en Excel
+        return
     filas, omitidas = _filas_a_incluir(conjunto, 'pptx')
     n = len(conjunto.columnas)
     for ini in range(0, max(len(filas), 1), FILAS_POR_DIAPOSITIVA):

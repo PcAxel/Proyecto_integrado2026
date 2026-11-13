@@ -395,3 +395,274 @@ class FormatoCorporativoTests(ReportesBase):
         d = Document(str(ruta))
         self.assertIn('Frío y Agroindustria', d.sections[0].header.paragraphs[0].text)
         self.assertIn('PAGE', d.sections[0].footer._element.xml)
+
+
+# ───────────────────────── Proyección de stock y compra crítica ─────────────────────────
+from datetime import timedelta
+
+from ai_agent.reportes import stock as stock_mod
+
+HOY2 = HOY
+
+
+def _dia(n):
+    return (HOY2 - timedelta(days=n)).isoformat() + 'T10:00:00'
+
+
+class StockBase(ReportesBase):
+    def articulo(self, rid='ART-900', sku='TST-001', nombre='Válvula de prueba', minimo=20, costo=1000, activo=True, proveedor=None):
+        Registro.objects.create(tabla='articulos', rid=rid, datos={'sku': sku, 'nombre': nombre, 'categoria': 'X', 'unidad': 'un', 'costo_unitario': costo, 'stock_minimo': minimo,
+                                                                   'proveedor_id': proveedor, 'activo': activo})
+
+    def mov(self, rid, articulo, tipo, cantidad, dias_atras, **extra):
+        signo = -1 if tipo == 'SALIDA_OBRA' else 1
+        Registro.objects.create(tabla='cardex', rid=rid, datos={'tipo': tipo, 'fecha': _dia(dias_atras), 'articulo_id': articulo, 'cantidad': cantidad, 'costo_unitario': 1000,
+                                                                'signo': signo, 'obra_id': 'OB-1' if signo < 0 else None, 'usuario_id': 'U-001', 'referencia': 'x',
+                                                                'reversa_de': None, 'salida_origen_id': None, **extra})
+
+
+class ProyeccionTests(StockBase):
+    def setUp(self):
+        super().setUp()
+        self.articulo()
+        self.mov('MOV-1', 'ART-900', 'ENTRADA_COMPRA', 250, 45)
+        for i, dias in enumerate((28, 20, 12, 5, 1), 1):  # 5 salidas de 30 = 150 en los últimos 30 días
+            self.mov(f'MOV-{i + 1}', 'ART-900', 'SALIDA_OBRA', 30, dias)
+        self.u = self.users['FINANZAS']
+
+    def proyectar(self):
+        return stock_mod.proyectar(self.u, stock_mod.buscar_articulo(self.u, 'TST-001')[1], hoy=HOY2)
+
+    def test_el_calculo_lo_hace_django_stock_consumo_promedio_y_dias(self):
+        p = self.proyectar()
+        self.assertEqual((float(p.stock), float(p.consumo), float(p.promedio), p.dias), (100.0, 150.0, 5.0, 20))
+        self.assertEqual(p.agota, HOY2 + timedelta(days=20))
+        self.assertIn('Stock actual: 100 un.', p.texto)
+        self.assertIn('Consumo diario promedio: 5 un.', p.texto)
+        self.assertIn('Se agotará en 20 días (aprox. el 03-12-2026).', p.texto)
+        self.assertIn('Quedará bajo el stock mínimo en 16 días.', p.texto)  # (100 − 20) / 5
+
+    def test_lo_anterior_a_30_dias_no_cuenta_y_lo_que_vuelve_a_bodega_resta(self):
+        self.mov('MOV-20', 'ART-900', 'SALIDA_OBRA', 500, 31)  # fuera de la ventana: no es consumo
+        self.mov('MOV-21', 'ART-900', 'ENTRADA_COMPRA', 500, 31)
+        self.mov('MOV-22', 'ART-900', 'REINGRESO_SOBRANTE', 10, 2, salida_origen_id='MOV-6')
+        p = self.proyectar()
+        self.assertEqual(float(p.consumo), 140.0)  # 150 − 10 que volvieron
+
+    def test_una_salida_reversada_no_es_consumo(self):
+        self.mov('MOV-30', 'ART-900', 'REVERSA', 30, 0, reversa_de='MOV-2', signo=1)
+        self.assertEqual(float(self.proyectar().consumo), 120.0)
+
+    def test_sin_consumo_no_se_proyecta_agotamiento(self):
+        Registro.objects.filter(tabla='cardex', rid__in=[f'MOV-{i}' for i in range(2, 7)]).delete()
+        p = self.proyectar()
+        self.assertIsNone(p.dias)
+        self.assertIn('No hubo consumo', p.texto)
+
+    def test_sin_stock(self):
+        self.mov('MOV-40', 'ART-900', 'SALIDA_OBRA', 100, 0)
+        p = self.proyectar()
+        self.assertIn('ya está sin stock', p.texto)
+        self.assertEqual(p.dias, 0)
+
+    def test_la_serie_para_el_grafico_cierra_en_el_stock_actual_y_la_proyeccion_baja_hasta_cero(self):
+        p = self.proyectar()
+        reales = [r for _, r, _ in p.serie if r is not None]
+        self.assertEqual((len(reales), reales[-1]), (31, 100.0))
+        proy = [x for _, _, x in p.serie if x is not None]
+        self.assertEqual((proy[0], proy[-1]), (100.0, 0.0))
+        self.assertTrue(all(a >= b for a, b in zip(proy, proy[1:])))
+        c = stock_mod.conjunto_proyeccion(p)
+        self.assertEqual(c.grafico['categoria'], 'fecha')
+        self.assertFalse(c.totales)
+
+    def test_busqueda_por_sku_nombre_parcial_sin_tildes_y_ambigua(self):
+        self.articulo('ART-901', 'TST-002', 'Válvula grande de prueba')
+        self.assertEqual(stock_mod.buscar_articulo(self.u, 'tst-001')[0], 'uno')
+        self.assertEqual(stock_mod.buscar_articulo(self.u, 'valvula grande')[1]['sku'], 'TST-002')
+        estado, lista = stock_mod.buscar_articulo(self.u, 'valvula')
+        self.assertEqual((estado, [a['sku'] for a in lista]), ('varios', ['TST-001', 'TST-002']))
+        self.assertEqual(stock_mod.buscar_articulo(self.u, 'inexistente')[0], 'ninguno')
+        self.assertEqual(stock_mod.buscar_articulo(self.u, '   ')[0], 'ninguno')
+
+    def test_roles_sin_acceso_a_bodega(self):
+        for rol in ('TECNICO', 'RRHH'):
+            with self.assertRaises(datos.SinPermiso, msg=rol):
+                stock_mod.buscar_articulo(self.users[rol], 'TST-001')
+
+
+class CompraCriticaTests(StockBase):
+    def setUp(self):
+        super().setUp()
+        Registro.objects.create(tabla='proveedores', rid='PRV-1', datos={'razon_social': 'Frigotec Ltda.', 'activo': True})
+        Registro.objects.create(tabla='proveedores', rid='PRV-2', datos={'razon_social': 'Alfa SpA', 'activo': True})
+        self.articulo('ART-1', 'AAA-001', 'Crítico exacto', minimo=10, costo=2000, proveedor='PRV-1')   # stock 10 = mínimo → crítico
+        self.articulo('ART-2', 'AAA-002', 'Crítico bajo', minimo=10, costo=500, proveedor='PRV-2')       # stock 3
+        self.articulo('ART-3', 'AAA-003', 'Sano', minimo=10, costo=900, proveedor='PRV-1')               # stock 11 → no
+        self.articulo('ART-4', 'AAA-004', 'Inactivo', minimo=10, costo=900, proveedor='PRV-1', activo=False)
+        for i, (art, q) in enumerate((('ART-1', 10), ('ART-2', 3), ('ART-3', 11), ('ART-4', 1)), 1):
+            self.mov(f'MOV-{i}', art, 'ENTRADA_COMPRA', q, 3)
+        self.u = self.users['FINANZAS']
+
+    def test_django_elige_los_productos_y_calcula_las_cantidades(self):
+        c, total = stock_mod.compra_critica(self.u, hoy=HOY2)
+        self.assertEqual(total, 2)
+        por_sku = {f['sku']: f for f in c.filas}
+        self.assertEqual(set(por_sku), {'AAA-001', 'AAA-002'})  # ni el sano ni el inactivo
+        self.assertEqual(por_sku['AAA-001']['cantidad'], 30)    # 4 × 10 − 10
+        self.assertEqual(por_sku['AAA-002']['cantidad'], 37)    # 4 × 10 − 3
+        self.assertEqual(por_sku['AAA-002']['subtotal'], 37 * 500)
+        self.assertEqual([f['proveedor'] for f in c.filas], ['Alfa SpA', 'Frigotec Ltda.'])  # ordenado por proveedor
+        neto = 30 * 2000 + 37 * 500
+        self.assertEqual({e: v for e, v, _ in c.resumen}['Neto'], neto)
+        self.assertEqual({e: v for e, v, _ in c.resumen}['Total'], neto + round(neto * 0.19))
+        self.assertEqual(c.firmas, ['Solicitado por', 'Aprobado por'])
+
+    def test_sin_criticos_no_hay_filas(self):
+        Registro.objects.filter(tabla='articulos', rid__in=['ART-1', 'ART-2']).delete()
+        self.assertEqual(stock_mod.compra_critica(self.u, hoy=HOY2)[0].filas, [])
+
+    def test_solo_roles_de_compras(self):
+        for rol in ('TECNICO', 'RRHH'):
+            with self.assertRaises(datos.SinPermiso, msg=rol):
+                stock_mod.compra_critica(self.users[rol])
+
+    def test_la_orden_de_compra_en_excel_tiene_tabla_totales_y_firmas(self):
+        c, _ = stock_mod.compra_critica(self.u, hoy=HOY2)
+        info = generadores.generar('xlsx', c, self.u)
+        ws = load_workbook(generadores.ruta_de(self.u, info['token'], 'xlsx')).active
+        celdas = [str(cl.value) for fila in ws.iter_rows() for cl in fila if cl.value is not None]
+        self.assertIn('Orden de Compra - FYAG', celdas)
+        self.assertIn('Solicitado por', celdas)
+        self.assertIn('Aprobado por', celdas)
+        self.assertEqual(len(ws.tables), 1)
+        tabla = next(iter(ws.tables.values()))
+        cab = int(tabla.ref.split(':')[0][1:])
+        # el costo unitario es pesos pero NO se suma; el subtotal sí
+        self.assertIsNone(ws.cell(cab + 3, 8).value)
+        self.assertTrue(str(ws.cell(cab + 3, 9).value).startswith('=SUBTOTAL(109,I'))
+
+    def test_la_orden_de_compra_en_word_tiene_tabla_totales_y_espacio_de_firma(self):
+        c, _ = stock_mod.compra_critica(self.u, hoy=HOY2)
+        info = generadores.generar('docx', c, self.u)
+        d = Document(str(generadores.ruta_de(self.u, info['token'], 'docx')))
+        textos = [p.text for p in d.paragraphs] + [cl.text for t in d.tables for r in t.rows for cl in r.cells]
+        self.assertTrue(any('Solicitado por' in x for x in textos) and any('Aprobado por' in x for x in textos))
+        self.assertTrue(any('______' in x for x in textos))
+        self.assertEqual(d.tables[0].rows[-1].cells[0].text, 'TOTAL')
+
+
+class ToolsStockEnElChatTests(StockBase):
+    def setUp(self):
+        super().setUp()
+        self.articulo()
+        self.mov('MOV-1', 'ART-900', 'ENTRADA_COMPRA', 250, 45)
+        for i, dias in enumerate((28, 20, 12, 5, 1), 1):
+            self.mov(f'MOV-{i + 1}', 'ART-900', 'SALIDA_OBRA', 30, dias)
+
+    def llamar(self, nombre, args, final='Listo'):
+        c = SimpleNamespace(id='call_1', function=SimpleNamespace(name=nombre, arguments=json.dumps(args)))
+        return self.ia(mensaje(tool_calls=[c]), mensaje(final))
+
+    def test_cada_rol_recibe_solo_las_tools_que_puede_usar(self):
+        nombres = lambda rol: [t['function']['name'] for t in herramientas.herramientas_para(self.users[rol])]
+        self.assertEqual(nombres('FINANZAS'), ['generar_reporte', 'analizar_proyeccion_stock', 'generar_borrador_compra_critico'])
+        self.assertEqual(nombres('RRHH'), ['generar_reporte'])
+        self.assertEqual(nombres('TECNICO'), [])
+
+    def test_esquemas_simples(self):
+        t = {x['function']['name']: x['function']['parameters'] for x in herramientas.herramientas_para(self.users['ADMIN'])}
+        self.assertEqual(t['generar_borrador_compra_critico']['required'], [])  # clic único: sin parámetros obligatorios
+        self.assertEqual(set(t['generar_borrador_compra_critico']['properties']), {'formato'})
+        self.assertEqual(t['analizar_proyeccion_stock']['required'], ['producto'])
+        self.assertEqual(set(t['analizar_proyeccion_stock']['properties']), {'producto', 'formato'})
+
+    def test_la_ia_recibe_el_texto_ya_calculado_y_el_chat_lo_muestra_tal_cual(self):
+        fake = self.llamar('analizar_proyeccion_stock', {'producto': 'TST-001'}, 'Te quedan unos 20 días de stock.')
+        r = self.pedir('FINANZAS', '¿cuánto dura la válvula de prueba?')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('Se agotará en 20 días', r.data['calculo'])
+        self.assertNotIn('archivo', r.data)
+        tool = json.loads(next(m for m in fake.llamadas[1]['messages'] if m['role'] == 'tool')['content'])
+        self.assertIn('Consumo diario promedio: 5 un.', tool['texto'])  # la IA solo lee y presenta
+        self.assertNotIn('_calculo', tool)
+
+    def test_el_prompt_prohibe_que_el_modelo_calcule(self):
+        fake = self.llamar('analizar_proyeccion_stock', {'producto': 'TST-001'})
+        self.pedir('FINANZAS', 'x')
+        sistema = fake.llamadas[0]['messages'][0]['content']
+        self.assertIn('TÚ NO CALCULAS NADA', sistema)
+        self.assertIn('generar_borrador_compra_critico', sistema)
+
+    def test_producto_ambiguo_o_inexistente_vuelve_como_error_y_sin_calculo(self):
+        self.articulo('ART-901', 'TST-002', 'Válvula grande de prueba')
+        for producto in ('válvula', 'no existe nada así'):
+            fake = self.llamar('analizar_proyeccion_stock', {'producto': producto}, 'Dime cuál.')
+            r = self.pedir('FINANZAS')
+            self.assertNotIn('calculo', r.data)
+            self.assertIn('Pídele al usuario', next(m for m in fake.llamadas[1]['messages'] if m['role'] == 'tool')['content'])
+
+    def test_con_formato_entrega_el_archivo_con_grafico_nativo_en_los_tres_formatos(self):
+        import zipfile
+        for formato in ('xlsx', 'docx', 'pptx'):
+            self.llamar('analizar_proyeccion_stock', {'producto': 'TST-001', 'formato': formato})
+            r = self.pedir('FINANZAS')
+            self.assertEqual(r.data['archivo']['formato'], formato)
+            self.assertIn('calculo', r.data)
+            ruta = generadores.ruta_de(self.users['FINANZAS'], r.data['archivo']['url'].split('/')[3], formato)
+            z = zipfile.ZipFile(ruta)
+            if formato == 'xlsx':
+                self.assertTrue(any(n.startswith('xl/charts/chart') for n in z.namelist()))
+                self.assertIn('lineChart', z.read('xl/charts/chart1.xml').decode())  # Excel: líneas
+                ws = load_workbook(ruta).active
+                self.assertEqual(len(ws._charts), 1)
+            elif formato == 'docx':
+                self.assertIn('word/charts/chart1.xml', z.namelist())
+                self.assertIn('barChart', z.read('word/charts/chart1.xml').decode())  # Word: barras
+                self.assertIn('word/embeddings/Microsoft_Excel_Sheet1.xlsx', z.namelist())
+                Document(str(ruta))  # sigue abriéndose con python-docx
+            else:
+                grafico = [s for sl in Presentation(str(ruta)).slides for s in sl.shapes if s.has_chart]
+                self.assertEqual(len(grafico), 1)
+                self.assertIn('COLUMN_CLUSTERED', str(grafico[0].chart.chart_type))  # PowerPoint: barras verticales
+
+    def test_compra_critica_en_un_clic_sin_parametros_ni_url_para_el_modelo(self):
+        Registro.objects.create(tabla='articulos', rid='ART-7', datos={'sku': 'CRI-001', 'nombre': 'Crítico', 'categoria': 'X', 'unidad': 'un', 'costo_unitario': 100, 'stock_minimo': 10, 'activo': True})
+        fake = self.ia(mensaje(tool_calls=[SimpleNamespace(id='c', function=SimpleNamespace(name='generar_borrador_compra_critico', arguments='{}'))]), mensaje('Borrador listo.'))
+        r = self.pedir('FINANZAS', 'prepara las compras')
+        self.assertEqual(r.data['archivo']['formato'], 'xlsx')
+        self.assertIn('Productos críticos: 1', r.data['calculo'])
+        tool = next(m for m in fake.llamadas[1]['messages'] if m['role'] == 'tool')['content']
+        self.assertNotIn('/ai/reportes', tool)
+
+    def test_compra_critica_sin_criticos_no_genera_archivo(self):
+        fake = self.ia(mensaje(tool_calls=[SimpleNamespace(id='c', function=SimpleNamespace(name='generar_borrador_compra_critico', arguments='{"formato":"docx"}'))]), mensaje('Todo bien.'))
+        r = self.pedir('FINANZAS')
+        self.assertNotIn('archivo', r.data)
+        self.assertIn('no hace falta comprar', r.data['calculo'])
+
+    def test_argumentos_hostiles_y_roles_sin_permiso(self):
+        for nombre, args in (('analizar_proyeccion_stock', {'producto': 'x' * 500}), ('analizar_proyeccion_stock', {'producto': {'a': 1}}), ('analizar_proyeccion_stock', {'producto': 'TST-001', 'formato': 'exe'}),
+                             ('generar_borrador_compra_critico', {'formato': 'pptx'})):
+            self.llamar(nombre, args, 'No puedo.')
+            r = self.pedir('FINANZAS')
+            self.assertNotIn('archivo', r.data, (nombre, args))
+            self.assertNotIn('calculo', r.data, (nombre, args))
+        # un rol sin acceso a bodega no puede ejecutar la tool aunque el modelo la pida
+        self.llamar('generar_borrador_compra_critico', {}, 'No tienes acceso.')
+        r = self.pedir('RRHH')
+        self.assertNotIn('archivo', r.data)
+
+
+class TotalesVisiblesSinCalcularTests(ReportesBase):
+    def test_el_total_trae_su_valor_calculado_para_los_visores_que_no_calculan_formulas(self):
+        for i in range(2, 5):
+            Registro.objects.create(tabla='presupuestos', rid=f'PRE-{i:04d}', datos={'titulo': f'P{i}', 'estado': 'APROBADO', 'fecha': '2026-10-05', 'precio_venta_neto': 100_000 * i})
+        u = self.users['FINANZAS']
+        c = datos.get_resumen_presupuestos(u)
+        info = generadores.generar('xlsx', c, u)
+        ruta = generadores.ruta_de(u, info['token'], 'xlsx')
+        ws_formula, ws_valor = load_workbook(ruta).active, load_workbook(ruta, data_only=True).active
+        fila = next(r for r in range(1, ws_formula.max_row + 1) if ws_formula.cell(r, 1).value == 'TOTAL')
+        self.assertTrue(str(ws_formula.cell(fila, 6).value).startswith('=SUBTOTAL('))   # sigue siendo una fórmula (respeta los filtros)
+        self.assertEqual(ws_valor.cell(fila, 6).value, sum(f['venta'] for f in c.filas))  # y trae el resultado ya calculado
