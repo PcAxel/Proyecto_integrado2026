@@ -4,6 +4,7 @@ import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-r
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { PanelApariencia } from '@/components/PanelApariencia'
+import { OpcionesInclusion } from '@/components/OpcionesInclusion'
 import { useApariencia } from '@/hooks/useApariencia'
 import { can } from '@/domain/rbac'
 import { ROL_API_LABEL } from '@/components/domain'
@@ -188,6 +189,7 @@ export function ErpLayout() {
           <BotonBuscar onClick={() => setBuscando(true)} />
           <div className="ml-auto flex items-center gap-3">
             <PanelApariencia nivelDefecto={100} />
+            <OpcionesInclusion />
             <div className="flex items-center gap-2 sm:hidden"><Avatar nombre={user.nombre} rol={user.rol} size="sm" /></div>
           </div>
         </header>
