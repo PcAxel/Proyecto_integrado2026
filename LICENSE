@@ -1,0 +1,93 @@
+LICENCIA PROPIETARIA — TODOS LOS DERECHOS RESERVADOS
+PROPRIETARY LICENSE — ALL RIGHTS RESERVED
+
+Apex Systems ERP
+Copyright (c) 2026 Axel Plata / Apex Systems. Todos los derechos reservados.
+
+
+=====================================================================
+ESPAÑOL (versión principal)
+=====================================================================
+
+1. TITULARIDAD
+   Este software, incluyendo su código fuente y objeto, arquitectura, diseño, base de datos, documentación, textos, imágenes, interfaces,
+   scripts y cualquier material asociado (en adelante, el «Software»), es obra original y propiedad exclusiva de Axel Plata, que actúa bajo
+   la marca comercial «Apex Systems» (en adelante, el «Titular»). El Software está protegido por la legislación de propiedad intelectual
+   aplicable (en Chile, la Ley N.º 17.336) y por los tratados internacionales sobre derechos de autor.
+
+2. SIN LICENCIA DE USO
+   Esta licencia NO concede ningún derecho de uso, copia, modificación ni distribución del Software. Todo derecho que no se otorgue
+   expresamente por escrito queda reservado por el Titular. La mera disponibilidad del Software, de su repositorio o de una copia
+   suya no implica licencia alguna.
+
+3. PROHIBICIONES
+   Sin autorización previa, expresa y por escrito del Titular, queda estrictamente prohibido:
+   a) copiar, reproducir o almacenar el Software, total o parcialmente, fuera de lo necesario para su revisión autorizada (punto 4);
+   b) modificar, adaptar, traducir o crear obras derivadas del Software;
+   c) distribuir, publicar, comunicar públicamente, alquilar, prestar, vender, sublicenciar o transferir el Software o cualquier parte de él;
+   d) usar el Software, o parte de él, en producción, en servicios a terceros o con fines comerciales;
+   e) descompilar, desensamblar, realizar ingeniería inversa o intentar obtener el código fuente de cualquier versión compilada o minificada;
+   f) eliminar, alterar u ocultar avisos de autoría, derechos de autor, marcas, banners o cabeceras del Software;
+   g) usar el Software, su código o su documentación para entrenar, ajustar o alimentar modelos de inteligencia artificial o bases de datos
+      de código, ni extraerlos de forma automatizada (scraping);
+   h) eludir o intentar eludir cualquier medida técnica de protección, control de acceso o límite de uso del Software.
+
+4. REVISIÓN AUTORIZADA
+   Las personas a quienes el Titular conceda acceso expreso al repositorio (por ejemplo, para una evaluación académica o una revisión
+   técnica) podrán leer el código únicamente para evaluarlo, de forma personal, no transferible y mientras dure ese acceso. Este permiso no
+   incluye ningún derecho de copia, uso, modificación ni distribución, y puede ser revocado en cualquier momento.
+
+5. CONFIDENCIALIDAD
+   El código fuente, la arquitectura y la documentación del Software constituyen información confidencial y secreto comercial del Titular.
+   Quien acceda a ellos se obliga a no divulgarlos ni utilizarlos para ningún fin distinto del autorizado.
+
+6. MARCAS, NOMBRES Y DATOS DE TERCEROS
+   «Apex Systems» y los logotipos, nombres y signos distintivos del Titular no se licencian por este documento. Los nombres, marcas, logotipos y
+   datos de terceros que aparezcan en el Software o en sus datos de ejemplo (incluidos nombres de empresas, clientes o personas de demostración)
+   pertenecen a sus respectivos titulares, se usan solo con fines de demostración y no implican relación, patrocinio ni respaldo.
+
+7. SIN GARANTÍA
+   EL SOFTWARE SE ENTREGA «TAL CUAL», SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O IMPLÍCITA, INCLUIDAS LAS DE COMERCIABILIDAD, IDONEIDAD PARA UN FIN
+   PARTICULAR, NO INFRACCIÓN, DISPONIBILIDAD O AUSENCIA DE ERRORES. Las funciones de facturación electrónica incluidas son una simulación de
+   demostración y no tienen validez tributaria.
+
+8. LIMITACIÓN DE RESPONSABILIDAD
+   EN LA MÁXIMA MEDIDA PERMITIDA POR LA LEY, EL TITULAR NO SERÁ RESPONSABLE POR DAÑOS DIRECTOS, INDIRECTOS, INCIDENTALES, ESPECIALES O
+   CONSECUENTES (INCLUIDA LA PÉRDIDA DE DATOS O DE BENEFICIOS) DERIVADOS DEL USO O LA IMPOSIBILIDAD DE USAR EL SOFTWARE.
+
+9. INFRACCIÓN Y TERMINACIÓN
+   Cualquier uso no autorizado pone término automático e inmediato a toda autorización (incluida la de revisión del punto 4) y obliga a
+   eliminar de inmediato todas las copias. El Titular podrá ejercer todas las acciones civiles y penales que la ley le reconozca, incluidas
+   medidas cautelares e indemnización de perjuicios.
+
+10. LEY APLICABLE Y JURISDICCIÓN
+    Este documento se rige por las leyes de la República de Chile. Cualquier controversia se someterá a los tribunales ordinarios de justicia de
+    la ciudad de Chillán, sin perjuicio de los derechos irrenunciables que la ley reconozca.
+
+11. AUTORIZACIONES Y CONTACTO
+    Para solicitar una licencia de uso, una revisión técnica o cualquier autorización, contacte al Titular: Axel Plata — Apex Systems.
+
+
+=====================================================================
+ENGLISH (courtesy translation; the Spanish text prevails)
+=====================================================================
+
+Copyright (c) 2026 Axel Plata / Apex Systems. All rights reserved.
+
+This software, including its source and object code, architecture, design, database, documentation and any associated material (the
+"Software"), is the original work and exclusive property of Axel Plata, acting under the trade name "Apex Systems" (the "Owner").
+
+NO LICENSE IS GRANTED. You may not use, copy, modify, merge, publish, distribute, sublicense, sell, lease or create derivative works of the
+Software, in whole or in part, without the Owner's prior express written permission. You may not reverse engineer, decompile or
+disassemble it; remove or alter authorship notices, banners or headers; use it to train or feed artificial-intelligence models or code
+datasets; or circumvent any technical protection measure.
+
+Persons expressly granted repository access by the Owner (for instance, for academic evaluation) may read the code solely to evaluate it,
+for as long as that access lasts. This does not include any right to copy, use, modify or distribute. The source code and documentation are
+confidential trade secrets of the Owner.
+
+Third-party names, trademarks and sample data appearing in the Software belong to their respective owners and are used for demonstration only.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE OWNER SHALL NOT BE
+LIABLE FOR ANY CLAIM OR DAMAGES ARISING FROM THE USE OF, OR INABILITY TO USE, THE SOFTWARE. Any unauthorized use automatically terminates all
+permissions and entitles the Owner to pursue all remedies available under law. Governed by the laws of Chile.

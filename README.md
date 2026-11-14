@@ -115,3 +115,7 @@ src/
 ## Supuestos a validar con FYAG
 
 Los rangos del checklist, los stocks mínimos, las tarifas hora-hombre, el umbral de desvío de costos (±5 %) y los datos del seed son valores plausibles, no datos reales de la empresa.
+
+## Licencia
+
+Software propietario de código cerrado. Copyright (c) 2026 Axel Plata / Apex Systems. Todos los derechos reservados: sin autorización escrita del titular no se permite copiar, modificar, distribuir ni usar este código. Ver [`LICENSE`](./LICENSE).

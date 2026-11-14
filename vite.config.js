@@ -2,6 +2,46 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const BANNER = '/* (c) 2026 Apex Systems - Arquitectura y Desarrollo por Axel Plata. Todos los derechos reservados. */'
+
+/**
+ * Autoría en producción: deja BANNER como PRIMERA línea de todos los .js y .css del build.
+ * - `generateBundle` lo agrega a los bundles DESPUÉS de minificar (el minificador borraría un comentario normal) y ANTES de que la PWA calcule
+ *   su caché, así el service worker precachea exactamente lo que se publica.
+ * - `closeBundle` (al final, tras la PWA) recorre dist/ y se lo agrega a lo que se generó después: service worker, workbox y registerSW.
+ * No toca el código ni su rendimiento: es una línea de comentario por archivo. Solo corre en `vite build`.
+ */
+function bannerApex() {
+  let outDir = 'dist'
+  const conBanner = (texto) => (texto.startsWith(BANNER) ? texto : `${BANNER}\n${texto}`)
+  const archivos = (dir) => readdirSync(dir).flatMap((n) => { const r = join(dir, n); return statSync(r).isDirectory() ? archivos(r) : [r] })
+  return {
+    name: 'apex-banner',
+    apply: 'build',
+    configResolved(c) { outDir = c.build.outDir },
+    generateBundle(_, bundle) {
+      for (const f of Object.values(bundle)) {
+        if (f.type === 'chunk') f.code = conBanner(f.code)
+        else if (f.fileName.endsWith('.css') && typeof f.source === 'string') f.source = conBanner(f.source)
+      }
+    },
+    closeBundle: {
+      order: 'post',
+      sequential: true,
+      handler() {
+        for (const ruta of archivos(outDir)) {
+          if (!/\.(js|css)$/.test(ruta)) continue
+          const texto = readFileSync(ruta, 'utf8')
+          if (!texto.startsWith(BANNER)) writeFileSync(ruta, conBanner(texto))
+        }
+      },
+    },
+  }
+}
+
 
 export default defineConfig({
   resolve: {
@@ -9,6 +49,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    bannerApex(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['logo-fyag.png', 'apple-touch-icon.png'],
