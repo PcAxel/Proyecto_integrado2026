@@ -54,3 +54,26 @@ describe('dividirTexto', () => {
     expect(trozos.join('')).toBe('x'.repeat(500))
   })
 })
+
+import { normalizarPrefsLector, recortarParaLeer } from '../lectura'
+
+describe('recortarParaLeer', () => {
+  it('un texto corto queda igual', () => { expect(recortarParaLeer('Hola  mundo')).toEqual({ texto: 'Hola mundo', recortado: false }) })
+  it('uno largo se corta en el final de una frase y avisa', () => {
+    const largo = Array.from({ length: 200 }, (_, i) => `Frase número ${i}.`).join(' ')
+    const r = recortarParaLeer(largo, 500)
+    expect(r.recortado).toBe(true)
+    expect(r.texto.length).toBeLessThanOrEqual(500)
+    expect(r.texto.endsWith('.')).toBe(true)
+  })
+  it('sin puntos igual lo limita', () => { expect(recortarParaLeer('a'.repeat(1000), 100).texto).toHaveLength(100) })
+})
+
+describe('normalizarPrefsLector', () => {
+  it('por defecto los subtítulos están activos', () => { expect(normalizarPrefsLector(null)).toEqual({ subtitulos: true }) })
+  it('respeta un booleano y descarta basura', () => {
+    expect(normalizarPrefsLector({ subtitulos: false })).toEqual({ subtitulos: false })
+    expect(normalizarPrefsLector({ subtitulos: 'no' })).toEqual({ subtitulos: true })
+    expect(normalizarPrefsLector({ ingles: true })).toEqual({ subtitulos: true })  // el inglés no se guarda
+  })
+})

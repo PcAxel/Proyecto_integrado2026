@@ -1,6 +1,7 @@
 import { Component, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
+import { AccessibilityProvider } from '@/context/AccessibilityContext'
 
 class ErrorBoundary extends Component {
   state = { error: null }
@@ -43,9 +44,11 @@ function InactivityWatcher() {
 export function Providers({ children }) {
   return (
     <ErrorBoundary>
-      <InactivityWatcher />
-      {children}
-      <Toaster position="top-right" richColors closeButton />
+      <AccessibilityProvider>
+        <InactivityWatcher />
+        {children}
+        <Toaster position="top-right" richColors closeButton />
+      </AccessibilityProvider>
     </ErrorBoundary>
   )
 }

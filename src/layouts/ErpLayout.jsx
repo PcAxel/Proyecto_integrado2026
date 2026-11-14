@@ -5,6 +5,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { PanelApariencia } from '@/components/PanelApariencia'
 import { OpcionesInclusion } from '@/components/OpcionesInclusion'
+import { LecturaSeleccion } from '@/components/LecturaSeleccion'
+import { SubtitulosLectura } from '@/components/SubtitulosLectura'
 import { useApariencia } from '@/hooks/useApariencia'
 import { can } from '@/domain/rbac'
 import { ROL_API_LABEL } from '@/components/domain'
@@ -199,6 +201,8 @@ export function ErpLayout() {
       </div>
       <GlobalSearch open={buscando} onClose={() => setBuscando(false)} />
       <AsistenteIA />
+      <LecturaSeleccion />
+      <SubtitulosLectura />
     </div>
   )
 }

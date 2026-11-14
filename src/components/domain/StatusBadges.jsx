@@ -1,5 +1,5 @@
 import { AlertTriangle, CircleDot, CheckCircle2, CalendarClock } from 'lucide-react'
-import { Badge } from '@/components/ui'
+import { Badge, StatusBadge } from '@/components/ui'
 
 const OBRA = {
   PLANIFICADA: { tone: 'neutral', label: 'Planificada', icon: CalendarClock },
@@ -12,12 +12,12 @@ export const ObraStatusBadge = ({ estado }) => {
 }
 
 const PRESUPUESTO = {
-  BORRADOR: { tone: 'neutral', label: 'Borrador' },
-  ENVIADO: { tone: 'info', label: 'Enviado' },
-  APROBADO: { tone: 'ok', label: 'Aprobado' },
-  RECHAZADO: { tone: 'crit', label: 'Rechazado' },
+  BORRADOR: { type: 'neutral', label: 'Borrador' },
+  ENVIADO: { type: 'info', label: 'Enviado' },
+  APROBADO: { type: 'success', label: 'Aprobado' },
+  RECHAZADO: { type: 'critical', label: 'Rechazado' },
 }
-export const PresupuestoStatusBadge = ({ estado }) => <Badge tone={PRESUPUESTO[estado].tone}>{PRESUPUESTO[estado].label}</Badge>
+export const PresupuestoStatusBadge = ({ estado }) => <StatusBadge type={PRESUPUESTO[estado].type} label={PRESUPUESTO[estado].label} />
 
 /** Marca CU30: obra abierta sin presupuesto previo, pendiente de regularizar. */
 export const EmergencyBadge = ({ regularizada = false }) => (

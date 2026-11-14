@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Lock, Undo2, PackagePlus, ArrowUpFromLine } from 'lucide-react'
-import { Button, Select, DataTable, Card, Badge, Mono, Pagination, ExportMenu } from '@/components/ui'
+import { Button, Select, DataTable, Card, StatusBadge, Mono, Pagination, ExportMenu } from '@/components/ui'
 import { CardexTypeBadge, MoneyCell, TIPO_MOV_LABEL } from '@/components/domain'
 import { cardexService, articulosService, obrasService } from '@/services'
 import { formatFechaHora, conSigno } from '@/domain/format'
@@ -49,7 +49,7 @@ export function CardexTab({ articuloId, onArticuloChange }) {
     { key: 'obra_id', header: 'Obra', mono: true, render: (m) => m.obra_id ?? '—' },
     { key: 'detalle', header: 'Detalle', render: (m) => (
       <div className="max-w-[16rem]">
-        {m.reversado && <Badge tone="warn">Reversado</Badge>}
+        {m.reversado && <StatusBadge type="warning" label="Reversado" />}
         {m.reversa_de && <p className="text-xs text-ink-soft">Reversa de <Mono>{m.reversa_de}</Mono></p>}
         {m.lote_codigo && <p className="text-xs font-medium text-brand-dark">Lote <Mono>{m.lote_codigo}</Mono></p>}
         <p className="truncate text-xs text-ink-soft" title={m.referencia}>{m.referencia}</p>

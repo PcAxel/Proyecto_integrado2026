@@ -54,3 +54,20 @@ export function dividirTexto(texto, max = 180) {
   cerrar()
   return trozos.filter(Boolean)
 }
+
+export const MAX_CARACTERES_LECTURA = 8000
+
+/** Limita lo que se lee de una vez (una pantalla entera puede ser enorme). Corta en el final de una frase si puede. @returns {{texto: string, recortado: boolean}} */
+export function recortarParaLeer(texto, max = MAX_CARACTERES_LECTURA) {
+  const limpio = limpiarTexto(texto)
+  if (limpio.length <= max) return { texto: limpio, recortado: false }
+  const corte = limpio.slice(0, max)
+  const fin = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('? '), corte.lastIndexOf('! '))
+  return { texto: fin > max * 0.6 ? corte.slice(0, fin + 1) : corte, recortado: true }
+}
+
+/** Preferencias del lector guardadas en el navegador: cualquier cosa inválida vuelve al valor por defecto. El inglés nunca se reactiva solo (pide descargar un modelo). */
+export function normalizarPrefsLector(crudo) {
+  const c = crudo && typeof crudo === 'object' ? crudo : {}
+  return { subtitulos: typeof c.subtitulos === 'boolean' ? c.subtitulos : true }
+}
