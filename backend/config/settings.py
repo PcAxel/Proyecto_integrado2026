@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'erp',
     'ai_agent',
     'rrhh',
+    'facturacion',
 ]
 
 MIDDLEWARE = [
@@ -140,6 +141,7 @@ REST_FRAMEWORK = {
         'anon': '20/min',
         'user': '120/min',
         'login': '5/min',
+        'dte': '10/min',        # emisión y descarga de facturas electrónicas, por usuario
         'recuperar': '10/hour',  # solicitudes de código de recuperación, por IP
         'refresh': '60/min',
         'ai': '15/min',      # ráfaga por usuario (una conversación hace varias consultas seguidas)
@@ -233,3 +235,13 @@ VALOR_UF = os.getenv('VALOR_UF')  # opcional: aplica el tope legal de 90 UF a la
 # Cantidad de proxies/balanceadores propios delante de Django (Vercel, nginx, etc.). 0 = conexión directa.
 # Define de dónde se lee la IP real para la evidencia de firma, la aceptación de términos y los límites de uso.
 PROXIES_DE_CONFIANZA = int(os.getenv('PROXIES_DE_CONFIANZA', '0'))
+
+# Facturación electrónica (DTE). Hoy solo existe el proveedor simulado; ver facturacion/servicios_dte.py.
+DTE_PROVEEDOR = os.getenv('DTE_PROVEEDOR', 'simulado')
+DTE_SIMULADO_RETRASO = float(os.getenv('DTE_SIMULADO_RETRASO', '2'))  # segundos que «tarda la red» en el simulador
+DTE_EMISOR = {
+    'rut': os.getenv('DTE_EMISOR_RUT', '76.000.000-0'),
+    'razon_social': os.getenv('DTE_EMISOR_RAZON_SOCIAL', 'Frío y Agroindustria SpA'),
+    'giro': os.getenv('DTE_EMISOR_GIRO', 'Refrigeración industrial y climatización'),
+    'direccion': os.getenv('DTE_EMISOR_DIRECCION', 'Chillán, Región de Ñuble'),
+}

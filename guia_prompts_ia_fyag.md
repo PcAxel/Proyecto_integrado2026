@@ -15,6 +15,7 @@ Qué hace cada herramienta y quién la tiene:
 | **Proyección de stock** de un producto | ✅ | ✅ | ✅ | — | — |
 | **Borrador de compra crítica** | ✅ | ✅ | ✅ | — | — |
 | Leer una **factura** (pestaña «Leer factura») | ✅ | ✅ | — | — | — |
+| **Llevar a facturar** una obra (la IA no emite) | ✅ | ✅ | — | — | — |
 | Redactar **informe técnico** desde notas | — | — | ✅ | — | ✅ |
 
 ## Reglas de oro
@@ -46,6 +47,13 @@ Qué hace cada herramienta y quién la tiene:
 - «Prepara las compras.» / «Prepara las compras en Word.»
 - «Lee esta factura» *(pestaña «Leer factura»: pega el texto de la factura)*
 - «Resume en tres puntos cómo va el negocio» *(la IA no ve datos del sistema por sí sola: pide un reporte primero)*
+
+## Llevar a facturar (Administrador y Finanzas)
+La IA **no emite facturas**: te lleva hasta la obra, la deja resaltada y tú revisas los datos y pulsas «Emitir Factura Electrónica (SII)».
+- «Quiero emitir la factura de la obra OB-0011.»
+- «Quiero facturar el trabajo de Distribuidora de Helados Sur.»
+- «Prepárame la factura de la cámara de frío de Packing Cordillera.»
+- Si hay varias obras parecidas, te pide el código. Si la obra aún no se puede facturar o ya tiene factura, te lo dice con el motivo o el folio.
 
 ## Finanzas
 - «Reporte en Excel de los presupuestos aprobados de septiembre.» *(incluye costo y margen)*

@@ -23,14 +23,28 @@ export function catalogoDeRutas(user) {
   return ERP_NAV.filter((n) => can(user.rol, n.accion)).map((n) => ({ ruta: n.to, label: n.label, buscable: Boolean(n.buscable) }))
 }
 
+const OBRA_A_FACTURAR = /^\/erp\/obras\/(OB-\d{1,6})$/
+
+/**
+ * Atajo para facturar: el servidor ubica la obra y pide llevar a la persona hasta su tarjeta de facturación. La ruta se vuelve a validar aquí
+ * (solo `/erp/obras/OB-0000`, solo con el permiso de emitir) y la IA nunca emite: en la obra, la persona revisa y pulsa «Emitir».
+ */
+function rutaDeFacturacion(respuesta, rol) {
+  const m = OBRA_A_FACTURAR.exec(String(respuesta?.ruta ?? ''))
+  if (respuesta?.accion !== 'navegar' || respuesta.ancla !== 'facturacion' || !m || !can(rol, 'facturacion.emitir')) return null
+  return { url: `${m[0]}?facturar=1`, etiqueta: `la obra ${m[1]}`, busqueda: null, ancla: 'facturacion' }
+}
+
 /**
  * Convierte la propuesta del servidor en una URL segura, o null si no hay nada que hacer.
  * Se vuelve a validar aquí aunque el servidor ya lo hizo: la ruta debe estar en el catálogo de esta persona.
  * @param {{accion?:string, ruta?:string|null, termino_busqueda?:string|null}} respuesta
- * @param {ReturnType<typeof catalogoDeRutas>} catalogo
- * @returns {{url:string, etiqueta:string, busqueda:string|null}|null}
+ * @param {ReturnType<typeof catalogoDeRutas>} catalogo @param {string} [rol] rol del frontend (para el atajo de facturación)
+ * @returns {{url:string, etiqueta:string, busqueda:string|null, ancla?:string}|null}
  */
-export function resolverAccion(respuesta, catalogo) {
+export function resolverAccion(respuesta, catalogo, rol) {
+  const factura = rutaDeFacturacion(respuesta, rol)
+  if (factura) return factura
   const destino = catalogo.find((r) => r.ruta === respuesta?.ruta)
   if (!destino || !['navegar', 'buscar'].includes(respuesta?.accion)) return null
   const termino = String(respuesta.termino_busqueda ?? '').trim().slice(0, 80)

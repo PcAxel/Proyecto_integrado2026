@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Play, AlertTriangle, MapPin, CalendarDays, Users, UserPlus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Play, Receipt, AlertTriangle, MapPin, CalendarDays, Users, UserPlus } from 'lucide-react'
 import { PageHeader, Tabs, Card, Button, Skeleton, Mono, ConfirmDialog, Modal } from '@/components/ui'
 import { ObraStatusBadge, EmergencyBadge, TIPO_OBRA_LABEL, MoneyCell } from '@/components/domain'
 import { obrasService, clientesService } from '@/services'
@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 import { PanelCierre } from './PanelCierre'
+import { FacturacionPanel } from '../facturacion/FacturacionPanel'
 import { CostosTab, MaterialesTab, HojasTab, AuditoriaTab } from './ObraTabs'
 import { SelectorTecnicos } from './SelectorTecnicos'
 
@@ -17,6 +18,9 @@ export function ObraDetalle() {
   const { id } = useParams()
   const rol = useAuthStore((s) => s.user.rol)
   const [tab, setTab] = useState('resumen')
+  const [params, setParams] = useSearchParams()
+  const [resaltarFactura, setResaltarFactura] = useState(false)
+  const irAFactura = useRef(false)
   const [iniciando, setIniciando] = useState(false)
   const [trabajando, setTrabajando] = useState(false)
   const [asignando, setAsignando] = useState(null) // ids elegidos mientras el modal está abierto
@@ -25,6 +29,19 @@ export function ObraDetalle() {
   const obra = obraRes.data
   const puedeAsignar = Boolean(obra) && can(rol, 'obras.crear') && obra.estado !== 'FINALIZADA'
   const tecnicos = useResource(() => (puedeAsignar ? obrasService.tecnicosDisponibles() : Promise.resolve(null)), [puedeAsignar])
+
+  // `?facturar=1` (lo pone el asistente de IA): baja hasta la tarjeta de facturación y la resalta unos segundos. NO emite nada: la persona revisa y pulsa.
+  useEffect(() => {
+    if (params.get('facturar') === '1') { irAFactura.current = true; setParams({}, { replace: true }) }
+  }, [params, setParams])
+  useEffect(() => {
+    if (!irAFactura.current || !obra) return
+    irAFactura.current = false
+    setTab('resumen')
+    setResaltarFactura(true)
+    setTimeout(() => document.getElementById('facturacion')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500)
+    setTimeout(() => setResaltarFactura(false), 6000)
+  }, [obra, params])
 
   if (obraRes.error) return <div className="card p-6 text-sm text-crit">{obraRes.error.message}</div>
   if (!obra) return <div className="card"><Skeleton rows={8} /></div>
@@ -58,7 +75,15 @@ export function ObraDetalle() {
       <PageHeader
         title={obra.nombre}
         subtitle={<span className="flex flex-wrap items-center gap-2"><Mono>{obra.id}</Mono><ObraStatusBadge estado={obra.estado} />{obra.es_emergencia_sin_presupuesto && <EmergencyBadge />}</span>}
-        actions={obra.estado === 'PLANIFICADA' && can(rol, 'obras.crear') && <Button icon={Play} onClick={() => setIniciando(true)}>Iniciar obra</Button>}
+        actions={(
+          <>
+            {obra.estado === 'PLANIFICADA' && can(rol, 'obras.crear') && <Button icon={Play} onClick={() => setIniciando(true)}>Iniciar obra</Button>}
+            {obra.estado === 'FINALIZADA' && can(rol, 'facturacion.emitir') && (
+              // Atajo a la tarjeta de facturación electrónica (está en el Resumen, abajo a la derecha): cambia a ese tab y baja hasta ella.
+              <Button variant="secondary" icon={Receipt} onClick={() => { setTab('resumen'); setTimeout(() => document.getElementById('facturacion')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}>Facturar</Button>
+            )}
+          </>
+        )}
       />
 
       {obra.es_emergencia_sin_presupuesto && obra.estado !== 'FINALIZADA' && (
@@ -91,7 +116,10 @@ export function ObraDetalle() {
               </Dato>
             </dl>
           </Card>
-          <PanelCierre obra={obra} onChanged={obraRes.reload} />
+          <div className="space-y-5">
+            <PanelCierre obra={obra} onChanged={obraRes.reload} />
+            {obra.estado === 'FINALIZADA' && <FacturacionPanel obraId={obra.id} resaltar={resaltarFactura} />}
+          </div>
         </div>
       )}
       {tab === 'costos' && obra.costo_real && <CostosTab obra={obra} />}

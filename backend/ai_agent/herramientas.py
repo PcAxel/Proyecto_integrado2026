@@ -11,22 +11,27 @@ import logging
 
 from django.utils import timezone
 
+from facturacion import busqueda as busqueda_obras
+from erp import tablas
 from .reportes import datos, generadores, stock
+from .reportes.generadores import _clp
 
 logger = logging.getLogger('ai_agent')
 
 NOMBRE_REPORTE = 'generar_reporte'
 NOMBRE_PROYECCION = 'analizar_proyeccion_stock'
 NOMBRE_COMPRA = 'generar_borrador_compra_critico'
+NOMBRE_FACTURA = 'preparar_factura'
 FORMATOS_COMPRA = ('xlsx', 'docx')
 MAX_LARGO_PRODUCTO = 80
+MAX_LARGO_TRABAJO = 120
 MAX_LLAMADAS_POR_TURNO = 1
 URL_DESCARGA = '/ai/reportes/{token}/?formato={formato}'
 
 
 def herramientas_para(usuario):
     """Definición de tools (formato OpenAI/DeepSeek) para este usuario: solo las que su rol puede usar (lista vacía si ninguna)."""
-    return [*_tool_reporte(usuario), *_tool_proyeccion(usuario), *_tool_compra(usuario)]
+    return [*_tool_reporte(usuario), *_tool_proyeccion(usuario), *_tool_compra(usuario), *_tool_factura(usuario)]
 
 
 def _tool_proyeccion(usuario):
@@ -40,6 +45,19 @@ def _tool_proyeccion(usuario):
             'producto': {'type': 'string', 'maxLength': MAX_LARGO_PRODUCTO, 'description': 'SKU, id o nombre del producto (basta una parte del nombre).'},
             'formato': {'type': 'string', 'enum': list(generadores.FORMATOS), 'description': 'Opcional. Solo si piden un reporte visual o con gráfico: xlsx (Excel), docx (Word), pptx (PowerPoint).'},
         }, 'required': ['producto'], 'additionalProperties': False}}}]
+
+
+def _tool_factura(usuario):
+    # Mismo permiso que el botón de emitir (Administrador y Finanzas) y, además, poder leer las obras para ubicarla.
+    if not (tablas.tiene(usuario, ['facturacion.emitir']) and tablas.puede_leer(usuario, 'obras')):
+        return []
+    return [{'type': 'function', 'function': {
+        'name': NOMBRE_FACTURA,
+        'description': ('Lleva a la persona hasta la obra cuya factura electrónica quiere emitir, para que la REVISE y pulse ella misma «Emitir». Esta herramienta NO emite nada. '
+                        'Úsala cuando digan «quiero emitir/hacer/preparar la factura de…».'),
+        'parameters': {'type': 'object', 'properties': {
+            'trabajo': {'type': 'string', 'maxLength': MAX_LARGO_TRABAJO, 'description': 'Código de la obra (OB-0003), parte de su nombre o el cliente.'},
+        }, 'required': ['trabajo'], 'additionalProperties': False}}}]
 
 
 def _tool_compra(usuario):
@@ -139,7 +157,31 @@ def _compra(usuario, args):
     return {'ok': True, 'texto': resumen, '_calculo': resumen, 'nota': 'Borrador listo; el botón de descarga se le muestra al usuario solo. No escribas ni inventes enlaces.'}, _archivo(info)
 
 
-_MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra}
+def _preparar_factura(usuario, args):
+    """Ubica la obra y devuelve a dónde llevar a la persona (`_navegacion`). JAMÁS emite: la emisión es un clic humano en la pantalla de la obra."""
+    trabajo = args.get('trabajo')
+    if not isinstance(trabajo, str) or not trabajo.strip() or len(trabajo) > MAX_LARGO_TRABAJO:
+        return {'ok': False, 'error': 'Indica el código, el nombre o el cliente de la obra (máx. 120 caracteres).'}, None
+    r = busqueda_obras.buscar_para_facturar(usuario, trabajo)
+    if r.estado == 'ninguno':
+        return {'ok': False, 'error': f'No encontré ninguna obra que coincida con «{trabajo.strip()[:40]}». Pídele el código (OB-0000), el nombre o el cliente.'}, None
+    if r.estado == 'varios':
+        return {'ok': False, 'error': f'Hay varias obras que coinciden: {"; ".join(c.rotulo for c in r.lista)}. Pídele al usuario que indique cuál.'}, None
+    c = r.obra
+    estado = {'facturable': 'Finalizada y lista para facturar (aún NO emitida).', 'emitida': f'Ya tiene factura electrónica emitida (folio {c.folio}).',
+              'no_facturable': f'Todavía no se puede facturar: {c.detalle}'}[c.situacion]
+    lineas = [f'Obra: {c.id} · {c.nombre}', f'Cliente: {c.cliente}', f'Estado: {estado}']
+    if c.situacion != 'no_facturable':
+        lineas.append(f'Neto: {_clp(c.neto)} · IVA: {_clp(c.iva)} · Total: {_clp(c.total)}')
+    texto = '\n'.join(lineas)
+    nota = ('La persona será llevada a la pantalla de esa obra para revisar y pulsar ella misma «Emitir Factura Electrónica (SII)». NO se emitió nada: '
+            'nunca digas que la factura quedó emitida.' if c.situacion == 'facturable' else 'Se lleva a la persona a la obra para que vea su estado. NO se emitió nada.')
+    logger.info('ai_preparar_factura user=%s rol=%s obra=%s situacion=%s', usuario.pk, usuario.role, c.id, c.situacion)
+    # La ruta la arma el servidor con un id ya validado (nunca con texto del modelo); `ancla` pide bajar hasta la tarjeta de facturación.
+    return {'ok': True, 'texto': texto, '_calculo': texto, 'nota': nota, '_navegacion': {'ruta': f'/erp/obras/{c.id}', 'ancla': 'facturacion', 'etiqueta': f'la obra {c.id}'}}, None
+
+
+_MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra, NOMBRE_FACTURA: _preparar_factura}
 
 
 def ejecutar(usuario, nombre, argumentos_json):

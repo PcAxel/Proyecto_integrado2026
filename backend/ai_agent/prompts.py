@@ -165,11 +165,20 @@ COMPRAS CRÍTICAS (herramienta generar_borrador_compra_critico):
 - Avisa en una frase que el borrador está listo y resume lo que dice el resultado, sin cambiar cifras. No escribas enlaces: el botón de descarga aparece solo."""
 
 
-def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None, con_stock: bool = False, con_compras: bool = False) -> str:
+PROMPT_FACTURA = """
+
+PREPARAR UNA FACTURA (herramienta preparar_factura):
+- Si piden emitir, hacer o preparar la factura de un trabajo, llama a la herramienta con lo que dijeron (código OB-0000, nombre de la obra o cliente).
+- TÚ NO EMITES FACTURAS. La herramienta solo lleva a la persona hasta esa obra: allí ella revisa los datos y pulsa «Emitir Factura Electrónica (SII)». Nunca digas que la factura ya se emitió.
+- Dile en una frase a dónde la llevas y que revise antes de emitir. Si la obra aún no se puede facturar o ya tiene factura, cuéntaselo con las palabras del resultado.
+- Si hay varias obras que coinciden o ninguna, pide que precise el código; no adivines."""
+
+
+def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None, con_stock: bool = False, con_compras: bool = False, con_factura: bool = False) -> str:
     """Prompt de conversación + reglas de solo lectura + catálogo de pantallas que este usuario puede abrir (+ reportes si su rol los tiene)."""
     from django.utils import timezone
     hoy = hoy or timezone.localdate()
     lista = '\n'.join(f'- {r["ruta"]}: {r["label"]}{" [admite búsqueda]" if r.get("buscable") else ""}' for r in rutas) or '- (ninguna: responde solo con accion "ninguna")'
     reportes = PROMPT_REPORTES.replace('{hoy}', hoy.isoformat()) if con_reportes else ''
-    reportes += (PROMPT_STOCK if con_stock else '') + (PROMPT_COMPRAS if con_compras else '')
+    reportes += (PROMPT_STOCK if con_stock else '') + (PROMPT_COMPRAS if con_compras else '') + (PROMPT_FACTURA if con_factura else '')
     return f'{system_prompt_chat(rol)}{PROMPT_AGENTE}{reportes}\n\nPANTALLAS DISPONIBLES PARA ESTE USUARIO:\n{lista}'

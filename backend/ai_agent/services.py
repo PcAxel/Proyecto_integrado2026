@@ -135,7 +135,7 @@ def conversar(usuario, rol, historial, rutas=()):
     tools = herramientas.herramientas_para(usuario)
     nombres = {t['function']['name'] for t in tools}
     mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas, con_reportes=herramientas.NOMBRE_REPORTE in nombres, con_stock=herramientas.NOMBRE_PROYECCION in nombres,
-                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres)},
+                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres, con_factura=herramientas.NOMBRE_FACTURA in nombres)},
                 *({'role': m['role'], 'content': m['content']} for m in historial)]
     if tools:
         return _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools)
@@ -168,20 +168,24 @@ def _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools):
 
     seguimiento = [*mensajes, {'role': 'assistant', 'content': msg.content or '', 'tool_calls': [
         {'id': tc.id, 'type': 'function', 'function': {'name': tc.function.name, 'arguments': tc.function.arguments}} for tc in llamadas]}]
-    archivo = calculo = None
+    archivo = calculo = navegacion = None
     for tc in llamadas:
         resultado, archivo = herramientas.ejecutar(usuario, tc.function.name, tc.function.arguments)
         calculo = resultado.pop('_calculo', None)  # el texto calculado va tal cual al chat; al modelo le llega en `texto`
+        navegacion = resultado.pop('_navegacion', None)  # destino que fijó el servidor (el modelo no lo ve ni lo escribe)
         seguimiento.append({'role': 'tool', 'tool_call_id': tc.id, 'content': json.dumps(resultado, ensure_ascii=False)})
     try:
         crudo = _completar(usuario, rol, 'chat', seguimiento, json_mode=False, temperature=0.4, max_tokens=settings.AI_MAX_TOKENS_CHAT)
         salida = interpretar_respuesta_agente(crudo, rutas)
     except ServicioIAError as e:
-        if (archivo is None and calculo is None) or e.code not in ('ai_empty', 'ai_timeout'):
+        if (archivo is None and calculo is None and navegacion is None) or e.code not in ('ai_empty', 'ai_timeout'):
             raise
         salida = {'respuesta_texto': '', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
     if calculo:
         salida['calculo'] = calculo
+    if navegacion:  # el destino lo decide el servidor: se impone aunque el modelo haya contestado otra cosa
+        texto = salida['respuesta_texto'] if salida['respuesta_texto'] not in ('', 'Listo.') else 'Te llevo a la obra para que revises los datos y emitas tú la factura.'
+        return {**salida, 'respuesta_texto': texto, 'accion': 'navegar', 'ruta': navegacion['ruta'], 'ancla': navegacion['ancla'], 'etiqueta': navegacion['etiqueta'], 'termino_busqueda': None}
     if archivo:
         # Con un archivo listo no se navega: el aviso y el enlace son la respuesta. El texto lo escribe el modelo; si falla, hay uno de reserva.
         texto = salida['respuesta_texto'] if salida['respuesta_texto'] not in ('', 'Listo.') else 'Aquí tienes tu reporte.'

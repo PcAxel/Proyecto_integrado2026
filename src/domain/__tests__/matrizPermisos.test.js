@@ -13,7 +13,7 @@ describe('segregación de funciones', () => {
   it('Administrador General: gestiona usuarios y autoriza, pero no ejecuta', () => {
     expect(permisosDe(ROLES.ADMIN_GENERAL, 'operativa')).toEqual([])
     expect(permisosDe(ROLES.ADMIN_GENERAL, 'sistema').sort()).toEqual(['usuarios.crear', 'usuarios.editar'])
-    expect(permisosDe(ROLES.ADMIN_GENERAL, 'aprobacion').sort()).toEqual(['conteo.aprobar', 'obras.cerrar', 'presupuestos.aprobar'])
+    expect(permisosDe(ROLES.ADMIN_GENERAL, 'aprobacion').sort()).toEqual(['conteo.aprobar', 'facturacion.emitir', 'obras.cerrar', 'presupuestos.aprobar'])
     for (const a of ['cardex.crear', 'cardex.reversar', 'compras.registrar', 'articulos.gestionar', 'hojas.auditar', 'personal.editar', 'maestros.gestionar', 'presupuestos.crear', 'obras.crear', 'pwa.usar']) {
       expect(can('ADMIN_GENERAL', a)).toBe(false)
     }

@@ -7,8 +7,8 @@
 
 | Rol | Código | Qué hace | Lectura | Aprobación | Operativas | Sistema |
 | --- | --- | --- | :-: | :-: | :-: | :-: |
-| **Administrador** | `ADMIN_GENERAL` | Autoriza y supervisa: aprueba presupuestos con margen bajo, cierra obras, ve toda la gestión y administra los accesos. No ejecuta tareas operativas. | 18 | 3 | 0 | 2 |
-| **Finanzas** | `ADMINISTRACION` | Presupuestos, compras, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 15 | 2 | 5 | 0 |
+| **Administrador** | `ADMIN_GENERAL` | Autoriza y supervisa: aprueba presupuestos con margen bajo, cierra obras, ve toda la gestión y administra los accesos. No ejecuta tareas operativas. | 18 | 4 | 0 | 2 |
+| **Finanzas** | `ADMINISTRACION` | Presupuestos, compras, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 15 | 3 | 5 | 0 |
 | **Bodega** | `BODEGA` | Artículos, Cardex, compras y solicitudes de retiro. | 8 | 0 | 6 | 0 |
 | **Operaciones** | `SUPERVISOR` | Obras, CU30, auditoría de hojas de terreno y presupuestos. | 11 | 1 | 10 | 0 |
 | **Técnico** | `TECNICO` | Solo la app de terreno: hojas de servicio y retiro de materiales. | 0 | 0 | 2 | 0 |
@@ -40,6 +40,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Bodega | `conteo.aprobar` | Aprobación | Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó) | ✅ | ✅ | — | — | — | — | — |
 | Compras | `compras.ver` | Lectura | Ver facturas de compra y notas de crédito | ✅ | ✅ | ✅ | ✅ | — | ✅ | — |
 | Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | ✅ | — | — | — |
+| Facturación | `facturacion.emitir` | Aprobación | Emitir la factura electrónica (DTE, SII) de una obra finalizada y descargar su PDF | ✅ | ✅ | — | — | — | — | — |
 | Auditoría de terreno | `terreno.ver` | Lectura | Ver las hojas de servicio enviadas desde la app móvil | ✅ | ✅ | — | ✅ | — | ✅ | — |
 | Auditoría de terreno | `hojas.auditar` | Operativa | Aprobar o devolver hojas de servicio | — | — | — | ✅ | — | — | — |
 | Personal y Flota | `personal.ver` | Lectura | Ver fichas, tarifas, vehículos y vencimientos | ✅ | ✅ | — | — | — | ✅ | ✅ |
@@ -76,7 +77,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Administración (Finanzas) y el Administrador General ya no lo modifican |
 | ✅ | Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera | rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración |
 | ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 39 acciones catalogadas |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 40 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)

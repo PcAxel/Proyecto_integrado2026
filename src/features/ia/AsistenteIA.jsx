@@ -106,7 +106,7 @@ function TextoMarkdown({ texto }) {
 }
 
 /** Conversación abierta. El historial vive solo aquí (en memoria): no se guarda ni en el navegador ni en el servidor. */
-function Conversacion({ activo }) {
+function Conversacion({ activo, onCerrar }) {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const [mensajes, setMensajes] = useState(() => [mensajeBienvenida()])
@@ -135,9 +135,10 @@ function Conversacion({ activo }) {
       // Solo lectura: el servidor propone una pantalla o una búsqueda; aquí se vuelve a validar y recién entonces se navega.
       const catalogo = catalogoDeRutas(user)
       const r = await iaService.conversar(historialParaEnviar(lista), catalogo)
-      const accion = resolverAccion(r, catalogo)
+      const accion = resolverAccion(r, catalogo, user.rol)
       setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion, archivo: r.archivo ?? null, calculo: r.calculo ?? null }])
       if (accion) navigate(accion.url)
+      if (accion?.ancla) onCerrar?.() // la tarjeta de facturación queda abajo a la derecha, justo donde está el chat: se esconde (la conversación se conserva)
     } catch (err) {
       setError(mensajeErrorIA(err))
       setTexto(nuevo.content) // no se pierde lo escrito: se puede reenviar
@@ -285,11 +286,12 @@ export function AsistenteIA({ posicion = 'fijo' }) {
 
   return (
     <>
-      {abierto && (
+      {/* Siempre montado y oculto al cerrar: así la conversación no se pierde al cerrar el asistente. */}
+      {(
         <section
-          role="dialog" aria-label="Asistente de IA"
+          role="dialog" aria-label="Asistente de IA" aria-hidden={!abierto}
           className={cn(
-            'z-30 flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-pop',
+            'z-30 flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-pop', !abierto && 'hidden',
             marco ? 'absolute inset-x-3 bottom-20 h-[78%]' : 'fixed bottom-24 right-4 h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] sm:right-6',
           )}
         >
@@ -300,7 +302,7 @@ export function AsistenteIA({ posicion = 'fijo' }) {
           </header>
           {tarea && <div role="tablist" className="flex border-b border-line bg-white">{pestana('chat', 'Conversar')}{pestana('tarea', TAREAS_IA[tarea].corto)}</div>}
           {/* Conversacion queda montada aunque se cambie de pestaña: no se pierde lo hablado */}
-          <div className={cn('min-h-0 flex-1 flex-col', modo === 'chat' ? 'flex' : 'hidden')}><Conversacion activo={abierto && modo === 'chat'} /></div>
+          <div className={cn('min-h-0 flex-1 flex-col', modo === 'chat' ? 'flex' : 'hidden')}><Conversacion activo={abierto && modo === 'chat'} onCerrar={() => setAbierto(false)} /></div>
           {tarea && modo === 'tarea' && <div className="flex min-h-0 flex-1 flex-col overflow-y-auto"><PanelTarea tarea={tarea} onUsarFactura={usarEnFactura} /></div>}
         </section>
       )}

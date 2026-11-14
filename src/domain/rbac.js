@@ -62,6 +62,7 @@ export const CATALOGO_PERMISOS = {
   'conteo.registrar': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Registrar conteos físicos de inventario (conteo ciego)' },
   'conteo.aprobar': { tipo: 'aprobacion', modulo: 'Bodega', descripcion: 'Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó)' },
   'compras.ver': { tipo: 'lectura', modulo: 'Compras', descripcion: 'Ver facturas de compra y notas de crédito' },
+  'facturacion.emitir': { tipo: 'aprobacion', modulo: 'Facturación', descripcion: 'Emitir la factura electrónica (DTE, SII) de una obra finalizada y descargar su PDF' },
   'compras.registrar': { tipo: 'operativa', modulo: 'Compras', descripcion: 'Registrar facturas (hasta 3 descuentos) y notas de crédito' },
   'terreno.ver': { tipo: 'lectura', modulo: 'Auditoría de terreno', descripcion: 'Ver las hojas de servicio enviadas desde la app móvil' },
   'hojas.auditar': { tipo: 'operativa', modulo: 'Auditoría de terreno', descripcion: 'Aprobar o devolver hojas de servicio' },
@@ -124,6 +125,7 @@ export const PERMISOS = {
   'presupuestos.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'obras.cerrar': ['ADMIN_GENERAL', 'SUPERVISOR'],
   'conteo.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
+  'facturacion.emitir': ['ADMIN_GENERAL', 'ADMINISTRACION'],
 
   // ── Operativas ──
   'presupuestos.crear': ['ADMINISTRACION', 'SUPERVISOR'],
