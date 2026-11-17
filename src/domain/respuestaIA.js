@@ -15,7 +15,11 @@ export function normalizarRespuestaIA(contenido, opcionesExtra = []) {
         const propias = limpiarOpciones(d.opciones)
         return { texto: d.respuesta_texto, opciones: propias.length ? propias : aparte }
       }
-    } catch { /* no era JSON: se muestra como texto normal */ }
+    } catch { /* JSON roto (p. ej. comillas sin escapar en otro campo): se intenta rescatar solo el mensaje */ }
+    const m = /^\{\s*"respuesta_texto"\s*:\s*"((?:[^"\\]|\\.)*)"\s*[,}]/s.exec(crudo)
+    if (m) {
+      try { return { texto: JSON.parse(`"${m[1]}"`), opciones: aparte } } catch { /* se muestra tal cual */ }
+    }
   }
   return { texto: contenido, opciones: aparte }
 }

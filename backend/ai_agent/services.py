@@ -104,6 +104,26 @@ def interpretar_respuesta_agente(crudo, rutas):
     return {**_interpretar_base(crudo, rutas), **gobernanza.extras_del_modelo(crudo)}
 
 
+def _reparar_json_modelo(texto):
+    """JSON casi válido del modelo (típico: comillas sin escapar en `termino_busqueda`, como 1/2\"). Se rescatan los campos conocidos;
+    después pasan por las mismas validaciones. None si no se puede rescatar `respuesta_texto`."""
+    m = re.search(r'"respuesta_texto"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"accion"', texto, re.S)
+    if not m:
+        return None
+    try:
+        datos = {'respuesta_texto': json.loads(f'"{m.group(1)}"')}
+    except ValueError:
+        return None
+    for campo in ('accion', 'ruta'):
+        f = re.search(rf'"{campo}"\s*:\s*"([^"]*)"', texto)
+        if f:
+            datos[campo] = f.group(1)
+    f = re.search(r'"termino_busqueda"\s*:\s*"(.*?)"\s*[,}]\s*(?:"[a-z_]+"\s*:|$)', texto, re.S)
+    if f:
+        datos['termino_busqueda'] = f.group(1).replace('\\"', '"')
+    return datos
+
+
 def _interpretar_base(crudo, rutas):
     """Convierte la salida del modelo en una acción segura. Nada de lo que diga el modelo se acepta sin validar:
     la acción debe ser conocida, la ruta debe estar en la lista que el usuario puede abrir y el término se limpia.
@@ -116,6 +136,8 @@ def _interpretar_base(crudo, rutas):
     try:
         datos = json.loads(texto)
     except ValueError:
+        datos = _reparar_json_modelo(texto)
+    if datos is None:
         if texto.startswith('{'):  # JSON cortado o roto: no se le muestran llaves al usuario
             return {'respuesta_texto': 'No pude interpretar mi propia respuesta. ¿Me lo preguntas de nuevo?', **sin_accion}
         return {'respuesta_texto': crudo[:settings.AI_MAX_CHARS_RESPUESTA_CHAT], **sin_accion}

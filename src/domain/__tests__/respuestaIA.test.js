@@ -16,4 +16,8 @@ describe('normalizarRespuestaIA', () => {
     expect(normalizarRespuestaIA('{"a":1}').texto).toBe('{"a":1}')
     expect(normalizarRespuestaIA('{roto').texto).toBe('{roto')
   })
+  it('rescata el mensaje de un JSON roto por comillas sin escapar en otro campo', () => {
+    const roto = '{"respuesta_texto": "Te llevo a Bodega.\\n\\nTiene 157 unidades de 1/2\\" flare.", "accion": "buscar", "ruta": "/erp/bodega", "termino_busqueda": "Adaptador 1/2""}'
+    expect(normalizarRespuestaIA(roto).texto).toBe('Te llevo a Bodega.\n\nTiene 157 unidades de 1/2" flare.')
+  })
 })

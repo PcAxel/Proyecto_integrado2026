@@ -8,8 +8,10 @@ import httpx2 as httpx  # la versión instalada de openai usa httpx2
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import override_settings
+from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
+
+from ai_agent.services import interpretar_respuesta_agente
 from openai import APIConnectionError, APIStatusError, APITimeoutError, RateLimitError
 from PIL import Image
 from rest_framework.throttling import SimpleRateThrottle
@@ -527,3 +529,21 @@ class RespuestaVaciaTests(AgenteBase):
         f = self.ia(error=RateLimitError('x', response=httpx.Response(429, request=httpx.Request('POST', 'https://api.deepseek.com')), body=None))
         self.assertEqual(self.chat().status_code, 503)
         self.assertEqual(len(f.llamadas), 1)
+
+
+class JsonRotoDelModeloTests(SimpleTestCase):
+    """Comillas sin escapar en `termino_busqueda` (1/2") rompen el JSON: se rescata el mensaje, nunca se muestran llaves."""
+    RUTAS = [{'ruta': '/erp/bodega', 'buscable': True}]
+    CRUDO = ('{"respuesta_texto": "Te llevo a Bodega.\\n\\nAdaptador 1/2\\" (SKU AHF-003) tiene 157 unidades.", "accion": "buscar", '
+             '"ruta": "/erp/bodega", "termino_busqueda": "Adaptador hembra flare de cobre 1/2""}')
+
+    def test_rescata_texto_y_accion(self):
+        r = interpretar_respuesta_agente(self.CRUDO, self.RUTAS)
+        self.assertTrue(r['respuesta_texto'].startswith('Te llevo a Bodega.'))
+        self.assertNotIn('{', r['respuesta_texto'])
+        self.assertEqual((r['accion'], r['ruta']), ('buscar', '/erp/bodega'))
+        self.assertEqual(r['termino_busqueda'], 'Adaptador hembra flare de cobre 1/2"')
+
+    def test_json_irrecuperable_no_muestra_llaves(self):
+        r = interpretar_respuesta_agente('{"respuesta_texto": "corta', self.RUTAS)
+        self.assertNotIn('{', r['respuesta_texto'])
