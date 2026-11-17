@@ -1,4 +1,5 @@
 import mimetypes
+from datetime import date
 
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -21,9 +22,12 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts.models import CustomUser, Role
+from ai_agent.throttles import IADiarioThrottle, IARafagaThrottle
 
 from .models import Contrato, DocumentoLaboral, DocumentoRRHH, FichaTrabajador, Finiquito
-from . import sellado
+from . import analitica, sellado
+from . import cumplimiento as cu
+from .permissions import PuedeVerCumplimiento
 from .permissions import AccionesPorRol, acciones
 from .serializers import (CalculoSerializer, ContratoSerializer, FichaTrabajadorSerializer, DocumentoLaboralSerializer, DocumentoSerializer, FirmaSerializer, MiDocumentoSerializer, FiniquitoSerializer, PersonalSerializer,
                           serializer_de_edicion)
@@ -47,7 +51,7 @@ class ContratoViewSet(viewsets.ModelViewSet):
     """RR. HH. y Admin: CRUD. Finanzas: solo lectura. Un contrato finiquitado no se toca ni se borra."""
     serializer_class = ContratoSerializer
     permission_classes = [AccionesPorRol]
-    acciones_por_rol = {Role.ADMIN: CRUD, Role.RRHH: CRUD, Role.FINANZAS: LECTURA}
+    acciones_por_rol = {Role.ADMIN: CRUD | {'renovar'}, Role.RRHH: CRUD | {'renovar'}, Role.FINANZAS: LECTURA, Role.AUDITOR: LECTURA}
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
@@ -55,6 +59,53 @@ class ContratoViewSet(viewsets.ModelViewSet):
         if emp := self.request.query_params.get('empleado'):
             qs = qs.filter(empleado_id=emp)
         return qs
+
+    def create(self, request, *args, **kwargs):
+        """Antes de crear un plazo fijo se revisa el historial de la persona (art. 159 N°4). Si el nuevo contrato la deja en riesgo de
+        contrato indefinido se responde 409 con la evaluación; RR. HH. puede insistir enviando `confirmar_riesgo_legal: true`."""
+        s = self.get_serializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        empleado = s.validated_data['empleado']
+        if getattr(getattr(empleado, 'ficha', None), 'tipo_contrato', None) == cu.PLAZO_FIJO:
+            previos = [cu.periodo_de(c) for c in Contrato.objects.filter(empleado=empleado).select_related('empleado__ficha', 'finiquito')]
+            ev = cu.evaluar_recontratacion(previos, timezone.localdate(), s.validated_data['fecha_inicio'], s.validated_data.get('fecha_termino'))
+            if ev['nivel'] != cu.SIN_RIESGO and request.data.get('confirmar_riesgo_legal') is not True:
+                return Response({'detail': ev['mensajes'][0], 'code': 'riesgo_indefinido', 'evaluacion': ev}, status=status.HTTP_409_CONFLICT)
+        s.save()
+        return Response(s.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def renovar(self, request, pk=None):
+        """POST /api/rrhh/contratos/<id>/renovar/ {"fecha_termino": "AAAA-MM-DD"} — renueva un plazo fijo y cuenta la renovación.
+
+        La PRIMERA renovación se registra sin más. La SEGUNDA convierte el contrato en indefinido por ley: se responde 409 con la
+        advertencia y solo se ejecuta con `aceptar_indefinido: true`, que deja el contrato y la ficha como INDEFINIDO, sin fecha de término."""
+        c = self.get_object()
+        if c.estado != Contrato.Estado.ACTIVO:
+            raise ValidationError('Solo se renueva un contrato activo.')
+        if c.tipo_contrato != cu.PLAZO_FIJO:
+            raise ValidationError('Solo los contratos a plazo fijo se renuevan.')
+        if c.numero_renovacion >= 1:
+            if request.data.get('aceptar_indefinido') is not True:
+                return Response({'detail': cu.ADVERTENCIA_RENOVACION, 'code': 'segunda_renovacion'}, status=status.HTTP_409_CONFLICT)
+            with transaction.atomic():
+                FichaTrabajador.objects.filter(usuario=c.empleado).update(tipo_contrato=cu.INDEFINIDO, actualizado_por=request.user)
+                c.empleado.ficha.tipo_contrato = cu.INDEFINIDO
+                c.numero_renovacion += 1
+                c.fecha_termino = None
+                c.save(update_fields=['numero_renovacion', 'fecha_termino'])
+            return Response(self.get_serializer(c).data)
+        try:
+            nueva = date.fromisoformat(str(request.data.get('fecha_termino')))
+        except ValueError:
+            raise ValidationError({'fecha_termino': 'Indica la nueva fecha de término (AAAA-MM-DD).'})
+        if not c.fecha_termino or nueva <= c.fecha_termino:
+            raise ValidationError({'fecha_termino': 'La nueva fecha debe ser posterior al término actual.'})
+        if (nueva - c.fecha_inicio).days + 1 > cu.DIAS_MAX_PLAZO_FIJO:
+            raise ValidationError({'fecha_termino': 'Con esa fecha el plazo fijo supera un año: la ley lo considera indefinido.'})
+        c.fecha_termino, c.numero_renovacion = nueva, c.numero_renovacion + 1
+        c.save(update_fields=['fecha_termino', 'numero_renovacion'])
+        return Response(self.get_serializer(c).data)
 
     def perform_destroy(self, c):
         if c.estado == Contrato.Estado.FINIQUITADO or hasattr(c, 'finiquito'):
@@ -96,6 +147,7 @@ class FiniquitoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.
         Role.ADMIN: CRUD | {'calcular', 'comprobante'},
         Role.RRHH: acciones('list', 'retrieve', 'create', 'partial_update', 'calcular', 'comprobante'),
         Role.FINANZAS: acciones('list', 'retrieve', 'partial_update', 'comprobante'),
+        Role.AUDITOR: acciones('list', 'retrieve', 'comprobante'),  # revisión de cumplimiento: solo lectura
     }
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
@@ -239,6 +291,57 @@ class MisDocumentosViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vie
     @action(detail=True, methods=['get'])
     def firmado(self, request, pk=None):
         return entregar(self.get_object().archivo_firmado)
+
+
+class _Cumplimiento(APIView):
+    """Cumplimiento laboral y rotación: lectura para RR. HH., Gerencia General y Auditor Externo (acción `cumplimiento.ver`)."""
+    permission_classes = [PuedeVerCumplimiento]
+
+
+class PanelCumplimientoView(_Cumplimiento):
+    """GET /api/rrhh/cumplimiento/ — KPIs de rotación, semáforo de plazo fijo, alertas y lista de personas."""
+
+    def get(self, request):
+        return Response(analitica.panel(timezone.localdate()))
+
+
+class HistorialContratacionesView(_Cumplimiento):
+    """GET /api/rrhh/cumplimiento/historial/<id>/ — línea de tiempo de una persona: contratos, días trabajados, lagunas y ventana segura."""
+
+    def get(self, request, pk):
+        per = analitica.persona_por(empleado=pk)
+        if per is None:
+            raise NotFound('Esta persona no tiene contratos registrados.')
+        return Response(analitica.historial(per, timezone.localdate()))
+
+
+class EvaluarRecontratacionView(_Cumplimiento):
+    """GET /api/rrhh/cumplimiento/evaluar/?rut=12345678-5&fecha_inicio=&fecha_termino= (o ?empleado=<id>) — ¿se puede recontratar a plazo fijo?"""
+
+    def get(self, request):
+        q = request.query_params
+        per = analitica.persona_por(empleado=q.get('empleado'), rut=q.get('rut')) if (q.get('empleado') or '').isdigit() or q.get('rut') else None
+        if per is None:
+            raise NotFound('No hay historial de contratos para ese trabajador.')
+        try:
+            inicio = date.fromisoformat(q['fecha_inicio']) if q.get('fecha_inicio') else None
+            termino = date.fromisoformat(q['fecha_termino']) if q.get('fecha_termino') else None
+        except ValueError:
+            raise ValidationError('Las fechas van como AAAA-MM-DD.')
+        hoy = timezone.localdate()
+        return Response({'id': per['id'], 'nombre': per['nombre'], 'rut': per['rut'], **cu.tiempos(per['periodos'], hoy),
+                         'evaluacion': cu.evaluar_recontratacion(per['periodos'], hoy, inicio, termino)})
+
+
+class ReporteRotacionIAView(_Cumplimiento):
+    """GET /api/rrhh/ia-reporte-rotacion/ — Informe Ejecutivo de Rotación y Riesgo Laboral en Markdown.
+
+    Con clave de IA lo redacta DeepSeek a partir de las métricas (sin nombres ni RUT: viajan códigos y el servidor repone los nombres);
+    sin clave, o si el proveedor falla, lo genera el motor analítico del sistema. Es de solo lectura y consume cupo de IA."""
+    throttle_classes = [IARafagaThrottle, IADiarioThrottle]
+
+    def get(self, request):
+        return Response(analitica.informe_rotacion(request.user, timezone.localdate()))
 
 
 class FirmarDocumentoView(APIView):

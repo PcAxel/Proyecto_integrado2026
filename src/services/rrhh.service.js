@@ -13,7 +13,19 @@ export const rrhhService = {
   crearFicha: (datos) => api.post('/rrhh/fichas/', datos),
   actualizarFicha: (id, datos) => api.patch(`/rrhh/fichas/${id}/`, datos),
   contratos: () => api.get('/rrhh/contratos/'),
+  /** Un plazo fijo que deja a la persona en riesgo de contrato indefinido responde 409 (`riesgo_indefinido`) con la evaluación;
+   *  para insistir se reenvía con `confirmar_riesgo_legal: true`. */
   crearContrato: (datos) => api.post('/rrhh/contratos/', datos),
+  /** Renueva un plazo fijo. La 2ª renovación responde 409 (`segunda_renovacion`) y solo procede con `aceptar_indefinido: true`. */
+  renovarContrato: (id, datos) => api.post(`/rrhh/contratos/${id}/renovar/`, datos),
+
+  // ── Cumplimiento laboral (art. 159 N°4) y rotación: lectura para RR. HH., Gerencia General y Auditor Externo ──
+  /** KPIs de rotación, semáforo de plazo fijo, alertas y personas. */
+  cumplimiento: () => api.get('/rrhh/cumplimiento/'),
+  /** Línea de tiempo de una persona: contratos, días trabajados, lagunas y ventana segura de recontratación. */
+  historialContrataciones: (id) => api.get(`/rrhh/cumplimiento/historial/${id}/`),
+  /** Informe Ejecutivo de Rotación y Riesgo Laboral (Markdown). Con IA si el servidor la tiene; si no, con su motor analítico. */
+  reporteRotacion: () => api.get('/rrhh/ia-reporte-rotacion/'),
   documentos: (empleado) => api.get(`/rrhh/documentos/${empleado ? `?empleado=${empleado}` : ''}`),
   /** @param {{empleado:number, tipo_documento:string, archivo_pdf:File, fecha_emision?:string}} d */
   subirDocumento(d) {

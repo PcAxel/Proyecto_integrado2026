@@ -13,4 +13,12 @@ router.register('rrhh/finiquitos', views.FiniquitoViewSet, basename='rrhh-finiqu
 router.register('rrhh/documentos-laborales', views.DocumentoLaboralViewSet, basename='rrhh-docs-laborales')
 router.register('rrhh/mis-documentos', views.MisDocumentosViewSet, basename='rrhh-mis-documentos')
 
-urlpatterns = [path('rrhh/firmar-documento/<int:pk>/', views.FirmarDocumentoView.as_view()), *router.urls]
+urlpatterns = [
+    path('rrhh/firmar-documento/<int:pk>/', views.FirmarDocumentoView.as_view()),
+    # Cumplimiento laboral (art. 159 N°4) y People Analytics
+    path('rrhh/cumplimiento/', views.PanelCumplimientoView.as_view()),
+    path('rrhh/cumplimiento/historial/<int:pk>/', views.HistorialContratacionesView.as_view()),
+    path('rrhh/cumplimiento/evaluar/', views.EvaluarRecontratacionView.as_view()),
+    path('rrhh/ia-reporte-rotacion/', views.ReporteRotacionIAView.as_view()),
+    *router.urls,
+]

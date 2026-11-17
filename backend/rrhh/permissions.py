@@ -20,5 +20,17 @@ class AccionesPorRol(BasePermission):
         return getattr(view, 'action', None) in view.acciones_por_rol.get(user.role, ())
 
 
+class PuedeVerCumplimiento(BasePermission):
+    """Acción `cumplimiento.ver` de la matriz de permisos (RR. HH., Gerencia General y Auditor Externo)."""
+
+    def has_permission(self, request, view):
+        from erp import tablas
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        require_terms(user)
+        return tablas.tiene(user, ['cumplimiento.ver'])
+
+
 def acciones(*nombres):
     return set(nombres)

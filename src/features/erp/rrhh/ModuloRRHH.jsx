@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { FileText, FilePlus2, Download, Calculator } from 'lucide-react'
+import { FileText, FilePlus2, Download, Calculator, ShieldAlert, Scale } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PageHeader, Button, Card, DataTable, Modal, Input, Select, Badge, Mono, Tabs } from '@/components/ui'
+import { botonClases } from '@/components/ui/Button'
 import { ErrorEstado } from '@/components/ErrorEstado'
 import { useResource } from '@/hooks/useResource'
 import { useAuthStore } from '@/stores/authStore'
@@ -84,21 +86,25 @@ function ContratoModal({ persona, onClose, onSaved }) {
   const [f, setF] = useState({ fecha_inicio: fechaLocal(), fecha_termino: '', sueldo_base: '' })
   const [errores, setErrores] = useState({})
   const [guardando, setGuardando] = useState(false)
-  const set = (k) => (ev) => setF({ ...f, [k]: ev.target.value })
+  const [riesgo, setRiesgo] = useState(null) // evaluación del art. 159 N°4 que devolvió el servidor al intentar crear
+  const set = (k) => (ev) => { setF({ ...f, [k]: ev.target.value }); setRiesgo(null) }
   const guardar = async (ev) => {
     ev.preventDefault()
     setGuardando(true)
     setErrores({})
     try {
-      await rrhhService.crearContrato({ empleado: persona.id, ...f, fecha_termino: f.fecha_termino || null })
+      await rrhhService.crearContrato({ empleado: persona.id, ...f, fecha_termino: f.fecha_termino || null, ...(riesgo ? { confirmar_riesgo_legal: true } : {}) })
       toast.success(`Contrato creado para ${persona.nombre}.`)
       onSaved()
       onClose()
-    } catch (err) { setErrores(errorDe(err)) } finally { setGuardando(false) }
+    } catch (err) {
+      if (err.code === 'riesgo_indefinido' && err.data?.evaluacion) setRiesgo(err.data.evaluacion)
+      else setErrores(errorDe(err))
+    } finally { setGuardando(false) }
   }
   return (
     <Modal open onClose={onClose} title={`Nuevo contrato · ${persona.nombre}`}
-      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-contrato" loading={guardando}>Crear contrato</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-contrato" variant={riesgo ? 'danger' : 'primary'} loading={guardando}>{riesgo ? 'Crear de todos modos' : 'Crear contrato'}</Button></>}>
       <form id="form-contrato" onSubmit={guardar} className="space-y-4">
         {/* El tipo de contrato no se elige aquí: sale de la ficha del trabajador (única fuente de verdad). */}
         <div className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm"><span className="text-ink-soft">Tipo de contrato (según su ficha): </span><span className="font-medium">{TIPOS_CONTRATO.find((t) => t.value === persona.tipo_contrato)?.label ?? '—'}</span></div>
@@ -107,6 +113,14 @@ function ContratoModal({ persona, onClose, onSaved }) {
           <Input label="Fecha de término" type="date" required={persona.tipo_contrato === 'PLAZO_FIJO'} value={f.fecha_termino} onChange={set('fecha_termino')} error={errores.fecha_termino} />
         </div>
         <Input label="Sueldo base mensual (CLP)" type="number" min="1" required value={f.sueldo_base} onChange={set('sueldo_base')} error={errores.sueldo_base} />
+        {riesgo && (
+          <div role="alert" className="space-y-2 rounded-lg border border-crit/50 bg-crit-bg p-3 text-sm text-crit">
+            <p className="flex items-center gap-2 font-semibold"><ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />Riesgo de contrato indefinido (art. 159 N°4)</p>
+            <ul className="list-disc space-y-1 pl-5">{riesgo.mensajes.map((m) => <li key={m}>{m}</li>)}</ul>
+            {riesgo.fecha_segura && <p className="font-semibold">Fecha segura para recontratar a plazo fijo: {formatFecha(riesgo.fecha_segura)} ({riesgo.dias_espera} días de espera).</p>}
+            <p className="text-xs">Puedes crear el contrato de todos modos; la decisión queda bajo tu responsabilidad.</p>
+          </div>
+        )}
         {(errores._ || errores.empleado) && <p role="alert" className="text-sm font-medium text-crit">{errores._ ?? errores.empleado}</p>}
       </form>
     </Modal>
@@ -189,7 +203,12 @@ export function ModuloRRHH() {
   return (
     <div className="space-y-6">
       <PageHeader title="Contratos y Finiquitos" description={gestiona ? 'Contratos, documentos laborales y finiquitos. El pago lo registra Finanzas.' : 'Supervisión de contratos, documentos y finiquitos (solo lectura).'}
-        actions={gestiona && tab === 'documentos' ? <Button icon={FileText} onClick={() => setModal({ tipo: 'documento' })} disabled={!personal.data?.length}>Subir documento</Button> : null} />
+        actions={(
+          <>
+            {can(rol, 'cumplimiento.ver') && <Link to="/erp/cumplimiento" className={botonClases('secondary')}><Scale className="h-4 w-4" aria-hidden="true" />Cumplimiento y rotación</Link>}
+            {gestiona && tab === 'documentos' && <Button icon={FileText} onClick={() => setModal({ tipo: 'documento' })} disabled={!personal.data?.length}>Subir documento</Button>}
+          </>
+        )} />
       <Card>
         <Tabs value={tab} onChange={setTab} tabs={[{ id: 'personal', label: 'Personal', count: personal.data?.length }, ...(verFichas ? [{ id: 'fichas', label: 'Fichas', count: personal.data?.filter((p) => !p.ficha_id).length || undefined }] : []), { id: 'documentos', label: 'Documentos', count: documentos.data?.length }, { id: 'finiquitos', label: 'Finiquitos', count: finiquitos.data?.length }]} />
         <div className="pt-2">

@@ -18,9 +18,9 @@ SUELDOS = {'admin@fyag.cl': 2_800_000, 'finanzas@fyag.cl': 1_600_000, 'operacion
            'tecnico@fyag.cl': 950_000, 'rrhh@fyag.cl': 1_400_000}
 # (correo, nombre, apellido, sueldo, inicio, causal, término, días de vacaciones, aviso previo, pagado)
 EX_PERSONAL = [
-    ('camila.fuentes@demo.fyag.cl', 'Camila', 'Fuentes', 1_100_000, date(2021, 3, 1), 'NECESIDADES_EMPRESA', date(2026, 9, 30), '8.5', True, True),
-    ('matias.ibanez@demo.fyag.cl', 'Matías', 'Ibáñez', 980_000, date(2023, 6, 12), 'RENUNCIA', date(2026, 11, 20), '12', True, False),
-    ('daniela.soto@demo.fyag.cl', 'Daniela', 'Soto', 1_250_000, date(2019, 2, 4), 'NECESIDADES_EMPRESA', date(2026, 11, 30), '5', False, False),
+    ('extrabajador01@apex.demo', 'Extrabajador', 'Demo 01', 1_100_000, date(2021, 3, 1), 'NECESIDADES_EMPRESA', date(2026, 9, 30), '8.5', True, True),
+    ('extrabajador02@apex.demo', 'Extrabajador', 'Demo 02', 980_000, date(2023, 6, 12), 'RENUNCIA', date(2026, 11, 20), '12', True, False),
+    ('extrabajador03@apex.demo', 'Extrabajador', 'Demo 03', 1_250_000, date(2019, 2, 4), 'NECESIDADES_EMPRESA', date(2026, 11, 30), '5', False, False),
 ]
 
 
@@ -43,10 +43,56 @@ def _pdf(titulo, lineas):
     for linea in lineas:
         c.drawString(60, y, linea)
         y -= 18
-    c.drawString(60, 90, 'Documento ficticio de demostración · FYAG SpA')
+    c.drawString(60, 90, 'Documento ficticio de demostración · Apex Systems')
     c.showPage()
     c.save()
     return b.getvalue()
+
+
+# ── Cumplimiento laboral (art. 159 N°4) y rotación: casos de demostración con fechas relativas a hoy ──
+MARCA_CUMPLIMIENTO = 'renovacion.demo@apex.demo'
+# (correo, nombre, apellido, sueldo, [(tipo, días atrás de inicio, días atrás de término, motivo)])  — los contratos van del más antiguo al más nuevo
+HISTORIAL_DEMO = [
+    # Ex trabajador con dos contratos a plazo en los últimos 14 meses: un tercero activa la alerta de espera para recontratar.
+    ('recontratacion.demo@apex.demo', 'Recontratación', 'Demo', 890_000, [('PLAZO_FIJO', 410, 262, 'VENCIMIENTO_PLAZO'), ('PLAZO_FIJO', 205, 38, 'VENCIMIENTO_PLAZO')]),
+    # Altas y bajas históricas para que la rotación tenga cifras realistas.
+    ('baja01.demo@apex.demo', 'Baja', 'Demo 01', 870_000, [('PLAZO_FIJO', 500, 318, 'RENUNCIA')]),
+    ('baja04.demo@apex.demo', 'Baja', 'Demo 04', 1_050_000, [('INDEFINIDO', 1300, 215, 'NECESIDADES_EMPRESA')]),
+    ('baja06.demo@apex.demo', 'Baja', 'Demo 06', 930_000, [('INDEFINIDO', 640, 125, 'RENUNCIA')]),
+    ('baja07.demo@apex.demo', 'Baja', 'Demo 07', 860_000, [('PLAZO_FIJO', 260, 80, 'MUTUO_ACUERDO')]),
+]
+
+
+def cargar_demo_cumplimiento():
+    """Idempotente (si ya está la cuenta marcadora no toca nada). Crea:
+    - un trabajador a plazo fijo en su 1ª renovación a punto de vencer (alerta roja);
+    - un ex trabajador con dos contratos a plazo en 14 meses (alerta de espera para recontratar);
+    - cuatro bajas repartidas en el último año, con distintos motivos.
+    Son personas de demostración: cuentas sin contraseña utilizable; las que ya no trabajan quedan desactivadas."""
+    if CustomUser.objects.filter(email=MARCA_CUMPLIMIENTO).exists():
+        return 0
+    hoy, creados = timezone.localdate(), 0
+
+    def persona(n, email, nombre, apellido, tipo, ingreso, activa):
+        u = CustomUser(email=email, first_name=nombre, last_name=apellido, role=Role.TECNICO, is_active=activa)
+        u.set_unusable_password()
+        u.save()
+        f = _ficha(u, n, ingreso)
+        f.tipo_contrato = tipo
+        f.save(update_fields=['tipo_contrato'])
+        return u
+
+    u = persona(40, MARCA_CUMPLIMIENTO, 'Renovación', 'Demo', 'PLAZO_FIJO', hoy - timedelta(days=172), True)
+    Contrato.objects.create(empleado=u, sueldo_base=920_000, fecha_inicio=hoy - timedelta(days=172), fecha_termino=hoy + timedelta(days=9), numero_renovacion=1)
+    creados += 2
+    for n, (email, nombre, apellido, sueldo, contratos) in enumerate(HISTORIAL_DEMO, start=41):
+        u = persona(n, email, nombre, apellido, contratos[-1][0], hoy - timedelta(days=contratos[0][1]), False)
+        for tipo, d_ini, d_fin, motivo in contratos:
+            Contrato.objects.create(empleado=u, sueldo_base=sueldo, fecha_inicio=hoy - timedelta(days=d_ini), fecha_termino=hoy - timedelta(days=d_fin),
+                                    estado=Contrato.Estado.FINIQUITADO, tipo=tipo, motivo_termino=motivo)
+            creados += 1
+        creados += 1
+    return creados
 
 
 def cargar_demo_rrhh():
@@ -82,7 +128,7 @@ def cargar_demo_rrhh():
         f.save()
         creados += 3
     # Un anexo por firmar para el técnico: aparece el aviso en su app.
-    pdf = _pdf('Anexo de contrato de trabajo', ['Entre Frío y Agroindustria SpA y Jorge Quezada se acuerda:', '', '1. Modificar la jornada a 40 horas semanales.',
+    pdf = _pdf('Anexo de contrato de trabajo', ['Entre Empresa Demo SpA y Técnico Demo 01 se acuerda:', '', '1. Modificar la jornada a 40 horas semanales.',
                                                  '2. Mantener las demás cláusulas del contrato.', '', f'Fecha: {hoy:%d-%m-%Y}'])
     d = DocumentoLaboral(trabajador=CustomUser.objects.get(email='tecnico@fyag.cl'), tipo_documento='ANEXO', titulo='Jornada de 40 horas',
                          hash_pdf=sha256(io.BytesIO(pdf)), subido_por=rrhh)

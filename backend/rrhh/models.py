@@ -89,6 +89,12 @@ class Contrato(models.Model):
     # en un índice único: así la base garantiza un solo contrato vigente por empleado.
     vigente = models.BooleanField(null=True, default=True, editable=False)
     creado_en = models.DateTimeField(auto_now_add=True)
+    # ── Historial de contrataciones (art. 159 N°4). Campos retrocompatibles: los contratos anteriores quedan con sus valores por defecto. ──
+    # Foto del tipo de contrato. Mientras el contrato está activo manda la ficha; al terminar se conserva el tipo con que terminó,
+    # así el historial no cambia aunque la persona vuelva después con otro tipo de contrato.
+    tipo = models.CharField(max_length=12, choices=FichaTrabajador.TipoContrato.choices, blank=True)
+    numero_renovacion = models.PositiveSmallIntegerField(default=0, help_text='0 = contrato inicial, 1 = primera renovación…')
+    motivo_termino = models.CharField(max_length=20, blank=True, choices=[(k, v[0]) for k, v in CAUSALES.items()])
 
     class Meta:
         ordering = ['-fecha_inicio', '-id']
@@ -99,9 +105,12 @@ class Contrato(models.Model):
 
     @property
     def tipo_contrato(self):
-        """Tipo de contrato de la ficha del trabajador (None si aún no tiene ficha)."""
+        """Activo: el tipo de la ficha del trabajador (fuente de verdad). Terminado: el tipo con que terminó. None si no hay ninguno."""
         ficha = getattr(self.empleado, 'ficha', None)
-        return ficha.tipo_contrato if ficha else None
+        de_ficha = ficha.tipo_contrato if ficha else None
+        if self.estado == self.Estado.ACTIVO:
+            return de_ficha or self.tipo or None
+        return self.tipo or de_ficha
 
     def clean(self):
         if self.tipo_contrato == FichaTrabajador.TipoContrato.PLAZO_FIJO and not self.fecha_termino:
@@ -111,8 +120,11 @@ class Contrato(models.Model):
 
     def save(self, *args, **kwargs):
         self.vigente = True if self.estado == self.Estado.ACTIVO else None
+        # La foto del tipo se toma al crear el contrato y otra vez al terminarlo (por si la ficha cambió entretanto).
+        if self.estado == self.Estado.ACTIVO or not self.tipo:
+            self.tipo = (getattr(getattr(self.empleado, 'ficha', None), 'tipo_contrato', None) or self.tipo or '')
         if (uf := kwargs.get('update_fields')) is not None:
-            kwargs['update_fields'] = {*uf, 'vigente'}
+            kwargs['update_fields'] = {*uf, 'vigente', 'tipo'}
         super().save(*args, **kwargs)
 
     def __str__(self):

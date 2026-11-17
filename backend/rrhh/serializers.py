@@ -74,8 +74,9 @@ class ContratoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Contrato
-        fields = ['id', 'empleado', 'empleado_nombre', 'tipo_contrato', 'fecha_inicio', 'fecha_termino', 'sueldo_base', 'estado', 'finiquito_id']
-        read_only_fields = ['estado']  # solo cambia al pagarse el finiquito
+        fields = ['id', 'empleado', 'empleado_nombre', 'tipo_contrato', 'fecha_inicio', 'fecha_termino', 'sueldo_base', 'estado', 'finiquito_id',
+                  'numero_renovacion', 'motivo_termino']
+        read_only_fields = ['estado', 'numero_renovacion', 'motivo_termino']  # el estado cambia al pagarse el finiquito; las renovaciones, con `renovar/`
 
     def get_empleado_nombre(self, c):
         return nombre_de(c.empleado)
@@ -237,8 +238,10 @@ class PagoFiniquitoSerializer(serializers.ModelSerializer):
         f.pagado_en = timezone.now()
         f.save()
         c = f.contrato
-        c.estado, c.fecha_termino = Contrato.Estado.FINIQUITADO, f.fecha_termino
-        c.save(update_fields=['estado', 'fecha_termino'])
+        # Al terminar se guarda el motivo y la foto del tipo de contrato vigente en ese momento (historial de contrataciones).
+        c.tipo = c.tipo_contrato or c.tipo
+        c.estado, c.fecha_termino, c.motivo_termino = Contrato.Estado.FINIQUITADO, f.fecha_termino, f.causal_despido
+        c.save(update_fields=['estado', 'fecha_termino', 'motivo_termino', 'tipo'])
         return f
 
 

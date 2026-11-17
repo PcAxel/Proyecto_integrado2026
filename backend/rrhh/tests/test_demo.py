@@ -49,13 +49,13 @@ class SeedDemoTest(TestCase):
 
     def test_carga_rrhh_de_demostracion_y_es_idempotente(self):
         self.sembrar(FYAG_SEED_PASSWORD='Clave-Demo-Comision-2026')
-        self.assertEqual(Contrato.objects.filter(estado='ACTIVO').count(), 7)  # 5 usuarios + 2 con finiquito en curso
+        self.assertEqual(Contrato.objects.filter(estado='ACTIVO').count(), 8)  # 5 usuarios + 2 con finiquito en curso + el plazo fijo en 1ª renovación
         self.assertEqual(Finiquito.objects.filter(estado_pago='PENDIENTE').count(), 2)
         pagado = Finiquito.objects.get(estado_pago='PAGADO')
         self.assertEqual((pagado.contrato.estado, bool(pagado.comprobante_pago)), ('FINIQUITADO', True))
         self.assertGreater(pagado.monto_indemnizacion, 0)
         doc = DocumentoLaboral.objects.get()
         self.assertEqual((doc.estado, doc.trabajador.email), ('PENDIENTE', 'tecnico@fyag.cl'))
-        self.assertFalse(CustomUser.objects.get(email='matias.ibanez@demo.fyag.cl').has_usable_password())
+        self.assertFalse(CustomUser.objects.get(email='extrabajador02@apex.demo').has_usable_password())
         self.sembrar(FYAG_SEED_PASSWORD='Clave-Demo-Comision-2026')
-        self.assertEqual((Contrato.objects.count(), DocumentoLaboral.objects.count()), (8, 1))
+        self.assertEqual((Contrato.objects.count(), DocumentoLaboral.objects.count()), (15, 1))  # 8 de base + 7 del historial de cumplimiento y rotación
