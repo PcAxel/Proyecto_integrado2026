@@ -341,6 +341,24 @@ class Lote:
                  costo_hora_hombre=self.ficha['costo_hora_hombre'])
         marcar_etapa(d['obra_id'], flujo.EN_EJECUCION)  # la primera hoja enviada desde terreno pone la obra en ejecución
 
+    def _alta_solicitudes_compra(self, d):
+        """Solicitud de compra del Jefe de Bodega: qué falta y cuánto. El precio y el proveedor los pone el servidor al emitir la orden."""
+        items = d.get('items') or []
+        exigir(items, 'Agrega al menos un artículo.')
+        vistos = set()
+        for it in items:
+            a = fila('articulos', it.get('articulo_id'))
+            exigir(a and a.get('activo'), 'Hay un artículo inexistente o inactivo.')
+            exigir(it['articulo_id'] not in vistos, f"Artículo repetido: {a['sku']}.")
+            exigir(positivo(it.get('cantidad')), f"Cantidad inválida para {a['sku']}.")
+            vistos.add(it['articulo_id'])
+        d['items'] = [{'articulo_id': it['articulo_id'], 'cantidad': it['cantidad']} for it in items]
+        motivo = str(d.get('motivo') or '').strip()
+        exigir(0 < len(motivo) <= 300, 'Indica por qué se necesita la compra (máx. 300 caracteres).')
+        d.update(motivo=motivo, solicitante_id=uid(self.user), fecha=ahora(), estado='PENDIENTE', orden_ids=[], resuelto_por=None, resuelto_en=None, motivo_rechazo=None)
+        from . import compras
+        compras.avisar_nueva_solicitud(d['id'], d['items'])
+
     def _alta_retiros(self, d):
         exigir(self.ficha, 'El usuario no tiene ficha de personal.', 403, 'permission_denied')
         if d.get('client_id') and any(r.get('client_id') == d['client_id'] for r in filas('retiros')):

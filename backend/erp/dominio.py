@@ -75,6 +75,19 @@ def simular_rentabilidad(p):
     return {'costo_total': costo_total, 'venta_neto': venta, 'margen_pct': margen_pct, 'bajo_minimo': margen_pct < MARGEN_MINIMO}
 
 
+def rentabilidad_de(p, articulos=()):
+    """Costo total y margen de un presupuesto, calculados por el servidor (nunca se guardan: cambian con el Kardex).
+    - `costo_total` / `margen_ganancia` (% sobre la venta neta): con los costos cotizados en cada línea, igual que el simulador.
+    - `costo_total_actual` / `margen_actual`: con el último costo de cada artículo (el que deja el Kardex con cada compra), para ver si el margen
+      se erosionó desde que se cotizó."""
+    base = simular_rentabilidad(p)
+    costo = {a['id']: numero(a.get('costo_unitario')) for a in articulos}
+    actual = dict(p, materiales=[dict(m, costo_unitario=costo.get(m.get('articulo_id')) or m.get('costo_unitario')) for m in p.get('materiales') or []])
+    ahora = simular_rentabilidad(actual)
+    return {'costo_total': base['costo_total'], 'margen_ganancia': base['margen_pct'],
+            'costo_total_actual': ahora['costo_total'], 'margen_actual': ahora['margen_pct']}
+
+
 # ───────── Checklist ─────────
 CHECKLIST = [
     {'id': 'presion_psi', 'tipo': 'numero', 'min': 60, 'max': 140, 'tol': 0.1},

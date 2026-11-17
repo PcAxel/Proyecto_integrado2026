@@ -1,6 +1,7 @@
 """Instantánea de datos que un rol puede ver: el servidor filtra tablas, filas y campos sensibles."""
 from accounts.models import CustomUser
 
+from . import dominio as dom
 from . import tablas
 from .escritura import filas, ficha_de, uid
 from .models import Registro
@@ -64,6 +65,9 @@ def tabla_para(user, tabla):
     if not tablas.ver_costos(user):
         for campo in tablas.TABLAS[tabla].get('costos', ()):
             rows = [{k: v for k, v in r.items() if k != campo} for r in rows]
+    if tabla == 'presupuestos' and tablas.tiene(user, ['costos.ver']):
+        arts = filas('articulos')  # costo vigente de cada artículo, derivado de las compras del Kardex
+        rows = [{**r, **dom.rentabilidad_de(r, arts)} for r in rows]
     return _sin_campos_sensibles(user, tabla, rows)
 
 

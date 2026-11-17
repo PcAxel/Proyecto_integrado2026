@@ -33,7 +33,7 @@ STAFF = [  # correo, rol, nombre, apellido (las mismas cuentas que `seed_fyag`)
     ('operaciones@fyag.cl', Role.OPERACIONES, 'Operaciones', 'Demo'), ('rrhh@fyag.cl', Role.RRHH, 'RRHH', 'Demo'),
 ]
 CORPORATIVOS = [  # roles corporativos: se crean después de los técnicos para no mover los ids de las cuentas anteriores
-    ('superadmin@fyag.cl', Role.SUPERADMIN, 'Super Admin', 'Demo'), ('comercial@fyag.cl', Role.COMERCIAL, 'Comercial', 'Demo'),
+    ('comercial@fyag.cl', Role.COMERCIAL, 'Comercial', 'Demo'),
     ('auditor@fyag.cl', Role.AUDITOR, 'Auditor', 'Demo'), ('ti@apexsystems.cl', Role.SUPERADMIN, 'Jefatura TI', 'Demo'),
 ]
 CLIENTES = [

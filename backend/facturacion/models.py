@@ -15,6 +15,10 @@ class FacturaDTE(models.Model):
         ACEPTADO = 'ACEPTADO', 'Aceptado'
         RECHAZADO = 'RECHAZADO', 'Rechazado'
 
+    class EstadoCobro(models.TextChoices):
+        PENDIENTE_PAGO = 'PENDIENTE_PAGO', 'Pendiente de pago'
+        PAGADA = 'PAGADA', 'Pagada'
+
     orden_id = models.CharField(max_length=30, unique=True, help_text='Id de la obra en el ERP («OB-0003»), que es la orden de trabajo que se factura')
     folio_sii = models.PositiveIntegerField(null=True, blank=True, unique=True)
     estado_sii = models.CharField(max_length=12, choices=EstadoSII.choices, default=EstadoSII.NO_EMITIDO)
@@ -28,6 +32,10 @@ class FacturaDTE(models.Model):
     monto_neto = models.PositiveBigIntegerField(default=0)
     monto_iva = models.PositiveBigIntegerField(default=0)
     monto_total = models.PositiveBigIntegerField(default=0)
+
+    # Cuentas por cobrar: una factura aceptada nace pendiente de pago y pasa a PAGADA cuando los pagos del cliente cubren su total.
+    estado_cobro = models.CharField(max_length=15, choices=EstadoCobro.choices, default=EstadoCobro.PENDIENTE_PAGO)
+    pagada_en = models.DateField(null=True, blank=True, help_text='Fecha del pago que dejó la factura saldada')
 
     error = models.CharField(max_length=300, blank=True)
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
@@ -46,3 +54,29 @@ class FacturaDTE(models.Model):
 
     def __str__(self):
         return f'DTE {self.orden_id} · {self.get_estado_sii_display()}' + (f' · folio {self.folio_sii}' if self.folio_sii else '')
+
+
+class PagoCliente(models.Model):
+    """Un pago (o abono) de un cliente contra una factura. Solo se agrega: un error se corrige con otro registro, nunca editando éste."""
+
+    class Metodo(models.TextChoices):
+        TRANSFERENCIA = 'TRANSFERENCIA', 'Transferencia'
+        CHEQUE = 'CHEQUE', 'Cheque'
+        EFECTIVO = 'EFECTIVO', 'Efectivo'
+        TARJETA = 'TARJETA', 'Tarjeta'
+        OTRO = 'OTRO', 'Otro'
+
+    factura = models.ForeignKey(FacturaDTE, on_delete=models.PROTECT, related_name='pagos')
+    fecha = models.DateField()
+    monto = models.PositiveBigIntegerField(help_text='Pesos chilenos, sin decimales')
+    metodo = models.CharField(max_length=15, choices=Metodo.choices)
+    referencia = models.CharField(max_length=100, blank=True, help_text='N° de transferencia, de cheque u otro dato del comprobante')
+    registrado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.PROTECT, related_name='+')
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha', 'id']
+        constraints = [models.CheckConstraint(condition=Q(monto__gt=0), name='pago_monto_positivo')]
+
+    def __str__(self):
+        return f'Pago {self.monto} · {self.factura.orden_id}'

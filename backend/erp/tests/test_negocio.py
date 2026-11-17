@@ -253,3 +253,26 @@ class BodegaFlujoTests(Negocio):
         # pero sí puede consultar el inventario (lo necesita para armar presupuestos y revisar obras)
         self.assertGreater(len(self.snap('OPERACIONES')['articulos']), 0)
         self.assertGreater(len(self.snap('JEFE_BODEGA')['articulos']), 0)
+
+
+class RentabilidadTests(Negocio):
+    def test_el_servidor_calcula_costo_total_y_margen_y_los_actualiza_con_el_kardex(self):
+        crear('presupuestos', 'PRE-0050', titulo='P', cliente_id='CLI-001', estado='ENVIADO', precio_venta_neto=10000,
+              materiales=[{'articulo_id': 'ART-001', 'cantidad': 2, 'costo_unitario': 1000}],
+              mano_obra=[{'horas': 2, 'costo_hora_hombre': 1500}], adicionales=[{'monto': 500}])
+        fila = next(p for p in self.snap('FINANZAS')['presupuestos'] if p['id'] == 'PRE-0050')
+        self.assertEqual((fila['costo_total'], fila['margen_ganancia']), (5500, 45.0))  # 2.000 + 3.000 + 500
+        self.assertEqual((fila['costo_total_actual'], fila['margen_actual']), (5500, 45.0))
+        # el artículo sube de costo (nueva compra): el margen «actual» baja, el cotizado queda
+        art = Registro.objects.get(tabla='articulos', rid='ART-001')
+        art.datos = {**art.datos, 'costo_unitario': 4000}; art.save()
+        fila = next(p for p in self.snap('FINANZAS')['presupuestos'] if p['id'] == 'PRE-0050')
+        self.assertEqual((fila['costo_total'], fila['margen_ganancia']), (5500, 45.0))
+        self.assertEqual((fila['costo_total_actual'], fila['margen_actual']), (11500, -15.0))
+
+    def test_quien_no_ve_costos_no_recibe_costo_ni_margen(self):
+        crear('presupuestos', 'PRE-0051', titulo='P', cliente_id='CLI-001', estado='ENVIADO', precio_venta_neto=10000, materiales=[], mano_obra=[], adicionales=[])
+        for rol in ('JEFE_BODEGA', 'RRHH'):
+            self.assertEqual(self.snap(rol)['presupuestos'], [])
+        fila = next(p for p in self.snap('COMERCIAL')['presupuestos'] if p['id'] == 'PRE-0051')
+        self.assertIn('margen_ganancia', fila)  # el Ejecutivo Comercial sí ve costos

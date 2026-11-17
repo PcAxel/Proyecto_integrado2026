@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import TermsAccepted
 
-from . import escritura, flujo, snapshot
+from . import compras, escritura, flujo, snapshot
 from .reglas import ReglaError
 
 logger = logging.getLogger(__name__)
@@ -70,3 +70,35 @@ class AuditoriaTerrenoOkView(APIView):
 
     def post(self, request, obra_id):
         return _respuesta_obra(request, obra_id, {'etapa': flujo.AUDITORIA_OK}, 'AUDITORIA_TERRENO_OK')
+
+
+def _resolver_solicitud(request, solicitud_id, accion, entidad_accion, **kwargs):
+    ip = request.META.get('REMOTE_ADDR')
+    try:
+        resultado = accion(request.user, solicitud_id, **kwargs)
+    except ReglaError as e:
+        return Response({'detail': e.mensaje, 'code': e.code}, status=e.status)
+    solicitud, ordenes = resultado if isinstance(resultado, tuple) else (resultado, [])
+    try:
+        escritura.Lote(request.user, ip).insertar('auditoria', {
+            'id': escritura.siguiente_id('auditoria'), 'entidad': 'SolicitudCompra', 'entidad_id': solicitud_id, 'accion': entidad_accion,
+            'anterior': {'estado': 'PENDIENTE'}, 'nuevo': {'estado': solicitud['estado'], 'ordenes': ordenes, 'motivo_rechazo': solicitud.get('motivo_rechazo')}})
+    except Exception:
+        logger.exception('compra_auditoria_error solicitud=%s', solicitud_id)
+    return Response({'solicitud': solicitud, 'ordenes': ordenes})
+
+
+class EmitirOrdenesView(APIView):
+    """POST /api/erp/solicitudes-compra/<id>/emitir/ — Finanzas aprueba la solicitud de Bodega y se emiten las órdenes de compra por proveedor."""
+    permission_classes = [TermsAccepted]
+
+    def post(self, request, solicitud_id):
+        return _resolver_solicitud(request, solicitud_id, compras.emitir_ordenes, 'APROBAR_SOLICITUD_COMPRA')
+
+
+class RechazarSolicitudView(APIView):
+    """POST /api/erp/solicitudes-compra/<id>/rechazar/ {motivo} — Finanzas rechaza la solicitud (el motivo le llega a Bodega)."""
+    permission_classes = [TermsAccepted]
+
+    def post(self, request, solicitud_id):
+        return _resolver_solicitud(request, solicitud_id, compras.rechazar, 'RECHAZAR_SOLICITUD_COMPRA', motivo=request.data.get('motivo'))

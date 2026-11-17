@@ -16,6 +16,10 @@ TABLAS = {
     'lotes': dict(prefijo='LOT-', ancho=4, leer=['bodega.ver', 'pwa.usar'], crear=['cardex.crear'], editar=[]),
     'cardex': dict(prefijo='MOV-', ancho=6, leer=['bodega.ver'], crear=['cardex.crear', 'cardex.reversar', 'cardex.reingresar', 'compras.registrar', 'conteo.aprobar'],
                    editar=[], costos=['costo_unitario']),
+    # Solicitud de compra (la crea el Jefe de Bodega) y orden de compra (la emite Finanzas al aprobarla). Los cambios de estado y las órdenes
+    # nacen solo en los endpoints dedicados (editar=[] / crear=[]): ningún cliente puede fabricar una orden por el lote genérico.
+    'solicitudes_compra': dict(prefijo='SC-', ancho=4, leer=['compras.ver'], crear=['solicitudes_compra.crear'], editar=[]),
+    'ordenes_compra': dict(prefijo='OC-', ancho=4, leer=['compras.ver'], crear=[], editar=[]),
     'facturas': dict(prefijo='FC-', ancho=4, leer=['compras.ver'], crear=['compras.registrar'], editar=[]),
     'notas_credito': dict(prefijo='NC-', ancho=4, leer=['compras.ver'], crear=['compras.registrar'], editar=[]),
     'presupuestos': dict(prefijo='PRE-', ancho=4, leer=['presupuestos.ver'], crear=['presupuestos.crear'], editar=['presupuestos.crear', 'presupuestos.aprobar']),
@@ -34,7 +38,7 @@ ROL_UI = {'ADMIN': 'ADMIN_GENERAL', 'FINANZAS': 'ADMINISTRACION', 'OPERACIONES':
           'SUPERADMIN': 'SUPER_ADMIN', 'COMERCIAL': 'COMERCIAL', 'AUDITOR': 'CONSULTA', 'JEFE_BODEGA': 'BODEGA'}
 
 # Tablas que solo admiten altas: un error se corrige con un contra-asiento, nunca se edita (P1, P2).
-INMUTABLES = {'cardex', 'facturas', 'notas_credito', 'asistencia', 'auditoria', 'lotes'}
+INMUTABLES = {'cardex', 'ordenes_compra', 'facturas', 'notas_credito', 'asistencia', 'auditoria', 'lotes'}
 # Campos que nadie puede cambiar tras crear la fila
 PROTEGIDOS = {'id', 'rut'}
 

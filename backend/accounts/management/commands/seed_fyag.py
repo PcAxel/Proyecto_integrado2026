@@ -36,7 +36,6 @@ USUARIOS = [
     ('tecnico@fyag.cl', 'Tecnico-Apex-2026', Role.TECNICO, 'Técnico', 'Demo 01'),
     ('rrhh@fyag.cl', 'RRHH-Apex-2026', Role.RRHH, 'RRHH', 'Demo'),
     # Roles corporativos: van al final para no mover los ids (U-00x) de las cuentas anteriores.
-    ('superadmin@fyag.cl', 'SuperAdmin-Apex-2026', Role.SUPERADMIN, 'Super Admin', 'Demo'),
     ('comercial@fyag.cl', 'Comercial-Apex-2026', Role.COMERCIAL, 'Comercial', 'Demo'),
     ('auditor@fyag.cl', 'Auditor-Apex-2026', Role.AUDITOR, 'Auditor', 'Demo'),
     ('bodega@fyag.cl', 'Bodega-Apex-2026', Role.JEFE_BODEGA, 'Jefe de Bodega', 'Demo'),
