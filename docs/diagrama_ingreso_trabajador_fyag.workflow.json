@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Ingreso de un Nuevo Trabajador y Creación de Ficha",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "alta-acceso",
+        "label": "Alta de acceso",
+        "focus": ["administrador", "formulario", "solicitud", "seguridad", "trabajador", "correo", "cuenta"],
+        "note": "Sigue la creación del acceso desde el formulario React hasta la cuenta persistida y el correo de bienvenida."
+      },
+      {
+        "id": "ficha-trabajador",
+        "label": "Creación de ficha",
+        "focus": ["trabajador", "ficha-form", "ficha-api", "ficha-db", "confirmacion"],
+        "note": "Aísla el tramo en que el trabajador queda asociado a su ficha laboral."
+      },
+      {
+        "id": "rechazo-reintento",
+        "label": "Controles y recuperación",
+        "focus": ["seguridad", "correo", "confirmacion"],
+        "note": "Muestra los puntos donde el backend rechaza datos inválidos o el correo requiere seguimiento."
+      }
+    ],
+    "output": "docs/diagrama_ingreso_trabajador_fyag.html"
+  },
+  "lanes": [
+    { "id": "experiencia", "label": "Usuario y Frontend" },
+    { "id": "servidor", "label": "Backend Django y Persistencia" }
+  ],
+  "phases": [
+    { "id": "captura", "label": "Captura", "fromCol": 0, "toCol": 1 },
+    { "id": "validacion", "label": "Validación y autorización", "fromCol": 2, "toCol": 3, "variant": "security" },
+    { "id": "persistencia", "label": "Persistencia y activación", "fromCol": 4, "toCol": 5, "variant": "emphasis" }
+  ],
+  "groups": [
+    { "id": "alta-cuenta", "label": "Creación de acceso", "lane": "servidor", "fromCol": 2, "toCol": 5, "variant": "emphasis" },
+    { "id": "control-acceso", "label": "RBAC y validación", "lane": "servidor", "fromCol": 2, "toCol": 3, "variant": "security" },
+    { "id": "datos-laborales", "label": "Datos de la ficha", "lane": "servidor", "fromCol": 3, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["administrador", "formulario", "solicitud", "seguridad", "cuenta", "correo", "trabajador", "ficha-form", "ficha-api", "ficha-db", "confirmacion"],
+  "semanticChecks": {
+    "allowedRoots": ["administrador"],
+    "allowedTerminals": ["confirmacion"],
+    "requiredEdges": [
+      { "from": "formulario", "to": "solicitud" },
+      { "from": "solicitud", "to": "seguridad" },
+      { "from": "seguridad", "to": "cuenta" },
+      { "from": "cuenta", "to": "correo" },
+      { "from": "ficha-api", "to": "ficha-db" }
+    ]
+  },
+  "nodes": [
+    { "id": "administrador", "lane": "experiencia", "col": 0, "type": "external", "label": "Administrador", "tag": "usuario autorizado", "width": 148 },
+    { "id": "formulario", "lane": "experiencia", "col": 1, "type": "frontend", "label": "Formulario de acceso", "tag": "React", "width": 156 },
+    { "id": "solicitud", "lane": "experiencia", "col": 2, "type": "frontend", "label": "POST de alta", "tag": "JSON + credenciales", "width": 156 },
+    { "id": "seguridad", "lane": "servidor", "col": 2, "type": "security", "label": "Validar RBAC y datos", "tag": "rechaza inválidos", "width": 170 },
+    { "id": "cuenta", "lane": "servidor", "col": 3, "type": "backend", "label": "Crear cuenta", "tag": "Django", "width": 170 },
+    { "id": "correo", "lane": "servidor", "col": 4, "type": "external", "label": "Correo de bienvenida", "tag": "SMTP", "width": 170 },
+    { "id": "trabajador", "lane": "experiencia", "col": 5, "type": "external", "label": "Trabajador", "tag": "inicio de sesión", "width": 160 },
+    { "id": "ficha-form", "lane": "experiencia", "col": 5, "type": "frontend", "label": "Formulario de ficha", "tag": "Personal y Flota", "width": 170, "yOffset": 96 },
+    { "id": "ficha-api", "lane": "servidor", "col": 5, "type": "backend", "label": "Validar y guardar ficha", "tag": "Django REST", "width": 178 },
+    { "id": "ficha-db", "lane": "servidor", "col": 5, "type": "database", "label": "Ficha persistida", "tag": "MySQL / ORM", "width": 170, "yOffset": 96 },
+    { "id": "confirmacion", "lane": "servidor", "col": 5, "type": "frontend", "label": "Alta confirmada", "tag": "respuesta al frontend", "width": 172, "yOffset": 192 }
+  ],
+  "edges": [
+    { "id": "abre-formulario", "from": "administrador", "to": "formulario", "label": "captura datos", "variant": "default" },
+    { "id": "envia-alta", "from": "formulario", "to": "solicitud", "label": "POST JSON", "variant": "emphasis" },
+    { "id": "entra-backend", "from": "solicitud", "to": "seguridad", "label": "request.data", "variant": "security" },
+    { "id": "autoriza-cuenta", "from": "seguridad", "to": "cuenta", "label": "válido + ADMIN; si no, 400/403", "variant": "emphasis" },
+    { "id": "guarda-cuenta", "from": "cuenta", "to": "correo", "label": "crea usuario y envía credenciales", "variant": "default" },
+    { "id": "correo-trabajador", "from": "correo", "to": "trabajador", "label": "correo temporal; fallo requiere seguimiento", "variant": "emphasis", "role": "return" },
+    { "id": "abre-ficha", "from": "trabajador", "to": "ficha-form", "label": "ingresa y completa ficha", "variant": "default" },
+    { "id": "envia-ficha", "from": "ficha-form", "to": "ficha-api", "label": "POST datos laborales", "variant": "emphasis" },
+    { "id": "guarda-ficha", "from": "ficha-api", "to": "ficha-db", "label": "ORM transaccional", "variant": "default" },
+    { "id": "confirma-alta", "from": "ficha-db", "to": "confirmacion", "label": "respuesta 201/200", "variant": "emphasis", "role": "return" }
+  ]
+}

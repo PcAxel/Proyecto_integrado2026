@@ -26,13 +26,13 @@ El login muestra una tarjeta por perfil. El rol **Técnico** entra a `/app`; el 
 
 | Perfil | Rol | Qué se ve distinto |
 | --- | --- | --- |
-| Carolina Fuentealba | `ADMIN_GENERAL` | Autoriza y supervisa: ve toda la gestión, aprueba presupuestos con margen < 20 %, cierra obras y administra usuarios. No ejecuta tareas operativas |
-| Matías Contreras | `ADMINISTRACION` | Presupuestos (aprueba salvo margen < 20 %), compras, clientes y proveedores; ve el personal pero no lo modifica |
-| Rodrigo Sepúlveda | `BODEGA` | Artículos, Cardex, compras; no ve presupuestos ni costos de obra |
-| Patricio Mella | `SUPERVISOR` | Obras, CU30, auditoría de hojas; no ve el valor del inventario |
-| Jorge Quezada | `TECNICO` | Solo la PWA; nunca ve costos |
-| Francisca Valdés | `CONSULTA` | Solo lectura |
-| Camila Torres | `RRHH` | Solo Dashboard y Personal y Flota: ve y edita fichas, tarifas y flota; sin acceso a obras, bodega ni compras |
+| Usuario Demo 04 | `ADMIN_GENERAL` | Autoriza y supervisa: ve toda la gestión, aprueba presupuestos con margen < 20 %, cierra obras y administra usuarios. No ejecuta tareas operativas |
+| Usuario Demo 01 | `ADMINISTRACION` | Presupuestos (aprueba salvo margen < 20 %), compras, clientes y proveedores; ve el personal pero no lo modifica |
+| Usuario Demo 03 | `BODEGA` | Artículos, Cardex, compras; no ve presupuestos ni costos de obra |
+| Usuario Demo 02 | `SUPERVISOR` | Obras, CU30, auditoría de hojas; no ve el valor del inventario |
+| Técnico Demo 01 | `TECNICO` | Solo la PWA; nunca ve costos |
+| Usuario Demo 05 | `CONSULTA` | Solo lectura |
+| Usuario Demo 06 | `RRHH` | Solo Dashboard y Personal y Flota: ve y edita fichas, tarifas y flota; sin acceso a obras, bodega ni compras |
 
 ## Búsqueda global (Ctrl+K / ⌘K)
 

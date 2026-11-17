@@ -3,16 +3,22 @@
 Entorno local: app en `http://localhost:5173` · API en `http://localhost:8000`.
 Para levantarlos: `npm run dev` (raíz) y `python manage.py runserver` (carpeta `backend`, con el entorno virtual).
 
-## 1. Cuentas locales
+## 1. Cuentas locales (las que existen hoy en tu base local)
 | Cuenta | Contraseña | Qué ve |
 |---|---|---|
-| `admin@fyag.cl` | `Admin-FYAG-2026` | Todo el ERP (Administrador) |
+| `admin@fyag.cl` | `Admin-FYAG-2026` | Todo el ERP (Administrador). Ya tiene el autenticador vinculado |
 | `finanzas@fyag.cl` | `Finanzas-FYAG-2026` | Presupuestos, compras, facturación |
 | `operaciones@fyag.cl` | `Operaciones-FYAG-2026` | Obras, bodega |
 | `rrhh@fyag.cl` | `RRHH-FYAG-2026` | Personal, flota, contratos |
+| `superadmin@fyag.cl` | la que fija `seed_fyag` | Super Admin (TI): accesos, log de auditoría y estado del sistema. No ve el negocio |
+| `comercial@fyag.cl` | la que fija `seed_fyag` | Ejecutivo Comercial: presupuestos y clientes. No aprueba |
+| `ti@apexsystems.cl` | la que fija `seed_fyag` | Jefatura de TI: accesos, Gobernanza IA (bitácora de prompts y políticas del agente) y estado del sistema |
+| `auditor@fyag.cl` | la que fija `seed_fyag` | Auditor Externo: todo en solo lectura; el servidor le rechaza cualquier escritura |
 | `tecnico@fyag.cl` y los otros 15 técnicos | `Tecnico-FYAG-2026` | Solo la app de terreno (`/app`) |
 
-Los técnicos son `nombre.apellido@fyag.cl` (por ejemplo `cristian.medina@fyag.cl`).
+Los otros técnicos son `nombre.apellido@fyag.cl` (por ejemplo `cristian.medina@fyag.cl`, `luis.parra@fyag.cl`, `hugo.salazar@fyag.cl`).
+
+**Bases nuevas:** al crear una base desde cero con el seeder (datos ficticios), las cuentas base quedan con contraseñas `*-Apex-2026` (por ejemplo `Admin-Apex-2026`) y los técnicos nuevos son `tecnico.demo02@apex.demo` … `tecnico.demo16@apex.demo` con `Tecnico-Apex-2026`. Tu base local actual no cambió.
 
 **Autenticador (2FA):** si una cuenta no lo tiene, el primer ingreso muestra un QR. Sin celular, el código de una cuenta ya vinculada
 se obtiene con `python manage.py totp correo@fyag.cl`. Para reiniciar uno: `python manage.py reset_2fa correo@fyag.cl`.
@@ -29,7 +35,8 @@ se obtiene con `python manage.py totp correo@fyag.cl`. Para reiniciar uno: `pyth
 | Apariencia (día/noche, paletas, letra) | Ícono del sol, arriba a la derecha | Barra Día↔Noche, 2 paletas claras y 2 oscuras, tamaño de letra |
 | Asistente de IA | Botón ✨ abajo a la derecha | Frases en `guia_prompts_ia_fyag.md` (reportes, proyección de stock, compras) |
 | Stickers QR de 1000 productos | **Bodega y Cardex** → pestaña **Etiquetas** | Buscar por SKU, seleccionar, abrir el PDF |
-| Datos de demostración | **Presupuestos**, **Obras**, **Personal y Flota**, **Contratos y Finiquitos**, **Clientes y Proveedores** | Navegar |
+| Datos de demostración (online) | Variables en Render: `APEX_SEED_DEMO=1` y `FYAG_SEED_PASSWORD` | Deploy; luego quitar `APEX_SEED_DEMO` |
+| Datos de demostración (local) | **Presupuestos**, **Obras**, **Personal y Flota**, **Contratos y Finiquitos**, **Clientes y Proveedores** | Navegar |
 | Usuarios y bloqueo de cuentas | **Accesos y Usuarios** (Administrador) | Ver los 16 técnicos; botón **Desbloquear** en cuentas bloqueadas |
 | Bloqueo por intentos | `/login` (cerrar sesión antes) | Oficina: 5 fallos → esperas 5/15/30/60 s y bloqueo. Técnico: solo esperas crecientes, nunca se bloquea |
 | Recuperar contraseña | `/login` → «¿Olvidaste tu contraseña?» | En local el código sale en la terminal del servidor, no llega por correo |

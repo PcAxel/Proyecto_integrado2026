@@ -18,6 +18,9 @@ Qué hace cada herramienta y quién la tiene:
 | **Llevar a facturar** una obra (la IA no emite) | ✅ | ✅ | — | — | — |
 | Redactar **informe técnico** desde notas | — | — | ✅ | — | ✅ |
 
+## Hablarle a la IA (dictado)
+En escritorio, el botón del **micrófono** junto a «Enviar» convierte tu voz en texto dentro del cuadro: pulsa, habla (por ejemplo «llévame a bodega y busca el refrigerante») y vuelve a pulsar el micrófono: al terminar, **el mensaje se envía solo**. Si el navegador corta por silencio, el texto queda en el cuadro para que lo revises y lo envíes tú. Funciona en Chrome, Edge y Safari, pide permiso de micrófono la primera vez y necesita internet. No dicta contraseñas ni datos sensibles.
+
 ## Reglas de oro
 - **Formato:** di siempre *Excel*, *Word* o *PowerPoint*. Si no lo dices, te lo pregunta.
 - **Período (opcional):** «solo de octubre», «del 2025», «entre el 1 y el 15 de marzo», «este mes». Sin período trae todo el historial.
@@ -33,7 +36,7 @@ Qué hace cada herramienta y quién la tiene:
 - «Llévame a Bodega.»
 - «Ábreme la pantalla de Compras.»
 - «Busca el artículo REF-404A.»
-- «Busca la obra de Packing Cordillera.»
+- «Busca la obra de Cliente Demo 01.»
 - «¿Cómo registro un retiro de materiales paso a paso?» *(explica; no lo hace por ti)*
 - «Ayúdame a redactar un correo para un proveedor que se atrasó en una entrega.»
 
@@ -51,8 +54,8 @@ Qué hace cada herramienta y quién la tiene:
 ## Llevar a facturar (Administrador y Finanzas)
 La IA **no emite facturas**: te lleva hasta la obra, la deja resaltada y tú revisas los datos y pulsas «Emitir Factura Electrónica (SII)».
 - «Quiero emitir la factura de la obra OB-0011.»
-- «Quiero facturar el trabajo de Distribuidora de Helados Sur.»
-- «Prepárame la factura de la cámara de frío de Packing Cordillera.»
+- «Quiero facturar el trabajo de Cliente Demo 07.»
+- «Prepárame la factura de la cámara de frío de Cliente Demo 01.»
 - Si hay varias obras parecidas, te pide el código. Si la obra aún no se puede facturar o ya tiene factura, te lo dice con el motivo o el folio.
 
 ## Finanzas
