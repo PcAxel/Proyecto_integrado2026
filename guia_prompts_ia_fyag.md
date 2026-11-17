@@ -35,6 +35,8 @@ En escritorio, el botón del **micrófono** junto a «Enviar» convierte tu voz 
 ## Para todos los roles (conversar, navegar, buscar)
 - «Llévame a Bodega.»
 - «Ábreme la pantalla de Compras.»
+- «Busca a Vargas.» / «Encuentra la obra de Panificadora Bulnes.» *(sin decir la pantalla, abre el **buscador general** — el de Ctrl+K — con ese texto: el cursor lo escribe y lo abre. Solo muestra lo que tu rol puede ver)*
+- «Busca Compresor Bitzer en Bodega.» *(si nombras una pantalla, filtra esa pantalla)*
 - «Busca el artículo REF-404A.»
 - «Busca la obra de Cliente Demo 01.»
 - «¿Cómo registro un retiro de materiales paso a paso?» *(explica; no lo hace por ti)*

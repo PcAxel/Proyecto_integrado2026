@@ -129,6 +129,7 @@ def aclaracion_para(usuario, texto, rutas=()):
 
 # ───────────────────────── 3. Acciones de interfaz ─────────────────────────
 NAVIGATE, SEARCH, HIGHLIGHT, FILL = 'NAVIGATE', 'SEARCH_OR_FILTER', 'HIGHLIGHT_ELEMENT', 'FILL_FORM'
+GLOBAL = 'GLOBAL_SEARCH'  # abre el buscador general (Ctrl+K) con un texto; el índice que muestra ya está filtrado por el rol de la persona
 
 # Elementos que el cursor del agente puede señalar: objetivo (`data-agent-target` en React) → (pantalla, cómo se describe, palabras que lo evocan)
 OBJETIVOS = {
@@ -204,6 +205,8 @@ def construir_acciones(usuario, salida, rutas, politica):
         acciones.append({'tipo': NAVIGATE, 'ruta': ruta, 'etiqueta': etiqueta, **({'ancla': salida['ancla']} if salida.get('ancla') else {})})
     if salida.get('accion') == 'buscar' and salida.get('termino_busqueda') and politica['permite_buscar'] and ruta in permitidas:
         acciones.append({'tipo': SEARCH, 'ruta': ruta, 'texto': salida['termino_busqueda'], 'objetivo': 'search-input'})
+    if salida.get('accion') == 'buscar_global' and salida.get('termino_busqueda') and politica['permite_buscar'] and '/erp' in permitidas:
+        acciones.append({'tipo': GLOBAL, 'texto': salida['termino_busqueda'], 'objetivo': 'search-input'})
     if resaltar:
         acciones.append({'tipo': HIGHLIGHT, 'objetivo': resaltar, 'ruta': OBJETIVOS[resaltar][0], 'descripcion': OBJETIVOS[resaltar][1]})
     if form and campos:
@@ -213,7 +216,10 @@ def construir_acciones(usuario, salida, rutas, politica):
 
     # Los campos heredados (`accion`, `ruta`…) siguen describiendo lo mismo que `ui_actions`: si la política quitó la navegación, también se quitan.
     tipos = {a['tipo'] for a in acciones}
-    if NAVIGATE not in tipos:
+    if salida.get('accion') == 'buscar_global':
+        if GLOBAL not in tipos:
+            salida.update(accion='ninguna', ruta=None, termino_busqueda=None)
+    elif NAVIGATE not in tipos:
         salida.update(accion='ninguna', ruta=None, termino_busqueda=None)
     elif SEARCH not in tipos and salida.get('accion') == 'buscar':
         salida.update(accion='navegar', termino_busqueda=None)
@@ -311,11 +317,16 @@ def responder_local(usuario, texto, rutas, origen=''):
     if (m := re.match(r'^(?:busca|buscar|buscame|encuentra|filtra|filtrar)\w*\s+(.+?)(?:\s+en\s+(.+))?$', t)):
         termino_t, donde = m.group(1), m.group(2)
         buscables = [r for r in rutas if r.get('buscable')]
+        general = any(r['ruta'] == '/erp' for r in rutas)  # tiene el buscador general (todo el ERP, solo lo que su rol ve)
         destino = (_ruta_por_texto(donde, buscables) if donde else None) or _ruta_por_texto(termino_t, buscables) or next((r for r in buscables if r['ruta'] == origen), None)
         # El término se toma del texto original (con sus mayúsculas y tildes) y sin la palabra que nombra la pantalla.
         original = re.sub(r'^\S+\s+', '', texto.strip(), count=1)
         original = re.sub(r'\s+en\s+.+$', '', original, flags=re.I) if donde else original
         termino = re.sub(r'^(al?|el|la|los|las|un|una)\s+(cliente|trabajador|tecnico|técnico|producto|articulo|artículo|insumo|obra|presupuesto|usuario|proveedor|empleado)\s+', '', original, flags=re.I).strip(' .?')
+        termino = re.sub(r'^(a|al|el|la|los|las)\s+', '', termino, flags=re.I).strip() or termino  # «busca a Vargas» → Vargas
+        if termino and general and not donde:
+            # Sin pantalla nombrada («busca Vargas»), se usa el buscador general: encuentra personas, obras, artículos… según lo que el rol puede ver.
+            return {**salida, 'accion': 'buscar_global', 'termino_busqueda': termino[:80], 'respuesta_texto': f'Busco «{termino[:80]}» en el buscador general.'}
         if destino and termino:
             return {**salida, 'accion': 'buscar', 'ruta': destino['ruta'], 'termino_busqueda': termino[:80], 'respuesta_texto': f'Busco «{termino[:80]}» en {destino["label"]}.'}
         if buscables:

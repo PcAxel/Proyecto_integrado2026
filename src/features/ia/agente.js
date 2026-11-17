@@ -82,6 +82,10 @@ export function planDeAcciones(acciones, catalogo, rol, accion = null) {
       const destino = enCatalogo(a.ruta)
       const t = texto(a.texto, 80)
       if (destino?.buscable && t) plan.push({ tipo: 'SEARCH_OR_FILTER', url: `${destino.ruta}?buscar=${encodeURIComponent(t)}`, texto: t, objetivo: 'search-input', etiqueta: destino.label })
+    } else if (a?.tipo === 'GLOBAL_SEARCH') {
+      // Buscador general (Ctrl+K): solo para quien tiene el ERP completo (su catálogo trae «Inicio»). Lo que muestra lo filtra el rol, no la IA.
+      const t = texto(a.texto, 80)
+      if (t && enCatalogo('/erp')) plan.push({ tipo: 'GLOBAL_SEARCH', texto: t, objetivo: 'search-input' })
     } else if (a?.tipo === 'HIGHLIGHT_ELEMENT') {
       const destino = enCatalogo(a.ruta)
       if (destino && ID.test(String(a.objetivo ?? ''))) plan.push({ tipo: 'HIGHLIGHT_ELEMENT', url: destino.ruta, objetivo: a.objetivo, descripcion: texto(a.descripcion, 80), etiqueta: destino.label })
@@ -99,6 +103,6 @@ export function planDeAcciones(acciones, catalogo, rol, accion = null) {
 
 /** Frase de lo que hizo el agente, para dejar constancia bajo su mensaje. */
 export function resumenDePlan(plan) {
-  return plan.map((p) => (p.tipo === 'NAVIGATE' ? `Te llevé a ${p.etiqueta}` : p.tipo === 'SEARCH_OR_FILTER' ? `Busqué «${p.texto}» en ${p.etiqueta}`
+  return plan.map((p) => (p.tipo === 'NAVIGATE' ? `Te llevé a ${p.etiqueta}` : p.tipo === 'SEARCH_OR_FILTER' ? `Busqué «${p.texto}» en ${p.etiqueta}` : p.tipo === 'GLOBAL_SEARCH' ? `Busqué «${p.texto}» en el buscador general`
     : p.tipo === 'HIGHLIGHT_ELEMENT' ? `Te mostré ${p.descripcion || 'dónde está'}` : `Completé «${p.nombre}» (falta que lo confirmes)`)).join(' · ')
 }

@@ -28,9 +28,9 @@ function itemsDeNavegacion(rol) {
 /**
  * Paleta de comandos (Ctrl/⌘ + K). Patrón combobox accesible: el foco permanece en el campo,
  * la opción activa se anuncia con aria-activedescendant y el resto de la página queda inerte.
- * @param {{open:boolean, onClose:()=>void}} props
+ * @param {{open:boolean, onClose:()=>void, consultaInicial?:string}} props `consultaInicial`: texto con el que se abre (lo usa el asistente de IA al buscar por ti)
  */
-export function GlobalSearch({ open, onClose }) {
+export function GlobalSearch({ open, onClose, consultaInicial = '' }) {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const [consulta, setConsulta] = useState('')
@@ -48,7 +48,7 @@ export function GlobalSearch({ open, onClose }) {
   useEffect(() => {
     if (!open) return undefined
     const previo = document.activeElement
-    setConsulta('')
+    setConsulta(consultaInicial)
     setActivo(0)
     const c = cache.current
     const fresco = c.usuario === user.id && Date.now() - c.t < VIGENCIA_MS
@@ -64,7 +64,7 @@ export function GlobalSearch({ open, onClose }) {
         setIndice(datos)
       }).catch(() => {}).finally(() => vigente && setCargando(false))
     }
-    const t = setTimeout(() => entrada.current?.focus(), 0)
+    const t = setTimeout(() => { entrada.current?.focus(); entrada.current?.select?.() }, 0) // con texto de la IA: seleccionado, se reemplaza al escribir
     return () => { vigente = false; clearTimeout(t); previo?.focus?.() }
   }, [open, user.id])
 

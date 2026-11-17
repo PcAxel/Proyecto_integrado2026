@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { planDeAcciones, resumenDePlan, resolverAccion } from '../agente'
 import { ERP_NAV } from '@/layouts/nav'
 import { can } from '@/domain/rbac'
+import { useBusquedaStore } from '@/stores/busquedaStore'
 
 const CATALOGO = [
   { ruta: '/erp', label: 'Inicio', buscable: false },
@@ -21,6 +22,25 @@ describe('plan de acciones del copiloto (validación en el cliente)', () => {
   it('descarta pantallas fuera del catálogo de la persona y búsquedas donde no se filtra', () => {
     expect(planDeAcciones([{ tipo: 'NAVIGATE', ruta: '/erp/usuarios' }, { tipo: 'SEARCH_OR_FILTER', ruta: '/erp/compras', texto: 'x' }, { tipo: 'NAVIGATE', ruta: 'https://malo.cl' }, { tipo: 'BORRAR_TODO' }, null], CATALOGO, 'SUPERVISOR')).toEqual([])
     expect(planDeAcciones(undefined, CATALOGO, 'SUPERVISOR')).toEqual([])
+  })
+  it('el buscador general se abre con el texto, solo para quien tiene el ERP completo', () => {
+    const plan = planDeAcciones([{ tipo: 'GLOBAL_SEARCH', texto: '  Vargas \n', objetivo: 'search-input' }], CATALOGO, 'RRHH')
+    expect(plan).toEqual([{ tipo: 'GLOBAL_SEARCH', texto: 'Vargas', objetivo: 'search-input' }])
+    expect(resumenDePlan(plan)).toBe('Busqué «Vargas» en el buscador general')
+    expect(planDeAcciones([{ tipo: 'GLOBAL_SEARCH', texto: '   ' }], CATALOGO, 'RRHH')).toEqual([])
+    expect(planDeAcciones([{ tipo: 'GLOBAL_SEARCH', texto: 'Vargas' }], [{ ruta: '/app', label: 'Inicio' }], 'TECNICO')).toEqual([]) // el técnico no tiene buscador general
+    expect(planDeAcciones([{ tipo: 'GLOBAL_SEARCH', texto: 'x'.repeat(300) }], CATALOGO, 'RRHH')[0].texto).toHaveLength(80)
+  })
+  it('el almacén del buscador abre con el texto de la IA y se limpia al cerrar o alternar', () => {
+    const s = useBusquedaStore.getState()
+    s.abrir('Vargas')
+    expect(useBusquedaStore.getState()).toMatchObject({ abierta: true, consulta: 'Vargas' })
+    useBusquedaStore.getState().cerrar()
+    expect(useBusquedaStore.getState()).toMatchObject({ abierta: false, consulta: '' })
+    useBusquedaStore.getState().alternar()
+    expect(useBusquedaStore.getState()).toMatchObject({ abierta: true, consulta: '' })
+    useBusquedaStore.getState().alternar()
+    expect(useBusquedaStore.getState().abierta).toBe(false)
   })
   it('resaltar exige una pantalla propia y un identificador simple', () => {
     const ok = planDeAcciones([{ tipo: 'HIGHLIGHT_ELEMENT', ruta: '/erp/cumplimiento', objetivo: 'semaforo-plazo-fijo', descripcion: 'el semáforo' }], CATALOGO, 'RRHH')

@@ -6,6 +6,8 @@
  * - pase lo que pase, al final se navega a la URL que decidió el servidor.
  */
 
+import { useBusquedaStore } from '@/stores/busquedaStore'
+
 const AZUL = '#2563EB'
 
 /** Partes de una URL del ERP: la sección del menú (`/erp/obras`), la ruta completa y si trae filtros. @param {string} url */
@@ -206,6 +208,7 @@ const ETIQUETA_CAMPO = { rut: 'RUT', razon_social: 'razón social', giro: 'giro'
 async function ejecutarDirecto(plan, navigate) {
   for (const a of plan) {
     if (a.url && location.pathname + location.search !== a.url) navigate(a.url)
+    if (a.tipo === 'GLOBAL_SEARCH') useBusquedaStore.getState().abrir(a.texto)
     if (a.tipo === 'HIGHLIGHT_ELEMENT') {
       const el = await esperar(() => objetivo(a.objetivo), 2500)
       if (el) { el.scrollIntoView({ block: 'center' }); iluminar(el) }
@@ -254,6 +257,14 @@ export async function ejecutarPlan(plan, navigate, { alDecir } = {}) {
         navigate(a.url)
         const filtro = await esperar(() => objetivo('filtro-activo'), 1500)
         if (filtro && !cancelado) { await moverYClicar(cursor, filtro, esCancelado, { clic: false }); iluminar(filtro, 1300) }
+      } else if (a.tipo === 'GLOBAL_SEARCH') {
+        // Igual que una persona: va al buscador de la cabecera, «escribe» lo que busca y lo abre. Los resultados los filtra el rol, no la IA.
+        decir('Abriendo el buscador general…')
+        const buscador = objetivo(a.objetivo)
+        if (visible(buscador)) await moverYClicar(cursor, buscador, esCancelado, { clic: false })
+        for (let i = 1; i <= a.texto.length && !cancelado; i++) { decir(`Buscando: «${a.texto.slice(0, i)}»`); await pausa(55) }
+        if (!cancelado) await pausa(250)
+        useBusquedaStore.getState().abrir(a.texto)
       } else if (a.tipo === 'HIGHLIGHT_ELEMENT') {
         decir(`Mira aquí: ${a.descripcion || 'esto'}`)
         if (location.pathname !== a.url.split('?')[0]) await recorrer(cursor, a.url, navigate, esCancelado)

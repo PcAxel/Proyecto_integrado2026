@@ -113,6 +113,24 @@ class AccionesDeInterfazTests(GobernanzaBase):
         self.assertEqual((r.data['accion'], r.data['ruta'], r.data['termino_busqueda']), ('buscar', '/erp/bodega', 'compresor'))  # los campos de siempre siguen
         self.assertEqual(self.ultima().acciones_ui_ejecutadas, r.data['ui_actions'])
 
+    def test_buscar_global_abre_el_buscador_general_sin_navegar(self):
+        self.ia({**OK, 'respuesta_texto': 'Lo busco.', 'accion': 'buscar_global', 'termino_busqueda': 'Vargas'})
+        r = self.chat('RRHH', 'encuentra a Vargas')
+        self.assertEqual(r.data['ui_actions'], [{'tipo': 'GLOBAL_SEARCH', 'texto': 'Vargas', 'objetivo': 'search-input'}])
+        self.assertEqual((r.data['accion'], r.data['ruta'], r.data['termino_busqueda']), ('buscar_global', None, 'Vargas'))
+        # sin texto, o sin el buscador general (el técnico no tiene /erp), no se ofrece nada
+        self.ia({**OK, 'accion': 'buscar_global', 'termino_busqueda': '  '})
+        self.assertEqual(self.chat('RRHH', 'busca algo por favor ahora').data['ui_actions'], [])
+        self.ia({**OK, 'accion': 'buscar_global', 'termino_busqueda': 'Vargas'})
+        r = self.chat('OPERACIONES', 'busca a Vargas', rutas=[{'ruta': '/app', 'label': 'Inicio'}])
+        self.assertEqual((r.data['ui_actions'], r.data['accion']), ([], 'ninguna'))
+
+    def test_la_politica_de_ti_puede_apagar_la_busqueda_general(self):
+        AIPoliticaRol.objects.update_or_create(rol='RRHH', defaults={'permite_buscar': False})
+        self.ia({**OK, 'accion': 'buscar_global', 'termino_busqueda': 'Vargas'})
+        r = self.chat('RRHH', 'encuentra a Vargas')
+        self.assertEqual((r.data['ui_actions'], r.data['accion']), ([], 'ninguna'))
+
     def test_resaltar_solo_objetivos_conocidos_de_sus_pantallas(self):
         self.ia({**OK, 'respuesta_texto': 'Mira aquí.', 'resaltar': 'semaforo-plazo-fijo'})
         r = self.chat('RRHH', '¿dónde veo las alertas de contratos del personal?')
@@ -239,6 +257,14 @@ class MotorLocalTests(GobernanzaBase):
         r = self.chat('COMERCIAL', 'Registra el cliente Agrícola Los Aromos SpA, RUT 76.543.210-3, comuna Chillán')
         self.assertEqual(r.data['ui_actions'][-1]['campos'], {'rut': '76.543.210-3', 'razon_social': 'Agrícola Los Aromos SpA', 'comuna': 'Chillán'})
         self.assertEqual(self.ultima().motor, 'local')
+
+    def test_busca_sin_pantalla_usa_el_buscador_general_y_con_pantalla_filtra_esa(self):
+        r = self.chat('RRHH', 'busca a Vargas')
+        self.assertEqual((r.data['ui_actions'], r.data['accion'], r.data['motor']), ([{'tipo': 'GLOBAL_SEARCH', 'texto': 'Vargas', 'objetivo': 'search-input'}], 'buscar_global', 'local'))
+        r = self.chat('OPERACIONES', 'Busca Compresor Bitzer en bodega')  # nombra una pantalla: filtra esa
+        self.assertEqual([a['tipo'] for a in r.data['ui_actions']], ['NAVIGATE', 'SEARCH_OR_FILTER'])
+        r = self.chat('OPERACIONES', 'busca a Vargas', rutas=[{'ruta': '/app', 'label': 'Inicio'}])  # sin buscador general
+        self.assertEqual([a['tipo'] for a in r.data['ui_actions']], [])
 
     def test_lo_que_no_entiende_lo_pregunta_y_el_ambito_sigue_valiendo(self):
         r = self.chat('OPERACIONES', 'cuéntame un chiste sobre refrigeración industrial')

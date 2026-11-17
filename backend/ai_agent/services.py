@@ -93,7 +93,7 @@ def chat(usuario, rol, tarea, etiqueta, texto, *, json_mode=False, imagen_b64=No
     return _completar(usuario, rol, tarea, construir_mensajes(rol, tarea, etiqueta, texto, imagen_b64), json_mode=json_mode)
 
 
-ACCIONES_AGENTE = ('navegar', 'buscar', 'ninguna')
+ACCIONES_AGENTE = ('navegar', 'buscar', 'buscar_global', 'ninguna')
 MAX_TERMINO_BUSQUEDA = 80
 
 
@@ -146,6 +146,12 @@ def _interpretar_base(crudo, rutas):
 
     respuesta = str(datos.get('respuesta_texto') or '').strip()[:settings.AI_MAX_CHARS_RESPUESTA_CHAT]
     accion, ruta = datos.get('accion'), datos.get('ruta')
+    if accion == 'buscar_global':
+        # Búsqueda general de la aplicación: no lleva ruta. Solo se acepta si el usuario tiene el buscador (hay pantalla «Inicio» /erp en su lista).
+        termino = ''.join(c for c in str(datos.get('termino_busqueda') or '') if c.isprintable()).strip()[:MAX_TERMINO_BUSQUEDA]
+        if termino and '/erp' in permitidas:
+            return {'respuesta_texto': respuesta or f'Busco «{termino}» en el buscador general.', 'accion': 'buscar_global', 'ruta': None, 'termino_busqueda': termino}
+        return {'respuesta_texto': respuesta or 'Listo.', **sin_accion}
     if accion not in ACCIONES_AGENTE or accion == 'ninguna' or ruta not in permitidas:
         return {'respuesta_texto': respuesta or 'Listo.', **sin_accion}
     if accion == 'buscar':

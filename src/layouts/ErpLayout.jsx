@@ -19,6 +19,7 @@ import { BordeIA } from '@/components/BordeIA'
 import { useAsistenteStore } from '@/stores/asistenteStore'
 import { AsistenteIA } from '@/features/ia/AsistenteIA'
 import { RutaDelMenu } from '@/app/RutaDelMenu'
+import { useBusquedaStore } from '@/stores/busquedaStore'
 
 const esMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform ?? navigator.userAgent)
 
@@ -146,7 +147,9 @@ export function ErpLayout() {
   const asistenteAbierto = useAsistenteStore((s) => s.abierto) // el panel de la IA se acopla a la derecha y el contenido le deja su lugar
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar } = useUiStore()
   const navigate = useNavigate()
-  const [buscando, setBuscando] = useState(false)
+  const buscando = useBusquedaStore((s) => s.abierta)
+  const consultaInicial = useBusquedaStore((s) => s.consulta)
+  const { abrir: abrirBusqueda, cerrar: cerrarBusqueda, alternar: alternarBusqueda } = useBusquedaStore.getState()
   const salir = () => { logout(); navigate('/login', { replace: true }) }
 
   // Tema oscuro solo mientras se está en el ERP; va en <html> para que también lo hereden modales y paneles fuera del layout.
@@ -164,7 +167,7 @@ export function ErpLayout() {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        setBuscando((v) => !v)
+        alternarBusqueda()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -196,7 +199,7 @@ export function ErpLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="relative z-40 flex h-16 shrink-0 items-center gap-3 border-b border-fyag-ice/10 bg-fyag-bg/90 px-4 backdrop-blur sm:px-6 lg:px-10">
           <button type="button" aria-label="Abrir menú" onClick={() => setMobileSidebar(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-fyag-ice hover:bg-fyag-deep/30 hover:text-fyag-cream sm:hidden"><Menu className="h-5 w-5" /></button>
-          <BotonBuscar onClick={() => setBuscando(true)} />
+          <BotonBuscar onClick={() => abrirBusqueda()} />
           <div className="ml-auto flex items-center gap-3">
             {soloLectura && (
               <span role="status" title="Tu cuenta es de auditoría: puedes consultar y exportar, pero no modificar ningún registro." className="inline-flex items-center gap-1.5 rounded-full border border-fyag-ice/30 bg-fyag-deep/40 px-3 py-1 text-xs font-semibold text-fyag-ice">
@@ -213,7 +216,7 @@ export function ErpLayout() {
           <RutaDelMenu><Outlet /></RutaDelMenu>
         </main>
       </div>
-      <GlobalSearch open={buscando} onClose={() => setBuscando(false)} />
+      <GlobalSearch open={buscando} onClose={cerrarBusqueda} consultaInicial={consultaInicial} />
       <AsistenteIA />
       <BordeIA />
       <LecturaSeleccion />
