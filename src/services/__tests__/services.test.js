@@ -21,8 +21,8 @@ beforeEach(async () => {
 })
 
 describe('contrato del Cardex (P1)', () => {
-  it('expone solo list, retrieve, create, reversar, reingresarSobrante', () => {
-    expect(Object.keys(cardexService).sort()).toEqual(['create', 'list', 'reingresarSobrante', 'retrieve', 'reversar'])
+  it('expone solo list, retrieve, create, recepcionar, reversar, reingresarSobrante', () => {
+    expect(Object.keys(cardexService).sort()).toEqual(['create', 'list', 'recepcionar', 'reingresarSobrante', 'retrieve', 'reversar'])
   })
   it('ningún servicio expone remove/destroy/delete', () => {
     const all = [cardexService, articulosService, obrasService, presupuestosService, hojasService, comprasService, auditoriaService, personalService]
@@ -32,7 +32,7 @@ describe('contrato del Cardex (P1)', () => {
     const [ultima] = (await cardexService.list({ tipo: 'SALIDA_OBRA' })).filter((m) => !m.reversado)
     const antes = db.all('cardex').length
     const rev = await cardexService.reversar(ultima.id, 'Despacho duplicado por error')
-    expect(rev.tipo).toBe('REVERSA')
+    expect(rev).toMatchObject({ tipo: 'ENTRADA_REVERSA', signo: 1, reversa_de: ultima.id, referencia: 'Despacho duplicado por error' })
     expect(db.all('cardex')).toHaveLength(antes + 1)
     await expect(cardexService.reversar(ultima.id, 'Otra vez más')).rejects.toMatchObject({ status: 422 })
     const logs = await (login(ADMIN), auditoriaService.list({ accion: 'REVERSA' }))
@@ -146,7 +146,7 @@ describe('solicitudes de retiro', () => {
     const r = await retirosService.entregar('SR-0001')
     expect(r.estado).toBe('ENTREGADA')
     expect(db.all('cardex')).toHaveLength(antes + 2)
-    expect(db.all('cardex').at(-1)).toMatchObject({ tipo: 'SALIDA_OBRA', obra_id: 'OB-0001', referencia: 'Retiro SR-0001' })
+    expect(db.all('cardex').at(-1)).toMatchObject({ tipo: 'SALIDA_RETIRO', obra_id: 'OB-0001', referencia: 'Retiro SR-0001' })
     await expect(retirosService.entregar('SR-0001')).rejects.toMatchObject({ status: 409 })
   })
   it('es todo o nada si falta stock y el rechazo exige motivo', async () => {
@@ -507,5 +507,52 @@ describe('inicio por rol: «Pendientes para ti»', () => {
     expect(kpis.inventarioSanoPct).toBeGreaterThan(0)
     expect(kpis.inventarioSanoPct).toBeLessThanOrEqual(100)
     expect(kpis.documentosAlDiaPct).toBeLessThan(100) // la camioneta con revisión vencida
+  })
+})
+
+describe('bodega: recepción, picking con escáner y reglas de stock', () => {
+  it('Bodega recepciona mercadería: ENTRADA_RECEPCION suma stock al costo vigente y exige documento', async () => {
+    const [a] = (await articulosService.list()).filter((x) => x.costo_unitario > 0)
+    await expect(cardexService.recepcionar({ referencia: '', items: [{ articulo_id: a.id, cantidad: 5 }] })).rejects.toMatchObject({ status: 422 })
+    const [m] = await cardexService.recepcionar({ referencia: 'Guía 1234', items: [{ articulo_id: a.id, cantidad: 5 }] })
+    expect(m).toMatchObject({ tipo: 'ENTRADA_RECEPCION', signo: 1, cantidad: 5, referencia: 'Guía 1234', obra_id: null, costo_unitario: a.costo_unitario })
+    expect((await articulosService.retrieve(a.id)).stock).toBe(a.stock + 5)
+    await expect(cardexService.recepcionar({ referencia: 'Guía 1', items: [{ articulo_id: a.id, cantidad: 1 }, { articulo_id: a.id, cantidad: 1 }] })).rejects.toMatchObject({ status: 422 })
+  })
+  it('solo quien tiene bodega.recepcionar puede recepcionar', async () => {
+    const [a] = await articulosService.list()
+    login(GERENCIA)
+    await expect(cardexService.recepcionar({ referencia: 'Guía 1', items: [{ articulo_id: a.id, cantidad: 1 }] })).rejects.toMatchObject({ status: 403 })
+    login(TECNICO)
+    await expect(cardexService.create({ tipo: 'ENTRADA_RECEPCION', articulo_id: a.id, cantidad: 1, referencia: 'Guía 1' })).rejects.toMatchObject({ status: 403 })
+  })
+  it('entregarEscaneado: exige lo pedido, genera SALIDA_RETIRO y descuenta el stock', async () => {
+    const sr = db.find('retiros', 'SR-0001')
+    const [it1] = sr.items
+    const antes = db.all('cardex').length
+    await expect(retirosService.entregarEscaneado('SR-0001', [{ articulo_id: it1.articulo_id, cantidad: it1.cantidad + 1 }])).rejects.toMatchObject({ status: 422 })
+    expect(db.all('cardex')).toHaveLength(antes)
+    const stock0 = db.all('cardex').filter((m) => m.articulo_id === it1.articulo_id).reduce((s, m) => s + m.signo * m.cantidad, 0)
+    const r = await retirosService.entregarEscaneado('SR-0001', sr.items.map((i) => ({ articulo_id: i.articulo_id, cantidad: i.cantidad, lote_id: null })))
+    expect(r.estado).toBe('ENTREGADA')
+    const nuevos = db.all('cardex').slice(antes)
+    expect(nuevos.every((m) => m.tipo === 'SALIDA_RETIRO' && m.signo === -1)).toBe(true)
+    const stock1 = db.all('cardex').filter((m) => m.articulo_id === it1.articulo_id).reduce((s, m) => s + m.signo * m.cantidad, 0)
+    expect(stock1).toBe(stock0 - it1.cantidad)
+  })
+  it('una salida por retiro se reversa con ENTRADA_REVERSA y no vuelve a reversarse', async () => {
+    await retirosService.entregar('SR-0001')
+    const salida = db.all('cardex').at(-1)
+    await expect(cardexService.reversar(salida.id, 'abc')).rejects.toMatchObject({ status: 422 }) // nota muy corta
+    const rev = await cardexService.reversar(salida.id, 'Se entregó al técnico equivocado')
+    expect(rev).toMatchObject({ tipo: 'ENTRADA_REVERSA', reversa_de: salida.id, cantidad: salida.cantidad })
+    await expect(cardexService.reversar(salida.id, 'Otra vez más')).rejects.toMatchObject({ status: 422 })
+  })
+  it('reglas de stock: crítico ≤ mínimo ≤ máximo', async () => {
+    const [a] = await articulosService.list()
+    await articulosService.update(a.id, { stock_minimo: 10, stock_minimo_critico: 4, stock_maximo: 50 })
+    expect(db.find('articulos', a.id)).toMatchObject({ stock_minimo: 10, stock_minimo_critico: 4, stock_maximo: 50 })
+    await expect(articulosService.update(a.id, { stock_minimo_critico: 11 })).rejects.toMatchObject({ status: 422 })
+    await expect(articulosService.update(a.id, { stock_maximo: 5 })).rejects.toMatchObject({ status: 422 })
   })
 })

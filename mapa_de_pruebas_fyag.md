@@ -8,7 +8,7 @@ Para levantarlos: `npm run dev` (raíz) y `python manage.py runserver` (carpeta 
 |---|---|---|
 | `admin@fyag.cl` | `Admin-FYAG-2026` | Todo el ERP (Administrador). Ya tiene el autenticador vinculado |
 | `finanzas@fyag.cl` | `Finanzas-FYAG-2026` | Presupuestos, compras, facturación |
-| `operaciones@fyag.cl` | `Operaciones-FYAG-2026` | Obras, bodega |
+| `operaciones@fyag.cl` | `Operaciones-FYAG-2026` | Obras, bodega (recepción, retiros, reversas) |
 | `rrhh@fyag.cl` | `RRHH-FYAG-2026` | Personal, flota, contratos |
 | `superadmin@fyag.cl` | la que fija `seed_fyag` | Super Admin (TI): accesos, log de auditoría y estado del sistema. No ve el negocio |
 | `comercial@fyag.cl` | la que fija `seed_fyag` | Ejecutivo Comercial: presupuestos y clientes. No aprueba |
@@ -34,6 +34,10 @@ se obtiene con `python manage.py totp correo@fyag.cl`. Para reiniciar uno: `pyth
 | Modo daltonismo | Mismo menú → «Visión» | Activar y mirar **Presupuestos** y **Bodega y Cardex** (✅ / ⚠️ y bordes) |
 | Apariencia (día/noche, paletas, letra) | Ícono del sol, arriba a la derecha | Barra Día↔Noche, 2 paletas claras y 2 oscuras, tamaño de letra |
 | Asistente de IA | Botón ✨ abajo a la derecha | Frases en `guia_prompts_ia_fyag.md` (reportes, proyección de stock, compras) |
+| **Reglas de stock** (crítico / mínimo / máximo) | **Bodega y Cardex** → Artículos → lápiz de un artículo → «Reglas de stock» | Como `operaciones@fyag.cl`: poner crítico mayor que el mínimo bloquea el guardado; en la tabla aparece «crít. N · máx. N» |
+| **Ingresar recepción** | **Bodega y Cardex** → botón «Ingresar recepción» (arriba a la derecha) | Documento de respaldo + artículo(s) + cantidad. Deja `ENTRADA_RECEPCION` en el Cardex; avisa si supera el máximo |
+| **Retiro con escáner (picking)** | **Bodega y Cardex** → «Solicitudes de retiro» → una solicitud → «Comenzar retiro» | Escanea el QR o escribe el SKU + Enter; la tabla suma contra lo pedido; «Confirmar retiro» se habilita al completar y deja `SALIDA_RETIRO` |
+| **Reversar / Devolver** | **Cardex** → botón «Reversar/Devolver» en una salida | Exige nota de justificación; genera `ENTRADA_REVERSA` que suma el stock y apunta al movimiento original |
 | Stickers QR de 1000 productos | **Bodega y Cardex** → pestaña **Etiquetas** | Buscar por SKU, seleccionar, abrir el PDF |
 | Datos de demostración (online) | Variables en Render: `APEX_SEED_DEMO=1` y `FYAG_SEED_PASSWORD` | Deploy; luego quitar `APEX_SEED_DEMO` |
 | Datos de demostración (local) | **Presupuestos**, **Obras**, **Personal y Flota**, **Contratos y Finiquitos**, **Clientes y Proveedores** | Navegar |

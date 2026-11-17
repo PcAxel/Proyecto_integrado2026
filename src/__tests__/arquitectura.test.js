@@ -89,6 +89,6 @@ describe('principios de arquitectura', () => {
     const t = leer(join(SRC, 'services/cardex.service.js'))
     const bloque = t.slice(t.indexOf('export const cardexService'))
     const metodos = [...bloque.matchAll(/^  (\w+)\(/gm)].map((m) => m[1]).sort()
-    expect(metodos).toEqual(['create', 'list', 'reingresarSobrante', 'retrieve', 'reversar'])
+    expect(metodos).toEqual(['create', 'list', 'recepcionar', 'reingresarSobrante', 'retrieve', 'reversar'])
   })
 })

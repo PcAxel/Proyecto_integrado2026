@@ -72,7 +72,7 @@ export function EscanearModal({ open, onClose }) {
             <p className="font-mono text-sm text-ink-soft">{lote?.codigo ?? art.sku}</p>
             <p className="text-lg font-semibold leading-snug">{art.nombre}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <StockBadge stock={art.stock} minimo={art.stock_minimo} unidad={art.unidad} />
+              <StockBadge stock={art.stock} minimo={art.stock_minimo} critico={art.stock_minimo_critico} maximo={art.stock_maximo} unidad={art.unidad} />
               <Badge tone="neutral" icon={Package}>Mínimo {art.stock_minimo} {art.unidad}</Badge>
             </div>
             {lote && (

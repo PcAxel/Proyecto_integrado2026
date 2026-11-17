@@ -4,7 +4,7 @@ import { Button, Select, DataTable, Card, StatusBadge, Mono, Pagination, ExportM
 import { CardexTypeBadge, MoneyCell, TIPO_MOV_LABEL } from '@/components/domain'
 import { cardexService, articulosService, obrasService } from '@/services'
 import { formatFechaHora, conSigno } from '@/domain/format'
-import { valorMovimiento } from '@/domain/cardex'
+import { valorMovimiento, esSalida, esReversa } from '@/domain/cardex'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
@@ -58,11 +58,11 @@ export function CardexTab({ articuloId, onArticuloChange }) {
     ) },
     { key: 'acc', header: '', align: 'right', render: (m) => (
       <div className="flex justify-end gap-1">
-        {can(rol, 'cardex.reingresar') && m.tipo === 'SALIDA_OBRA' && m.reingresable > 0 && (
+        {can(rol, 'cardex.reingresar') && esSalida(m.tipo) && m.reingresable > 0 && (
           <Button size="sm" variant="secondary" icon={PackagePlus} onClick={() => setModal({ tipo: 'reingreso', mov: m })}>Reingresar</Button>
         )}
-        {can(rol, 'cardex.reversar') && m.tipo !== 'REVERSA' && m.tipo !== 'AJUSTE_CONTEO' && !m.reversado && (
-          <Button size="sm" variant="secondary" icon={Undo2} onClick={() => setModal({ tipo: 'reversa', mov: m })}>Reversar</Button>
+        {can(rol, 'cardex.reversar') && !esReversa(m.tipo) && m.tipo !== 'AJUSTE_CONTEO' && !m.reversado && (
+          <Button size="sm" variant="secondary" icon={Undo2} onClick={() => setModal({ tipo: 'reversa', mov: m })}>{m.signo < 0 ? 'Reversar/Devolver' : 'Reversar'}</Button>
         )}
       </div>
     ) },
@@ -73,7 +73,7 @@ export function CardexTab({ articuloId, onArticuloChange }) {
       <div className="flex items-start gap-3 rounded-xl border border-line bg-brand-tint p-4 text-sm">
         <Lock className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
         <p className="text-ink-soft">
-          <span className="font-semibold text-ink">Libro inmutable.</span> Los movimientos no se editan ni se eliminan. Los errores se corrigen con una <b>Reversa</b> auditada y los sobrantes con un <b>Reingreso</b>.
+          <span className="font-semibold text-ink">Libro inmutable.</span> Los movimientos no se editan ni se eliminan. Los errores se corrigen con una <b>Reversa</b> auditada (en una salida, una <b>Entrada por reversa</b> que devuelve el stock) y los sobrantes con un <b>Reingreso</b>.
         </p>
       </div>
 

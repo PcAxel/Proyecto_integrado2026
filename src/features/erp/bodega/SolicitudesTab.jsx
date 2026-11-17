@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { CheckCircle2, XCircle } from 'lucide-react'
-import { Card, DataTable, Badge, Drawer, Button, ConfirmDialog, Modal, Textarea, Mono } from '@/components/ui'
+import { ScanLine, XCircle } from 'lucide-react'
+import { Card, DataTable, Badge, Drawer, Button, Modal, Textarea, Mono } from '@/components/ui'
 import { retirosService } from '@/services'
 import { formatFechaHora } from '@/domain/format'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { runAction } from '@/hooks/runAction'
+import { RetiroEscaneoModal } from './RetiroEscaneoModal'
 
 export const ESTADO_RETIRO = {
   PENDIENTE: { tone: 'warn', label: 'Pendiente' },
@@ -17,10 +18,12 @@ export function SolicitudesTab({ resource }) {
   const rol = useAuthStore((s) => s.user.rol)
   const { data, loading, reload } = resource
   const [sel, setSel] = useState(null)
-  const [confirmar, setConfirmar] = useState(false)
+  const [picking, setPicking] = useState(false)
+  const [soloPendientes, setSoloPendientes] = useState(true)
   const [rechazo, setRechazo] = useState(null) // string | null
   const [trabajando, setTrabajando] = useState(false)
   const actual = sel && (data ?? []).find((r) => r.id === sel)
+  const filas = (data ?? []).filter((r) => !soloPendientes || r.estado === 'PENDIENTE')
   const puede = can(rol, 'cardex.crear')
 
   const columns = [
@@ -32,12 +35,6 @@ export function SolicitudesTab({ resource }) {
     { key: 'estado', header: 'Estado', render: (r) => <Badge tone={ESTADO_RETIRO[r.estado].tone}>{ESTADO_RETIRO[r.estado].label}</Badge> },
   ]
 
-  const entregar = async () => {
-    setTrabajando(true)
-    const r = await runAction(retirosService.entregar(actual.id), 'Solicitud entregada: salidas registradas en el Cardex')
-    setTrabajando(false)
-    if (r) { setConfirmar(false); reload() }
-  }
   const rechazar = async () => {
     setTrabajando(true)
     const r = await runAction(retirosService.rechazar(actual.id, rechazo), 'Solicitud rechazada')
@@ -48,8 +45,15 @@ export function SolicitudesTab({ resource }) {
   return (
     <>
       <Card padded={false}>
-        <DataTable columns={columns} rows={data ?? []} rowKey={(r) => r.id} loading={loading && !data} onRowClick={(r) => setSel(r.id)}
-          emptyTitle="Sin solicitudes" emptyHint="Las solicitudes de materiales enviadas desde terreno aparecerán aquí." />
+        <div className="flex items-center justify-between gap-3 border-b border-line p-4">
+          <h2 className="text-sm font-semibold">{soloPendientes ? 'Solicitudes de retiro pendientes' : 'Todas las solicitudes de retiro'}</h2>
+          <label className="flex items-center gap-2 text-sm text-ink-soft">
+            <input type="checkbox" checked={soloPendientes} onChange={(e) => setSoloPendientes(e.target.checked)} className="h-4 w-4 accent-brand" />
+            Solo pendientes
+          </label>
+        </div>
+        <DataTable columns={columns} rows={filas} rowKey={(r) => r.id} loading={loading && !data} onRowClick={(r) => setSel(r.id)}
+          emptyTitle={soloPendientes ? 'Sin solicitudes pendientes' : 'Sin solicitudes'} emptyHint="Las solicitudes de materiales enviadas desde terreno aparecerán aquí." />
       </Card>
 
       <Drawer open={Boolean(actual)} onClose={() => setSel(null)} title={actual ? `Solicitud ${actual.id}` : ''}>
@@ -83,7 +87,7 @@ export function SolicitudesTab({ resource }) {
             {actual.movimientos.length > 0 && <p className="text-xs text-ink-soft">Movimientos generados: <Mono>{actual.movimientos.join(', ')}</Mono></p>}
             {actual.estado === 'PENDIENTE' && puede && (
               <div className="flex gap-2 border-t border-line pt-4">
-                <Button icon={CheckCircle2} onClick={() => setConfirmar(true)}>Entregar materiales</Button>
+                <Button icon={ScanLine} onClick={() => setPicking(true)}>Comenzar retiro</Button>
                 <Button variant="secondary" icon={XCircle} onClick={() => setRechazo('')}>Rechazar</Button>
               </div>
             )}
@@ -91,9 +95,7 @@ export function SolicitudesTab({ resource }) {
         )}
       </Drawer>
 
-      <ConfirmDialog open={confirmar} onClose={() => setConfirmar(false)} onConfirm={entregar} loading={trabajando}
-        title="Entregar materiales" confirmLabel="Registrar salidas"
-        message="Se generará una salida de Cardex por cada ítem, imputada a la obra. Si falta stock en algún ítem no se registra ninguna." />
+      {actual && picking && <RetiroEscaneoModal open onClose={() => setPicking(false)} retiro={actual} onDone={() => { setPicking(false); reload() }} />}
       <Modal open={rechazo !== null} onClose={() => setRechazo(null)} title="Rechazar solicitud"
         footer={<><Button variant="secondary" onClick={() => setRechazo(null)}>Cancelar</Button><Button variant="danger" onClick={rechazar} loading={trabajando} disabled={!rechazo?.trim()}>Rechazar</Button></>}>
         <Textarea label="Motivo" value={rechazo ?? ''} onChange={(e) => setRechazo(e.target.value)} />

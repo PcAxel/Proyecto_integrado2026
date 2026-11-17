@@ -18,7 +18,12 @@ def num(v):
 # ───────────────────────── Cardex (libro inmutable) ─────────────────────────
 ENTRADA, SALIDA, REVERSA, REINGRESO = 'ENTRADA_COMPRA', 'SALIDA_OBRA', 'REVERSA', 'REINGRESO_SOBRANTE'
 AJUSTE = 'AJUSTE_CONTEO'  # contra-asiento de un conteo físico aprobado
-SIGNO = {ENTRADA: 1, SALIDA: -1, REINGRESO: 1}
+RECEPCION = 'ENTRADA_RECEPCION'  # ingreso directo de mercadería por bodega (guía de despacho), sin factura aún
+RETIRO = 'SALIDA_RETIRO'  # salida generada al entregar una solicitud de retiro escaneada (picking)
+ENTRADA_REVERSA = 'ENTRADA_REVERSA'  # contra-asiento de una salida: devuelve el stock; REVERSA queda para reversar entradas
+SALIDAS = (SALIDA, RETIRO)
+REVERSAS = (REVERSA, ENTRADA_REVERSA)
+SIGNO = {ENTRADA: 1, SALIDA: -1, REINGRESO: 1, RECEPCION: 1, RETIRO: -1, ENTRADA_REVERSA: 1}
 
 
 def stock(movs, articulo_id):
@@ -26,12 +31,12 @@ def stock(movs, articulo_id):
 
 
 def esta_reversado(movs, mov_id):
-    return any(m['tipo'] == REVERSA and m.get('reversa_de') == mov_id for m in movs)
+    return any(m['tipo'] in REVERSAS and m.get('reversa_de') == mov_id for m in movs)
 
 
 def cantidad_reingresable(movs, salida_id):
     salida = next((m for m in movs if m['id'] == salida_id), None)
-    if not salida or salida['tipo'] != SALIDA or esta_reversado(movs, salida_id):
+    if not salida or salida['tipo'] not in SALIDAS or esta_reversado(movs, salida_id):
         return Decimal(0)
     devuelto = sum(num(m['cantidad']) for m in movs
                    if m['tipo'] == REINGRESO and m.get('salida_origen_id') == salida_id and not esta_reversado(movs, m['id']))
@@ -42,7 +47,7 @@ def validar_movimiento(fila, movs, existe_obra, existe_articulo_activo):
     """Valida un movimiento nuevo contra el libro vigente. `movs` ya incluye los movimientos del mismo lote."""
     tipo = fila.get('tipo')
     cantidad, costo = num(fila.get('cantidad')), num(fila.get('costo_unitario'))
-    if tipo not in (ENTRADA, SALIDA, REVERSA, REINGRESO):
+    if tipo not in (ENTRADA, SALIDA, REVERSA, REINGRESO, RECEPCION, RETIRO, ENTRADA_REVERSA):
         raise ReglaError('Tipo de movimiento no permitido.')
     if not cantidad > 0:
         raise ReglaError('La cantidad debe ser mayor que cero.')
@@ -53,28 +58,32 @@ def validar_movimiento(fila, movs, existe_obra, existe_articulo_activo):
     if fila.get('signo') != (SIGNO.get(tipo) if tipo != REVERSA else fila.get('signo')):
         raise ReglaError('Signo del movimiento inconsistente.')
 
-    if tipo == ENTRADA:
+    if tipo in (ENTRADA, RECEPCION):
         if fila.get('obra_id'):
             raise ReglaError('Una entrada no se imputa a una obra.')
-    elif tipo == SALIDA:
+        if tipo == RECEPCION and len((fila.get('referencia') or '').strip()) < 3:
+            raise ReglaError('Una recepción debe indicar el documento de respaldo (guía de despacho u orden).')
+    elif tipo in SALIDAS:
         if not fila.get('obra_id') or not existe_obra(fila['obra_id']):
             raise ReglaError('Una salida debe imputarse a una obra existente.')
         disponible = stock(movs, fila['articulo_id'])
         if cantidad > disponible:
             raise ReglaError(f'Stock insuficiente: disponible {disponible}, solicitado {cantidad}.')
-    elif tipo == REVERSA:
+    elif tipo in REVERSAS:
         orig = next((m for m in movs if m['id'] == fila.get('reversa_de')), None)
         if not orig:
             raise ReglaError('Movimiento a reversar no encontrado.')
         if len((fila.get('referencia') or '').strip()) < 5:
-            raise ReglaError('Debe indicar un motivo (mín. 5 caracteres).')
-        if orig['tipo'] == REVERSA:
+            raise ReglaError('Debe indicar una nota de justificación (mín. 5 caracteres).')
+        if orig['tipo'] in REVERSAS:
             raise ReglaError('Una reversa no puede reversarse.')
+        if (tipo == ENTRADA_REVERSA) != (orig['signo'] < 0):
+            raise ReglaError('Una salida se reversa con una ENTRADA_REVERSA; las demás con una REVERSA.')
         if orig['tipo'] == AJUSTE:
             raise ReglaError('Un ajuste de conteo no se reversa: se corrige con un nuevo conteo.')
         if esta_reversado(movs, orig['id']):
             raise ReglaError('El movimiento ya fue reversado.')
-        if orig['tipo'] == SALIDA and cantidad_reingresable(movs, orig['id']) != num(orig['cantidad']):
+        if orig['tipo'] in SALIDAS and cantidad_reingresable(movs, orig['id']) != num(orig['cantidad']):
             raise ReglaError('La salida tiene reingresos activos; reverse primero los reingresos.')
         if (fila['signo'], fila['articulo_id'], cantidad) != (-orig['signo'], orig['articulo_id'], num(orig['cantidad'])):
             raise ReglaError('La reversa debe ser el contra-asiento exacto del movimiento original.')
@@ -82,7 +91,7 @@ def validar_movimiento(fila, movs, existe_obra, existe_articulo_activo):
             raise ReglaError('La reversa dejaría el stock en negativo.')
     elif tipo == REINGRESO:
         salida = next((m for m in movs if m['id'] == fila.get('salida_origen_id')), None)
-        if not salida or salida['tipo'] != SALIDA:
+        if not salida or salida['tipo'] not in SALIDAS:
             raise ReglaError('Solo se puede reingresar sobrante de una salida a obra.')
         if esta_reversado(movs, salida['id']):
             raise ReglaError('La salida fue reversada.')

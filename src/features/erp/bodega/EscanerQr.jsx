@@ -7,9 +7,9 @@ import { Input } from '@/components/ui'
  * Lector de QR con la cámara del equipo, más un campo para lectores USB tipo teclado o para escribir el SKU.
  * La cámara solo funciona con HTTPS (o localhost) y con permiso del usuario; si se niega, queda el campo de texto.
  * Se apaga sola al desmontarse. `onCodigo` se llama una vez por lectura (el mismo código no se repite en 2 s).
- * @param {{onCodigo:(texto:string)=>void, continuo?:boolean}} props
+ * @param {{onCodigo:(texto:string)=>void, compacto?:boolean}} props `compacto`: cámara baja y ancha, para dejar a la vista una tabla en el mismo modal
  */
-export function EscanerQr({ onCodigo }) {
+export function EscanerQr({ onCodigo, compacto = false }) {
   const video = useRef(null)
   const lienzo = useRef(null)
   const ultimo = useRef({ texto: '', t: 0 })
@@ -73,7 +73,7 @@ export function EscanerQr({ onCodigo }) {
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-deep">
+      <div className={`relative overflow-hidden rounded-xl bg-deep ${compacto ? 'h-36' : 'aspect-[4/3]'}`}>
         <video ref={video} playsInline muted className="h-full w-full object-cover" aria-label="Vista de la cámara" />
         <canvas ref={lienzo} className="hidden" />
         {estado === 'activa' && (

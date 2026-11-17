@@ -10,7 +10,7 @@ describe('seed', () => {
     expect(s.clientes).toHaveLength(8)
     expect(s.proveedores).toHaveLength(5)
     expect(s.articulos.length).toBeGreaterThanOrEqual(30)
-    expect(s.cardex.some((m) => m.tipo === 'REVERSA')).toBe(true)
+    expect(s.cardex.some((m) => m.tipo === 'ENTRADA_REVERSA')).toBe(true)
     expect(s.cardex.some((m) => m.tipo === 'REINGRESO_SOBRANTE')).toBe(true)
     expect(s.obras.filter((o) => o.es_emergencia_sin_presupuesto)).toHaveLength(2)
   })

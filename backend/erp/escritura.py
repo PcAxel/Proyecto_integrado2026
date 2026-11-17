@@ -17,7 +17,7 @@ from .reglas import ReglaError
 CAMPOS_EDITABLES = {
     'clientes': {'razon_social', 'giro', 'comuna', 'contacto', 'telefono', 'email', 'activo'},
     'proveedores': {'razon_social', 'comuna', 'contacto', 'condicion_pago', 'descuentos_habituales', 'activo'},
-    'articulos': {'nombre', 'categoria', 'unidad', 'costo_unitario', 'stock_minimo', 'proveedor_id', 'activo'},
+    'articulos': {'nombre', 'categoria', 'unidad', 'costo_unitario', 'stock_minimo', 'stock_minimo_critico', 'stock_maximo', 'proveedor_id', 'activo'},
 }
 # Campos de un presupuesto que solo fija el servidor
 PRESUPUESTO_SERVIDOR = {'id', 'estado', 'aprobado_por', 'fecha', 'motivo_rechazo'}
@@ -25,6 +25,7 @@ PRESUPUESTO_SERVIDOR = {'id', 'estado', 'aprobado_por', 'fecha', 'motivo_rechazo
 PERMISO_POR_MOVIMIENTO = {
     reglas.ENTRADA: ('compras.registrar',), reglas.SALIDA: ('cardex.crear',), reglas.REVERSA: ('cardex.reversar',),
     reglas.REINGRESO: ('cardex.reingresar',), reglas.AJUSTE: ('conteo.aprobar',),
+    reglas.RECEPCION: ('bodega.recepcionar',), reglas.RETIRO: ('cardex.crear',), reglas.ENTRADA_REVERSA: ('cardex.reversar',),
 }
 MAX_BYTES_FILA = 3_000_000  # una hoja con firma y fotos reducidas cabe de sobra
 
@@ -138,10 +139,21 @@ class Lote:
         desc = d.get('descuentos_habituales') or []
         exigir(len(desc) <= 3 and all(dom.es_numero(x) and 0 <= x <= 100 for x in desc), 'Descuentos inválidos.')
 
+    def _validar_reglas_stock(self, d):
+        """Reglas de stock del artículo: crítico ≤ mínimo ≤ máximo. Máximo 0 o vacío = sin tope. Se guardan siempre como número."""
+        for campo in ('stock_minimo', 'stock_minimo_critico', 'stock_maximo'):
+            if campo in d and d[campo] in (None, ''):
+                d[campo] = 0
+        minimo, critico, maximo = (d.get(c, 0) for c in ('stock_minimo', 'stock_minimo_critico', 'stock_maximo'))
+        exigir(all(no_negativo(v) for v in (minimo, critico, maximo)), 'Las reglas de stock no pueden ser negativas.')
+        exigir(critico <= minimo, 'El stock mínimo crítico no puede superar al stock mínimo.')
+        exigir(not maximo or maximo >= minimo, 'El stock máximo no puede ser menor que el stock mínimo.')
+
     def _alta_articulos(self, d):
         exigir(str(d.get('sku') or '').strip() and str(d.get('nombre') or '').strip(), 'Indique SKU y nombre.')
         exigir(not any(a['sku'] == d['sku'] for a in filas('articulos')), 'Ya existe un artículo con ese SKU.', 409, 'duplicado')
         exigir(no_negativo(d.get('costo_unitario', 0)) and no_negativo(d.get('stock_minimo', 0)), 'Costo y stock mínimo no pueden ser negativos.')
+        self._validar_reglas_stock(d)
         exigir(not d.get('proveedor_id') or fila('proveedores', d['proveedor_id']), 'Proveedor inexistente.')
         d['activo'] = True
 
@@ -203,9 +215,9 @@ class Lote:
             existe_obra=lambda i: bool(fila('obras', i)),
             existe_articulo_activo=lambda i: bool((fila('articulos', i) or {}).get('activo')),
         )
-        if d.get('tipo') in (reglas.SALIDA,):
+        if d.get('tipo') in (*reglas.SALIDAS, reglas.RECEPCION):
             art = fila('articulos', d['articulo_id'])
-            exigir(d['costo_unitario'] == art['costo_unitario'], 'La salida se valora al costo vigente del artículo.')
+            exigir(d['costo_unitario'] == art['costo_unitario'], 'El movimiento se valora al costo vigente del artículo.')
         self._validar_lote(d)
 
     def _validar_lote(self, d):
@@ -220,8 +232,8 @@ class Lote:
             return
         lote = fila('lotes', lote_id)
         exigir(lote and lote['articulo_id'] == d['articulo_id'], 'El lote no corresponde a este artículo.')
-        exigir(d['tipo'] in (reglas.SALIDA, reglas.REINGRESO, reglas.REVERSA), 'Una entrada no se imputa a un lote existente.')
-        if d['tipo'] == reglas.SALIDA:
+        exigir(d['tipo'] in (*reglas.SALIDAS, reglas.REINGRESO, *reglas.REVERSAS), 'Una entrada no se imputa a un lote existente.')
+        if d['tipo'] in reglas.SALIDAS:
             restante = reglas.restante_lote(lote, movs)
             exigir(reglas.num(d['cantidad']) <= restante, f"El lote {lote['codigo']} solo tiene {restante} disponible(s).")
 
@@ -434,6 +446,11 @@ class Lote:
         c = {k: v for k, v in c.items() if k in CAMPOS_EDITABLES['articulos']}
         if 'costo_unitario' in c or 'stock_minimo' in c:
             exigir(no_negativo(c.get('costo_unitario', 0)) and no_negativo(c.get('stock_minimo', 0)), 'Valores no pueden ser negativos.')
+        if {'stock_minimo', 'stock_minimo_critico', 'stock_maximo'} & c.keys():
+            # se valida el conjunto resultante (lo que ya tenía el artículo más lo que cambia)
+            final = {k: a.get(k, 0) for k in ('stock_minimo', 'stock_minimo_critico', 'stock_maximo')} | {k: v for k, v in c.items() if k.startswith('stock_m')}
+            self._validar_reglas_stock(final)
+            c.update({k: final[k] for k in final if k in c})
         return c
 
     def _patch_personal(self, a, c):
@@ -547,8 +564,11 @@ class Lote:
         movs = [fila('cardex', i) for i in ids]
         exigir(all(movs), 'Faltan los movimientos de la entrega.')
         esperado = sorted((i['articulo_id'], i['cantidad']) for i in a['items'])
-        entregado = sorted((m['articulo_id'], m['cantidad']) for m in movs
-                           if m['tipo'] == reglas.SALIDA and m['obra_id'] == a['obra_id'] and m['referencia'] == f"Retiro {a['id']}")
+        por_articulo = {}  # con escáner, un artículo puede salir en varios movimientos (uno por lote o cilindro)
+        for m in movs:
+            if m['tipo'] == reglas.RETIRO and m['obra_id'] == a['obra_id'] and m['referencia'] == f"Retiro {a['id']}":
+                por_articulo[m['articulo_id']] = por_articulo.get(m['articulo_id'], 0) + m['cantidad']
+        entregado = sorted(por_articulo.items())
         exigir(esperado == entregado, 'La entrega no coincide con lo solicitado.')
         return {'estado': 'ENTREGADA', 'resuelto_por': uid(self.user), 'resuelto_en': ahora(), 'movimientos': ids}
 

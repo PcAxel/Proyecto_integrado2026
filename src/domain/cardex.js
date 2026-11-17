@@ -2,7 +2,7 @@
  * Reglas del Cardex (P1, P2): el libro es inmutable. Aquí solo existen funciones
  * que CONSTRUYEN movimientos nuevos; ninguna edita ni elimina uno existente.
  *
- * @typedef {'ENTRADA_COMPRA'|'SALIDA_OBRA'|'REVERSA'|'REINGRESO_SOBRANTE'} TipoMov
+ * @typedef {'ENTRADA_COMPRA'|'ENTRADA_RECEPCION'|'SALIDA_OBRA'|'SALIDA_RETIRO'|'REVERSA'|'ENTRADA_REVERSA'|'REINGRESO_SOBRANTE'} TipoMov
  * @typedef {{
  *   id: string, tipo: TipoMov, fecha: string, articulo_id: string, cantidad: number,
  *   costo_unitario: number, signo: 1|-1, obra_id: string|null, usuario_id: string,
@@ -13,13 +13,20 @@
 
 export const TIPOS_MOV = {
   ENTRADA_COMPRA: 'ENTRADA_COMPRA',
+  ENTRADA_RECEPCION: 'ENTRADA_RECEPCION', // ingreso directo de bodega con guía de despacho
   SALIDA_OBRA: 'SALIDA_OBRA',
-  REVERSA: 'REVERSA',
+  SALIDA_RETIRO: 'SALIDA_RETIRO', // salida de una solicitud de retiro entregada con escáner
+  REVERSA: 'REVERSA', // contra-asiento de una entrada
+  ENTRADA_REVERSA: 'ENTRADA_REVERSA', // contra-asiento de una salida: devuelve el stock
   REINGRESO_SOBRANTE: 'REINGRESO_SOBRANTE',
   AJUSTE_CONTEO: 'AJUSTE_CONTEO', // contra-asiento de un conteo físico aprobado
 }
 
-const SIGNO_POR_TIPO = { ENTRADA_COMPRA: 1, SALIDA_OBRA: -1, REINGRESO_SOBRANTE: 1 }
+const SIGNO_POR_TIPO = { ENTRADA_COMPRA: 1, SALIDA_OBRA: -1, REINGRESO_SOBRANTE: 1, ENTRADA_RECEPCION: 1, SALIDA_RETIRO: -1, ENTRADA_REVERSA: 1 }
+
+/** Tipos que sacan stock hacia una obra, y tipos que son contra-asientos. */
+export const esSalida = (tipo) => tipo === TIPOS_MOV.SALIDA_OBRA || tipo === TIPOS_MOV.SALIDA_RETIRO
+export const esReversa = (tipo) => tipo === TIPOS_MOV.REVERSA || tipo === TIPOS_MOV.ENTRADA_REVERSA
 
 /** @param {MovimientoCardex[]} movs */
 function siguienteId(movs) {
@@ -37,11 +44,11 @@ export function calcularStock(movs, articuloId) {
 
 /** @param {MovimientoCardex[]} movs @param {string} movId */
 export function estaReversado(movs, movId) {
-  return movs.some((m) => m.tipo === TIPOS_MOV.REVERSA && m.reversa_de === movId)
+  return movs.some((m) => esReversa(m.tipo) && m.reversa_de === movId)
 }
 
 /**
- * Crea una ENTRADA_COMPRA o SALIDA_OBRA. REVERSA y REINGRESO tienen sus propios constructores.
+ * Crea una entrada (compra o recepción directa) o una salida (a obra o por retiro). Reversa y reingreso tienen sus propios constructores.
  * Rechaza stock negativo.
  * @param {MovimientoCardex[]} movs
  * @param {{tipo: TipoMov, articulo_id: string, cantidad: number, costo_unitario: number,
@@ -50,12 +57,15 @@ export function estaReversado(movs, movId) {
  */
 export function crearMovimiento(movs, input) {
   const { tipo, articulo_id, cantidad, costo_unitario, usuario_id, fecha } = input
-  if (tipo !== TIPOS_MOV.ENTRADA_COMPRA && tipo !== TIPOS_MOV.SALIDA_OBRA) {
+  if (![TIPOS_MOV.ENTRADA_COMPRA, TIPOS_MOV.ENTRADA_RECEPCION, TIPOS_MOV.SALIDA_OBRA, TIPOS_MOV.SALIDA_RETIRO].includes(tipo)) {
     return { ok: false, error: 'Tipo de movimiento no permitido en esta operación.' }
   }
   if (!(cantidad > 0)) return { ok: false, error: 'La cantidad debe ser mayor que cero.' }
   if (!(costo_unitario > 0)) return { ok: false, error: 'El costo unitario debe ser mayor que cero.' }
-  if (tipo === TIPOS_MOV.SALIDA_OBRA) {
+  if (tipo === TIPOS_MOV.ENTRADA_RECEPCION && (input.referencia ?? '').trim().length < 3) {
+    return { ok: false, error: 'Una recepción debe indicar el documento de respaldo (guía de despacho u orden).' }
+  }
+  if (esSalida(tipo)) {
     if (!input.obra_id) return { ok: false, error: 'Una salida debe imputarse a una obra.' }
     const stock = calcularStock(movs, articulo_id)
     if (cantidad > stock) return { ok: false, error: `Stock insuficiente: disponible ${stock}, solicitado ${cantidad}.` }
@@ -75,12 +85,12 @@ export function crearMovimiento(movs, input) {
       cantidad,
       costo_unitario,
       signo: SIGNO_POR_TIPO[tipo],
-      obra_id: tipo === TIPOS_MOV.SALIDA_OBRA ? input.obra_id : null,
+      obra_id: esSalida(tipo) ? input.obra_id : null,
       usuario_id,
       referencia: input.referencia ?? '',
       reversa_de: null,
       salida_origen_id: null,
-      lote_id: tipo === TIPOS_MOV.SALIDA_OBRA ? input.lote?.id ?? null : null,
+      lote_id: esSalida(tipo) ? input.lote?.id ?? null : null,
     },
   }
 }
@@ -92,7 +102,7 @@ export function crearMovimiento(movs, input) {
  */
 export function cantidadReingresable(movs, salidaId) {
   const salida = movs.find((m) => m.id === salidaId)
-  if (!salida || salida.tipo !== TIPOS_MOV.SALIDA_OBRA || estaReversado(movs, salidaId)) return 0
+  if (!salida || !esSalida(salida.tipo) || estaReversado(movs, salidaId)) return 0
   const yaDevuelto = movs
     .filter((m) => m.tipo === TIPOS_MOV.REINGRESO_SOBRANTE && m.salida_origen_id === salidaId && !estaReversado(movs, m.id))
     .reduce((acc, m) => acc + m.cantidad, 0)
@@ -109,11 +119,11 @@ export function cantidadReingresable(movs, salidaId) {
 export function crearReversa(movs, movId, { usuario_id, motivo, fecha }) {
   const orig = movs.find((m) => m.id === movId)
   if (!orig) return { ok: false, error: 'Movimiento no encontrado.' }
-  if (!motivo || motivo.trim().length < 5) return { ok: false, error: 'Debe indicar un motivo (mín. 5 caracteres).' }
-  if (orig.tipo === TIPOS_MOV.REVERSA) return { ok: false, error: 'Una reversa no puede reversarse.' }
+  if (!motivo || motivo.trim().length < 5) return { ok: false, error: 'Debe indicar una nota de justificación (mín. 5 caracteres).' }
+  if (esReversa(orig.tipo)) return { ok: false, error: 'Una reversa no puede reversarse.' }
   if (orig.tipo === TIPOS_MOV.AJUSTE_CONTEO) return { ok: false, error: 'Un ajuste de conteo no se reversa: se corrige con un nuevo conteo.' }
   if (estaReversado(movs, movId)) return { ok: false, error: 'El movimiento ya fue reversado.' }
-  if (orig.tipo === TIPOS_MOV.SALIDA_OBRA && cantidadReingresable(movs, movId) !== orig.cantidad) {
+  if (esSalida(orig.tipo) && cantidadReingresable(movs, movId) !== orig.cantidad) {
     return { ok: false, error: 'La salida tiene reingresos activos; reverse primero los reingresos.' }
   }
   const stockResultante = calcularStock(movs, orig.articulo_id) - orig.signo * orig.cantidad
@@ -124,7 +134,7 @@ export function crearReversa(movs, movId, { usuario_id, motivo, fecha }) {
     ok: true,
     movimiento: {
       id: siguienteId(movs),
-      tipo: TIPOS_MOV.REVERSA,
+      tipo: orig.signo < 0 ? TIPOS_MOV.ENTRADA_REVERSA : TIPOS_MOV.REVERSA, // una salida se reversa con una entrada
       fecha,
       articulo_id: orig.articulo_id,
       cantidad: orig.cantidad,
@@ -148,7 +158,7 @@ export function crearReversa(movs, movId, { usuario_id, motivo, fecha }) {
  */
 export function crearReingresoSobrante(movs, { salida_id, cantidad, usuario_id, fecha, motivo }) {
   const salida = movs.find((m) => m.id === salida_id)
-  if (!salida || salida.tipo !== TIPOS_MOV.SALIDA_OBRA) return { ok: false, error: 'Solo se puede reingresar sobrante de una salida a obra.' }
+  if (!salida || !esSalida(salida.tipo)) return { ok: false, error: 'Solo se puede reingresar sobrante de una salida a obra.' }
   if (estaReversado(movs, salida_id)) return { ok: false, error: 'La salida fue reversada.' }
   if (!(cantidad > 0)) return { ok: false, error: 'La cantidad debe ser mayor que cero.' }
   const max = cantidadReingresable(movs, salida_id)
@@ -187,6 +197,24 @@ export const valorMovimiento = (m) => m.cantidad * m.costo_unitario
 export function estadoStock(stock, minimo) {
   if (stock <= 0) return 'SIN_STOCK'
   return stock < minimo ? 'BAJO' : 'OK'
+}
+
+/** ¿El stock llegó al mínimo crítico? (0 o vacío = regla no definida). */
+export const esCritico = (stock, critico) => critico > 0 && stock > 0 && stock <= critico
+
+/** ¿El stock supera el máximo? (0 o vacío = sin tope). */
+export const superaMaximo = (stock, maximo) => maximo > 0 && stock > maximo
+
+/**
+ * Valida el conjunto de reglas de stock de un artículo: crítico ≤ mínimo ≤ máximo (máximo 0 = sin tope). Devuelve el error o null.
+ * @param {{stock_minimo?:number|null, stock_minimo_critico?:number|null, stock_maximo?:number|null}} r
+ */
+export function validarReglasStock({ stock_minimo: min, stock_minimo_critico: crit, stock_maximo: max }) {
+  const [m, c, x] = [min, crit, max].map((v) => v ?? 0)
+  if ([m, c, x].some((v) => !(v >= 0))) return 'Las reglas de stock no pueden ser negativas.'
+  if (c > m) return 'El stock mínimo crítico no puede superar al stock mínimo.'
+  if (x && x < m) return 'El stock máximo no puede ser menor que el stock mínimo.'
+  return null
 }
 
 /**

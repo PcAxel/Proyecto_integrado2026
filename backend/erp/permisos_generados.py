@@ -30,6 +30,7 @@ PERMISOS = {
     'obras.emergencia': {'OPERACIONES'},
     'articulos.gestionar': {'OPERACIONES'},
     'cardex.crear': {'OPERACIONES'},
+    'bodega.recepcionar': {'OPERACIONES'},
     'cardex.reversar': {'OPERACIONES'},
     'cardex.reingresar': {'OPERACIONES'},
     'conteo.registrar': {'OPERACIONES'},

@@ -94,11 +94,11 @@ def proyectar(user, articulo, hoy=None):
         if f is None or f < desde or f > hoy:
             continue
         c = reglas.num(m['cantidad'])
-        if m['tipo'] == reglas.SALIDA:
+        if m['tipo'] in reglas.SALIDAS:
             consumo += c
         elif m['tipo'] == reglas.REINGRESO:
             consumo -= c  # lo que vuelve de una obra no se consumió
-        elif m['tipo'] == reglas.REVERSA and por_id.get(m.get('reversa_de'), {}).get('tipo') == reglas.SALIDA:
+        elif m['tipo'] in reglas.REVERSAS and por_id.get(m.get('reversa_de'), {}).get('tipo') in reglas.SALIDAS:
             consumo -= c  # una salida reversada tampoco
     consumo = max(consumo, Decimal(0))
     promedio = consumo / VENTANA_DIAS

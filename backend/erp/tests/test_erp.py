@@ -45,9 +45,9 @@ class ErpBase(RoleTestCase):
         return [fac, self.mov(f'MOV-{n:06d}', cantidad=cantidad, costo_unitario=precio, referencia=f'FC-{n:04d}')]
 
     def mov(self, id, tipo='ENTRADA_COMPRA', cantidad=10, **extra):
-        signo = {'ENTRADA_COMPRA': 1, 'SALIDA_OBRA': -1, 'REINGRESO_SOBRANTE': 1}.get(tipo, 1)
+        signo = {'ENTRADA_COMPRA': 1, 'SALIDA_OBRA': -1, 'SALIDA_RETIRO': -1, 'REINGRESO_SOBRANTE': 1}.get(tipo, 1)
         fila = {'id': id, 'tipo': tipo, 'fecha': '2026-11-05T10:00:00', 'articulo_id': 'ART-001', 'cantidad': cantidad,
-                'costo_unitario': 1000, 'signo': signo, 'obra_id': 'OB-0001' if tipo == 'SALIDA_OBRA' else None,
+                'costo_unitario': 1000, 'signo': signo, 'obra_id': 'OB-0001' if tipo in ('SALIDA_OBRA', 'SALIDA_RETIRO') else None,
                 'usuario_id': 'U-001', 'referencia': 'x', 'reversa_de': None, 'salida_origen_id': None, **extra}
         return {'op': 'insert', 'tabla': 'cardex', 'fila': fila}
 

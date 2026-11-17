@@ -26,6 +26,35 @@ const buscar = (id) => {
   return r
 }
 
+/** Genera las SALIDA_RETIRO de una solicitud (todo o nada). `escaneados` null = lo pedido, sin lotes. */
+function entregarSalidas(id, escaneados) {
+  const u = requirePermiso('cardex.crear')
+  const r = buscar(id)
+  if (r.estado !== 'PENDIENTE') throw new ApiError(409, 'La solicitud ya fue resuelta.')
+  const lineas = escaneados ?? r.items.map((it) => ({ articulo_id: it.articulo_id, cantidad: it.cantidad, lote_id: null }))
+  const total = {}
+  lineas.forEach((l) => { total[l.articulo_id] = (total[l.articulo_id] ?? 0) + l.cantidad })
+  const pedido = Object.fromEntries(r.items.map((it) => [it.articulo_id, it.cantidad]))
+  const igual = Object.keys(pedido).length === Object.keys(total).length && Object.keys(pedido).every((k) => total[k] === pedido[k])
+  if (!igual) throw new ApiError(422, 'Lo escaneado no coincide con lo solicitado.')
+  const simulados = []
+  for (const l of lineas) {
+    const a = db.find('articulos', l.articulo_id)
+    const lote = l.lote_id ? db.find('lotes', l.lote_id) : null
+    if (l.lote_id && !lote) throw new ApiError(422, `${a.sku}: lote inexistente.`)
+    const res = crearMovimiento([...db.all('cardex'), ...simulados], {
+      tipo: 'SALIDA_RETIRO', articulo_id: a.id, cantidad: l.cantidad, costo_unitario: a.costo_unitario,
+      obra_id: r.obra_id, usuario_id: u.id, fecha: ahora(), referencia: `Retiro ${r.id}`, lote,
+    })
+    if (!res.ok) throw new ApiError(422, `${a.sku}: ${res.error}`)
+    simulados.push(res.movimiento)
+  }
+  simulados.forEach((m) => db.insert('cardex', m))
+  db.patch('retiros', id, { estado: 'ENTREGADA', resuelto_por: u.id, resuelto_en: ahora(), movimientos: simulados.map((m) => m.id) })
+  registrarAuditoria({ entidad: 'SolicitudRetiro', entidad_id: id, accion: 'ENTREGAR', anterior: { estado: 'PENDIENTE' }, nuevo: { estado: 'ENTREGADA', movimientos: simulados.map((m) => m.id) } })
+  return vista(r, u.rol)
+}
+
 /** Solicitudes de materiales desde terreno. Bodega las convierte en salidas de Cardex. */
 export const retirosService = {
   list({ estado } = {}) {
@@ -68,27 +97,16 @@ export const retirosService = {
       return vista(r, u.rol)
     })
   },
-  /** Genera una SALIDA_OBRA por ítem, todo o nada, valorada al costo vigente. */
+  /** Entrega sin escáner: una SALIDA_RETIRO por ítem pedido, todo o nada, valorada al costo vigente. */
   entregar(id) {
-    return respond(() => {
-      const u = requirePermiso('cardex.crear')
-      const r = buscar(id)
-      if (r.estado !== 'PENDIENTE') throw new ApiError(409, 'La solicitud ya fue resuelta.')
-      const simulados = []
-      for (const it of r.items) {
-        const a = db.find('articulos', it.articulo_id)
-        const res = crearMovimiento([...db.all('cardex'), ...simulados], {
-          tipo: 'SALIDA_OBRA', articulo_id: a.id, cantidad: it.cantidad, costo_unitario: a.costo_unitario,
-          obra_id: r.obra_id, usuario_id: u.id, fecha: ahora(), referencia: `Retiro ${r.id}`,
-        })
-        if (!res.ok) throw new ApiError(422, `${a.sku}: ${res.error}`)
-        simulados.push(res.movimiento)
-      }
-      simulados.forEach((m) => db.insert('cardex', m))
-      db.patch('retiros', id, { estado: 'ENTREGADA', resuelto_por: u.id, resuelto_en: ahora(), movimientos: simulados.map((m) => m.id) })
-      registrarAuditoria({ entidad: 'SolicitudRetiro', entidad_id: id, accion: 'ENTREGAR', anterior: { estado: 'PENDIENTE' }, nuevo: { estado: 'ENTREGADA', movimientos: simulados.map((m) => m.id) } })
-      return vista(r, u.rol)
-    })
+    return respond(() => entregarSalidas(id, null))
+  },
+  /**
+   * Entrega con escáner (picking): lo escaneado debe coincidir exactamente con lo pedido. Un artículo puede salir de varios lotes o cilindros.
+   * @param {string} id @param {Array<{articulo_id:string, cantidad:number, lote_id?:string|null}>} escaneados
+   */
+  entregarEscaneado(id, escaneados) {
+    return respond(() => entregarSalidas(id, escaneados))
   },
   rechazar(id, motivo) {
     return respond(() => {

@@ -18,8 +18,11 @@ function persistir(resultado, accion, entidadExtra) {
   return mov
 }
 
+/** Permiso que exige cada tipo de movimiento (por defecto, el de salidas). Tener uno no habilita los demás. */
+const PERMISO_POR_TIPO = { ENTRADA_RECEPCION: 'bodega.recepcionar' }
+
 /**
- * Contrato del Cardex: list, retrieve, create, reversar, reingresarSobrante.
+ * Contrato del Cardex: list, retrieve, create, recepcionar, reversar, reingresarSobrante.
  * NO existe update, patch, remove ni destroy (P1). Un test lo verifica.
  */
 export const cardexService = {
@@ -46,7 +49,7 @@ export const cardexService = {
   /** Entrada manual o salida a obra. Las salidas valoran al costo vigente del artículo. */
   create({ tipo, articulo_id, cantidad, obra_id = null, costo_unitario, referencia = '', lote_id = null }) {
     return respond(() => {
-      const u = requirePermiso('cardex.crear')
+      const u = requirePermiso(PERMISO_POR_TIPO[tipo] ?? 'cardex.crear')
       const articulo = db.find('articulos', articulo_id)
       if (!articulo || !articulo.activo) throw new ApiError(422, 'Artículo inexistente o inactivo.')
       if (obra_id && !db.find('obras', obra_id)) throw new ApiError(422, 'Obra inexistente.')
@@ -60,6 +63,30 @@ export const cardexService = {
       return vista(persistir(r, tipo), u.rol)
     })
   },
+  /**
+   * Recepción directa de mercadería (guía de despacho): una ENTRADA_RECEPCION por artículo, todo o nada, valorada al costo vigente
+   * (el costo real se actualiza cuando llega la factura). @param {{referencia:string, items:Array<{articulo_id:string,cantidad:number}>}} data
+   */
+  recepcionar({ referencia, items }) {
+    return respond(() => {
+      const u = requirePermiso('bodega.recepcionar')
+      if (!items?.length) throw new ApiError(422, 'Agrega al menos un artículo.')
+      const simulados = []
+      for (const it of items) {
+        const a = db.find('articulos', it.articulo_id)
+        if (!a?.activo) throw new ApiError(422, 'Hay un artículo inexistente o inactivo.')
+        if (simulados.some((m) => m.articulo_id === a.id)) throw new ApiError(422, `Artículo repetido: ${a.sku}.`)
+        const r = crearMovimiento([...db.all('cardex'), ...simulados], {
+          tipo: 'ENTRADA_RECEPCION', articulo_id: a.id, cantidad: it.cantidad, costo_unitario: a.costo_unitario,
+          referencia: referencia ?? '', usuario_id: u.id, fecha: ahora(),
+        })
+        if (!r.ok) throw new ApiError(422, `${a.sku}: ${r.error}`)
+        simulados.push(r.movimiento)
+      }
+      return simulados.map((m) => vista(persistir({ ok: true, movimiento: m }, 'ENTRADA_RECEPCION'), u.rol))
+    })
+  },
+  /** Una salida se reversa con una ENTRADA_REVERSA (suma el stock); lleva la nota de justificación y el id del original. */
   reversar(id, motivo) {
     return respond(() => {
       const u = requirePermiso('cardex.reversar')

@@ -53,8 +53,10 @@ export function ArticulosTab({ onVerKardex }) {
     { key: 'nombre', header: 'Artículo', render: (a) => (
       <div><p className="font-medium">{a.nombre}</p><p className="text-xs text-ink-soft">{a.categoria}</p></div>
     ) },
-    { key: 'stock', header: 'Stock', render: (a) => <StockBadge stock={a.stock} minimo={a.stock_minimo} unidad={a.unidad} /> },
-    { key: 'stock_minimo', header: 'Mínimo', align: 'right', mono: true },
+    { key: 'stock', header: 'Stock', render: (a) => <StockBadge stock={a.stock} minimo={a.stock_minimo} critico={a.stock_minimo_critico} maximo={a.stock_maximo} unidad={a.unidad} /> },
+    { key: 'stock_minimo', header: 'Mínimo', align: 'right', mono: true, render: (a) => (
+      <div><p>{a.stock_minimo}</p>{(a.stock_minimo_critico > 0 || a.stock_maximo > 0) && <p className="text-[11px] text-ink-faint">{a.stock_minimo_critico > 0 ? `crít. ${a.stock_minimo_critico}` : ''}{a.stock_minimo_critico > 0 && a.stock_maximo > 0 ? ' · ' : ''}{a.stock_maximo > 0 ? `máx. ${a.stock_maximo}` : ''}</p>}</div>
+    ) },
     { key: 'costo_unitario', header: 'Último costo', align: 'right', render: (a) => <MoneyCell value={a.costo_unitario} /> },
     { key: 'activo', header: 'Estado', render: (a) => <Badge tone={a.activo ? 'ok' : 'neutral'}>{a.activo ? 'Activo' : 'Inactivo'}</Badge> },
     { key: 'acc', header: '', align: 'right', render: (a) => (

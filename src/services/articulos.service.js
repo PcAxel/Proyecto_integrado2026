@@ -1,5 +1,5 @@
 import { db } from '@/mocks/db'
-import { calcularStock, estadoStock } from '@/domain/cardex'
+import { calcularStock, estadoStock, validarReglasStock } from '@/domain/cardex'
 import { can } from '@/domain/rbac'
 import { respond, requirePermiso, actor, ApiError, sinCostos } from './http'
 import { registrarAuditoria } from './auditoria.service'
@@ -44,7 +44,9 @@ export const articulosService = {
     return respond(() => {
       requirePermiso('articulos.gestionar')
       if (db.all('articulos').some((a) => a.sku === data.sku)) throw new ApiError(409, 'Ya existe un artículo con ese SKU.')
-      const row = db.insert('articulos', { activo: true, costo_unitario: 0, stock_minimo: 0, ...data, id: db.nextId('articulos') })
+      const errorReglas = validarReglasStock(data)
+      if (errorReglas) throw new ApiError(422, errorReglas)
+      const row = db.insert('articulos', { activo: true, costo_unitario: 0, stock_minimo: 0, stock_minimo_critico: 0, stock_maximo: 0, ...data, id: db.nextId('articulos') })
       registrarAuditoria({ entidad: 'Articulo', entidad_id: row.id, accion: 'CREAR', nuevo: row })
       return vista(row, actor().rol)
     })
@@ -56,6 +58,8 @@ export const articulosService = {
       const a = db.find('articulos', id)
       if (!a) throw new ApiError(404, 'Artículo no encontrado.')
       const { id: _i, activo: _a, stock: _s, ...permitidos } = cambios
+      const errorReglas = validarReglasStock({ ...a, ...permitidos })
+      if (errorReglas) throw new ApiError(422, errorReglas)
       const anterior = { ...a }
       db.patch('articulos', id, permitidos)
       registrarAuditoria({ entidad: 'Articulo', entidad_id: id, accion: 'ACTUALIZAR', anterior, nuevo: { ...a } })

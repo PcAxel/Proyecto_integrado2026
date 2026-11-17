@@ -403,7 +403,7 @@ export function createSeed() {
   FACTURAS.forEach((fc) => log(`${fc.fecha}T10:30:00`, 'U-003', 'FacturaCompra', fc.id, 'CREAR', null, { total: fc.total }))
   PRESUPUESTOS.filter((p) => p.estado === 'APROBADO').forEach((p) => log(`${p.fecha}T15:00:00`, 'U-002', 'Presupuesto', p.id, 'APROBAR', { estado: 'ENVIADO' }, { estado: 'APROBADO' }))
   OBRAS.filter((o) => o.es_emergencia_sin_presupuesto).forEach((o) => log(`${o.fecha_inicio}T07:30:00`, 'U-004', 'Obra', o.id, 'CREAR_CU30', null, { tipo: o.tipo, es_emergencia_sin_presupuesto: true }))
-  CARDEX.filter((m) => m.tipo === 'REVERSA' || m.tipo === 'REINGRESO_SOBRANTE').forEach((m) => log(m.fecha, 'U-003', 'MovimientoCardex', m.id, m.tipo, m.reversa_de ?? m.salida_origen_id, { cantidad: m.cantidad }))
+  CARDEX.filter((m) => m.tipo === 'REVERSA' || m.tipo === 'ENTRADA_REVERSA' || m.tipo === 'REINGRESO_SOBRANTE').forEach((m) => log(m.fecha, 'U-003', 'MovimientoCardex', m.id, m.tipo, m.reversa_de ?? m.salida_origen_id, { cantidad: m.cantidad }))
   HOJAS.filter((h) => h.auditoria).forEach((h) => log(h.auditoria.fecha, 'U-004', 'HojaServicio', h.id, h.estado === 'APROBADA' ? 'APROBAR' : 'DEVOLVER', { estado: 'ENVIADA' }, { estado: h.estado }))
   LOG.sort((a, b) => a.fecha.localeCompare(b.fecha)).forEach((l, i) => { l.id = `LOG-${pad(i + 1, 6)}` })
 
