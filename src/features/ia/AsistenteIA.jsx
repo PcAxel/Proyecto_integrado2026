@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useAsistenteStore } from '@/stores/asistenteStore'
 import { guiarA, ejecutarPlan } from '@/lib/guiaCursor'
 import { useDictado } from '@/hooks/useDictado'
+import { normalizarRespuestaIA } from '@/domain/respuestaIA'
 import { catalogoDeRutas, resolverAccion, planDeAcciones, resumenDePlan } from './agente'
 
 const copiar = async (texto) => {
@@ -155,8 +156,9 @@ function Conversacion({ activo, onCerrar }) {
       const accion = resolverAccion(r, catalogo, user.rol)
       // Copiloto: el servidor autoriza una lista de acciones de interfaz (`ui_actions`) y aquí se vuelven a validar antes de ejecutarlas.
       const plan = planDeAcciones(r.ui_actions, catalogo, user.rol, accion)
-      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion: plan.length ? null : accion, plan, archivo: r.archivo ?? null, calculo: r.calculo ?? null,
-        opciones: Array.isArray(r.opciones) ? r.opciones.slice(0, 4) : [], bloqueado: r.estado_seguridad === 'BLOQUEADO_POR_ROL', motor: r.motor }])
+      const limpia = normalizarRespuestaIA(r.respuesta_texto ?? r.respuesta, r.opciones) // si llegó JSON crudo, solo se muestra el mensaje
+      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: limpia.texto, accion: plan.length ? null : accion, plan, archivo: r.archivo ?? null, calculo: r.calculo ?? null,
+        opciones: limpia.opciones, bloqueado: r.estado_seguridad === 'BLOQUEADO_POR_ROL', motor: r.motor }])
       // El cursor del agente recorre el camino a la vista; con el panel acoplado a la derecha (pantalla grande) no tapa lo que se trabaja.
       if ((accion?.ancla || plan.some((p) => p.tipo !== 'NAVIGATE')) && !window.matchMedia('(min-width: 1024px)').matches) onCerrar?.() // en pantallas chicas el chat flota encima: se esconde (la conversación se conserva)
       if (plan.length) await ejecutarPlan(plan, navigate)
