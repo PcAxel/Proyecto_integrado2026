@@ -13,6 +13,7 @@ const ETAPA = {
   EN_EJECUCION: { tone: 'info', icon: HardHat },
   AUDITORIA_TERRENO_OK: { tone: 'ok', icon: ClipboardCheck },
   FACTURADO: { tone: 'ok', icon: Receipt },
+  PAGADA: { tone: 'ok', icon: CheckCircle2 },
 }
 /** Etapa del flujo entre áreas (Operaciones → Finanzas). */
 export const EtapaObraBadge = ({ etapa }) => {

@@ -26,8 +26,8 @@ export function describirTareas(tareas) {
 export const ENFOQUES = {
   ADMIN_GENERAL: {
     titular: (t) => (t.length ? 'Estas decisiones esperan por ti' : 'Sin decisiones pendientes'),
-    apoyo: (t) => (t.length ? `Pendientes: ${describirTareas(t)}.` : 'Los presupuestos y las obras están al día. Revisa los indicadores o administra los accesos.'),
-    accesos: [['Revisar presupuestos', '/erp/presupuestos', 'presupuestos.ver'], ['Administrar accesos', '/erp/usuarios', 'usuarios.ver']],
+    apoyo: (t) => (t.length ? `Pendientes: ${describirTareas(t)}.` : 'Los presupuestos y las obras están al día. Revisa los indicadores o las cobranzas.'),
+    accesos: [['Revisar presupuestos', '/erp/presupuestos', 'presupuestos.ver'], ['Ver cobranzas', '/erp/cobranzas', 'cobranzas.ver']],
   },
   ADMINISTRACION: {
     titular: (t) => (t.length ? 'Tu mesa de trabajo tiene pendientes' : 'Tu mesa de trabajo está al día'),

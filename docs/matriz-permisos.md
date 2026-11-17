@@ -7,12 +7,12 @@
 
 | Rol | Código | Qué hace | Lectura | Aprobación | Operativas | Sistema |
 | --- | --- | --- | :-: | :-: | :-: | :-: |
-| **Gerente General** | `ADMIN_GENERAL` | Dirección ejecutiva: aprueba presupuestos con margen bajo, cierra obras y ve toda la gestión. Administra accesos mientras no exista un área de TI. No ejecuta tareas operativas. | 20 | 4 | 0 | 3 |
-| **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 16 | 3 | 5 | 0 |
-| **Jefe de Bodega** | `BODEGA` | Inventario y Cardex: artículos, reglas de stock, recepciones, retiros con escáner, conteos y reversas. No ve ni gestiona obras, presupuestos ni facturación. | 8 | 0 | 7 | 0 |
+| **Gerente General** | `ADMIN_GENERAL` | Dirección ejecutiva: aprueba presupuestos con margen bajo, cierra obras y ve toda la gestión. Administra accesos mientras no exista un área de TI. No ejecuta tareas operativas. | 21 | 4 | 0 | 3 |
+| **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 17 | 4 | 6 | 0 |
+| **Jefe de Bodega** | `BODEGA` | Inventario y Cardex: artículos, reglas de stock, recepciones, retiros con escáner, conteos y reversas. No ve ni gestiona obras, presupuestos ni facturación. | 8 | 0 | 8 | 0 |
 | **Jefe de Operaciones** | `SUPERVISOR` | Obras: delegar a terreno, auditar el trabajo de terreno (avisa a Finanzas) y CU30. Ve el inventario solo para consultar; no lo opera. No emite facturas ni toca estados financieros. | 11 | 1 | 5 | 0 |
 | **Técnico en Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio, horas, reloj control y retiro de materiales. | 0 | 0 | 2 | 0 |
-| **Auditor Externo** | `CONSULTA` | Revisión externa de solo lectura: finanzas, presupuestos, aprobaciones e indicadores. No puede modificar nada. | 17 | 0 | 0 | 0 |
+| **Auditor Externo** | `CONSULTA` | Revisión externa de solo lectura: finanzas, presupuestos, aprobaciones e indicadores. No puede modificar nada. | 18 | 0 | 0 | 0 |
 | **Recursos Humanos** | `RRHH` | Único rol que modifica personal y flota: fichas, tarifas, contratos, vehículos y vencimientos. | 5 | 0 | 2 | 0 |
 | **Super Admin (TI y Seguridad)** | `SUPER_ADMIN` | TI y seguridad: usuarios y roles, log de auditoría técnica y estado del sistema e integraciones. No participa del negocio: no crea, aprueba ni ve costos. | 3 | 0 | 0 | 5 |
 | **Ejecutivo Comercial** | `COMERCIAL` | Ventas: crea y simula presupuestos y gestiona la cartera de clientes. No aprueba: bajo 20 % de margen decide Gerencia. | 7 | 0 | 2 | 0 |
@@ -42,10 +42,14 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Bodega | `cardex.reingresar` | Operativa | Reingresar sobrantes y conciliarlos | — | — | ✅ | — | — | — | — | — | — |
 | Bodega | `conteo.registrar` | Operativa | Registrar conteos físicos de inventario (conteo ciego) | — | — | ✅ | — | — | — | — | — | — |
 | Bodega | `conteo.aprobar` | Aprobación | Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó) | ✅ | ✅ | — | — | — | — | — | — | — |
+| Bodega | `solicitudes_compra.crear` | Operativa | Solicitar a Finanzas la compra de artículos que faltan en bodega | — | — | ✅ | — | — | — | — | — | — |
 | Compras | `compras.ver` | Lectura | Ver facturas de compra y notas de crédito | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | — | — |
+| Compras | `compras.aprobar` | Aprobación | Aprobar solicitudes de compra de Bodega y emitir las órdenes de compra a proveedores | — | ✅ | — | — | — | — | — | — | — |
 | Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | — | — | — | — | — | — |
 | Facturación | `facturacion.ver` | Lectura | Ver el estado de la factura electrónica de una obra y descargar su PDF | ✅ | ✅ | — | — | — | ✅ | — | — | — |
 | Facturación | `facturacion.emitir` | Aprobación | Emitir la factura electrónica (DTE, SII) de una obra finalizada y descargar su PDF | ✅ | ✅ | — | — | — | — | — | — | — |
+| Cobranzas | `cobranzas.ver` | Lectura | Ver las facturas emitidas por cobrar y los pagos de los clientes | ✅ | ✅ | — | — | — | ✅ | — | — | — |
+| Cobranzas | `cobranzas.gestionar` | Operativa | Registrar pagos de clientes (fecha, monto y método) y dejar la factura pagada | — | ✅ | — | — | — | — | — | — | — |
 | Auditoría de terreno | `terreno.ver` | Lectura | Ver las hojas de servicio enviadas desde la app móvil | ✅ | ✅ | — | ✅ | — | ✅ | — | — | — |
 | Auditoría de terreno | `hojas.auditar` | Operativa | Aprobar o devolver hojas de servicio | — | — | — | ✅ | — | — | — | — | — |
 | Personal y Flota | `personal.ver` | Lectura | Ver fichas, tarifas, vehículos y vencimientos | ✅ | ✅ | — | — | — | ✅ | ✅ | — | — |
@@ -86,12 +90,12 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | Operaciones no opera el inventario y Bodega no delega ni audita obras | El inventario es solo de Bodega; delegar y auditar terreno es solo de Operaciones |
 | ✅ | El Gerente General no ejecuta tareas operativas | Tiene 0 acciones operativas: solo lectura, aprobación y sistema |
 | ✅ | El Gerente General conserva la autorización (margen < 20 % y cierre de obras) | Puede aprobar presupuestos y finalizar obras |
-| ✅ | El Auditor Externo es estrictamente solo lectura | 17 permisos y todos son de lectura |
+| ✅ | El Auditor Externo es estrictamente solo lectura | 18 permisos y todos son de lectura |
 | ✅ | RRHH controla únicamente Personal y Flota, contratos y finiquitos | Solo asistencia.ver, cumplimiento.ver, dashboard.ver, personal.editar, personal.ver, rrhh.gestionar, rrhh.ver |
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Finanzas y el Gerente General ya no lo modifican |
 | ✅ | Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera | rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración |
 | ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 48 acciones catalogadas |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 52 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)

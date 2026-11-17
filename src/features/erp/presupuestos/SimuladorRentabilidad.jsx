@@ -21,7 +21,7 @@ function Fila({ label, value, fuerte, tono }) {
  * Simulador de rentabilidad previa (RF05). Presentacional: recibe el resultado de simularRentabilidad().
  * El manómetro lee el margen mientras se edita el presupuesto.
  */
-export function SimuladorRentabilidad({ sim, aprobacion, onAplicarSugerido, editable = true, children }) {
+export function SimuladorRentabilidad({ sim, aprobacion, onAplicarSugerido, editable = true, margenActual, children }) {
   const conVenta = sim.ventaNeto > 0
   return (
     <aside className="card overflow-hidden xl:sticky xl:top-6" aria-label="Simulador de rentabilidad">
@@ -39,7 +39,8 @@ export function SimuladorRentabilidad({ sim, aprobacion, onAplicarSugerido, edit
       <div className="space-y-4 p-5">
         {sim.bajoMinimo && conVenta && (
           <div role="alert" className="rounded-lg border border-crit/30 bg-crit-bg p-3 text-sm text-crit">
-            <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" />Margen bajo el mínimo de {MARGEN_MINIMO} %</p>
+            <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" />Riesgo de Rentabilidad</p>
+            <p className="mt-0.5 text-xs">Margen de {formatPct(sim.margenPct)}, bajo el mínimo de {MARGEN_MINIMO} %.</p>
             <p className="mt-1 text-xs">
               Precio sugerido para {MARGEN_OBJETIVO} % de margen: <Mono className="font-semibold">{formatCLP(sim.precioSugerido)}</Mono>
             </p>
@@ -56,6 +57,13 @@ export function SimuladorRentabilidad({ sim, aprobacion, onAplicarSugerido, edit
           <div className="my-1 border-t border-line" />
           <Fila label="Costo total" value={sim.costoTotal} fuerte />
         </div>
+
+        {margenActual !== undefined && margenActual !== sim.margenPct && conVenta && (
+          // El servidor recalcula con el último costo de cada artículo (el que deja el Kardex): si bajó, la cotización ya no rinde lo que se calculó.
+          <p className={cn('rounded-lg p-3 text-xs', margenActual < MARGEN_MINIMO ? 'bg-crit-bg text-crit' : 'bg-slate-50 text-ink-soft')}>
+            Con los costos actuales de bodega el margen sería <b>{formatPct(margenActual)}</b>{margenActual < MARGEN_MINIMO ? `, bajo el mínimo de ${MARGEN_MINIMO} %` : ''}.
+          </p>
+        )}
 
         <div>
           <Fila label="Venta neta" value={sim.ventaNeto} fuerte />

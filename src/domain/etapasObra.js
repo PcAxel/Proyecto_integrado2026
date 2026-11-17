@@ -1,10 +1,10 @@
 /**
  * Etapas del flujo de una obra entre áreas (las fija el servidor):
  * CREADO → ASIGNADO_A_TERRENO (Jefe de Operaciones delega) → EN_EJECUCION (primera hoja de terreno)
- * → AUDITORIA_TERRENO_OK (Jefe de Operaciones audita; avisa a Finanzas) → FACTURADO (factura aceptada).
+ * → AUDITORIA_TERRENO_OK (Jefe de Operaciones audita; avisa a Finanzas) → FACTURADO (factura aceptada) → PAGADA (el cliente pagó el total).
  * `estado` (PLANIFICADA / EN_CURSO / FINALIZADA) sigue siendo el ciclo operativo; las obras anteriores al flujo no traen `etapa` y se deduce de su estado.
  */
-export const ETAPAS = ['CREADO', 'ASIGNADO_A_TERRENO', 'EN_EJECUCION', 'AUDITORIA_TERRENO_OK', 'FACTURADO']
+export const ETAPAS = ['CREADO', 'ASIGNADO_A_TERRENO', 'EN_EJECUCION', 'AUDITORIA_TERRENO_OK', 'FACTURADO', 'PAGADA']
 
 export const ETAPA_LABEL = {
   CREADO: 'Creado',
@@ -12,6 +12,7 @@ export const ETAPA_LABEL = {
   EN_EJECUCION: 'En ejecución',
   AUDITORIA_TERRENO_OK: 'Auditoría de terreno OK',
   FACTURADO: 'Facturado',
+  PAGADA: 'Pagada',
 }
 
 const POR_ESTADO = { PLANIFICADA: 'CREADO', EN_CURSO: 'EN_EJECUCION', FINALIZADA: 'AUDITORIA_TERRENO_OK' }

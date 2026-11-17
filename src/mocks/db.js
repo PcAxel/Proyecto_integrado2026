@@ -13,10 +13,10 @@ import { api, request } from '@/services/api'
 /** Prefijo y ancho del id autogenerado por tabla (igual que el servidor: el id siguiente es cantidad + 1). */
 const ID_FORMAT = {
   articulos: ['ART-', 3], clientes: ['CLI-', 3], proveedores: ['PRV-', 3],
-  cardex: ['MOV-', 6], facturas: ['FC-', 4], notas_credito: ['NC-', 4],
+  cardex: ['MOV-', 6], solicitudes_compra: ['SC-', 4], ordenes_compra: ['OC-', 4], facturas: ['FC-', 4], notas_credito: ['NC-', 4],
   conteos: ['CNT-', 4], lotes: ['LOT-', 4], presupuestos: ['PRE-', 4], obras: ['OB-', 4], hojas: ['HS-', 4], retiros: ['SR-', 4], asistencia: ['ASI-', 6], usuarios: ['U-', 3], auditoria: ['LOG-', 6],
 }
-const TABLAS = ['usuarios', 'conteos', 'lotes', 'clientes', 'proveedores', 'articulos', 'cardex', 'facturas', 'notas_credito', 'presupuestos', 'obras',
+const TABLAS = ['usuarios', 'conteos', 'lotes', 'clientes', 'proveedores', 'articulos', 'cardex', 'solicitudes_compra', 'ordenes_compra', 'facturas', 'notas_credito', 'presupuestos', 'obras',
   'hojas', 'retiros', 'personal', 'flota', 'asistencia', 'auditoria']
 const EN_PRUEBAS = import.meta.env.MODE === 'test'
 

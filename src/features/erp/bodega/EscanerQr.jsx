@@ -7,14 +7,17 @@ import { Input } from '@/components/ui'
  * Lector de QR con la cámara del equipo, más un campo para lectores USB tipo teclado o para escribir el SKU.
  * La cámara solo funciona con HTTPS (o localhost) y con permiso del usuario; si se niega, queda el campo de texto.
  * Se apaga sola al desmontarse. `onCodigo` se llama una vez por lectura (el mismo código no se repite en 2 s).
- * @param {{onCodigo:(texto:string)=>void, compacto?:boolean}} props `compacto`: cámara baja y ancha, para dejar a la vista una tabla en el mismo modal
+ * @param {{onCodigo:(texto:string)=>void, compacto?:boolean, pausado?:boolean}} props `compacto`: cámara baja y ancha, para dejar a la vista una tabla en el mismo modal.
+ *   `pausado`: la cámara sigue encendida pero no se lee ningún código (se usa mientras una confirmación está abierta: nada se registra por un escaneo accidental).
  */
-export function EscanerQr({ onCodigo, compacto = false }) {
+export function EscanerQr({ onCodigo, compacto = false, pausado = false }) {
   const video = useRef(null)
   const lienzo = useRef(null)
   const ultimo = useRef({ texto: '', t: 0 })
   const alLeer = useRef(onCodigo)
   alLeer.current = onCodigo
+  const enPausa = useRef(pausado)
+  enPausa.current = pausado
   const [estado, setEstado] = useState('iniciando') // iniciando | activa | error
   const [error, setError] = useState('')
   const [manual, setManual] = useState('')
@@ -27,7 +30,7 @@ export function EscanerQr({ onCodigo, compacto = false }) {
     const ciclo = () => {
       const v = video.current
       if (!vivo || !v) return
-      if (v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
+      if (!enPausa.current && v.readyState === v.HAVE_ENOUGH_DATA && v.videoWidth) {
         const escala = Math.min(1, 640 / v.videoWidth)
         const w = Math.round(v.videoWidth * escala)
         const h = Math.round(v.videoHeight * escala)
@@ -87,7 +90,7 @@ export function EscanerQr({ onCodigo, compacto = false }) {
           </p>
         )}
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); if (manual.trim()) { alLeer.current(manual); setManual('') } }}>
+      <form onSubmit={(e) => { e.preventDefault(); if (manual.trim() && !enPausa.current) { alLeer.current(manual); setManual('') } }}>
         <Input label="Lector USB o escribir el SKU" placeholder="Ej.: REF-404A y Enter" icon={Keyboard} value={manual} autoComplete="off"
           onChange={(e) => setManual(e.target.value)} />
       </form>

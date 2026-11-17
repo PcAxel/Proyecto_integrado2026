@@ -18,6 +18,7 @@ import { GlobalSearch } from './GlobalSearch'
 import { BordeIA } from '@/components/BordeIA'
 import { useAsistenteStore } from '@/stores/asistenteStore'
 import { AsistenteIA } from '@/features/ia/AsistenteIA'
+import { RutaDelMenu } from '@/app/RutaDelMenu'
 
 const esMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform ?? navigator.userAgent)
 
@@ -209,7 +210,7 @@ export function ErpLayout() {
           </div>
         </header>
         <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6 sm:py-7 lg:px-10">
-          <Outlet />
+          <RutaDelMenu><Outlet /></RutaDelMenu>
         </main>
       </div>
       <GlobalSearch open={buscando} onClose={() => setBuscando(false)} />

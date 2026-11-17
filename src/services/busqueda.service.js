@@ -1,5 +1,6 @@
 import { db } from '@/mocks/db'
 import { can, ROL_LABEL } from '@/domain/rbac'
+import { rutaVisible } from '@/layouts/nav'
 import { respond, actor } from './http'
 
 const ESTADO_OBRA = { PLANIFICADA: 'Planificada', EN_CURSO: 'En curso', FINALIZADA: 'Finalizada' }
@@ -68,7 +69,7 @@ export const busquedaService = {
           subtitulo: `${u.cargo} · ${ROL_LABEL[u.rol]}${u.activo ? '' : ' · Desactivado'}`, keywords: [u.email], ruta: `/erp/usuarios?buscar=${encodeURIComponent(u.nombre)}`,
         }))
       }
-      return items
+      return items.filter((it) => rutaVisible(it.ruta, rol)) // nada que lleve a una pantalla que este rol no puede abrir
     })
   },
 }

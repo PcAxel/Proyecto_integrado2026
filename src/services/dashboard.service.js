@@ -4,6 +4,7 @@ import { costoRealObra, validarCierreObra } from '@/domain/obras'
 import { evaluarChecklist } from '@/domain/checklist'
 import { simularRentabilidad } from '@/domain/rentabilidad'
 import { construirTareas } from '@/domain/tareas'
+import { rutaVisible } from '@/layouts/nav'
 import { kpisGerencia, comparativoObras } from '@/domain/kpis'
 import { alertasOperativas, alertasVencimiento, ordenarAlertas, diasHasta } from '@/domain/alertas'
 import { can } from '@/domain/rbac'
@@ -80,8 +81,8 @@ export const dashboardService = {
         vencimientos,
         vehiculosEnTaller: (flota ?? []).filter((v) => v.activo && v.estado === 'EN_TALLER').map((v) => ({ patente: v.patente })),
       }
-      const tareas = construirTareas({ rol, fuentes, usuarioId: u_id })
-      return { kpis, comparativo, alertas, actividad, tareas, generado: ahora() }
+      const tareas = construirTareas({ rol, fuentes, usuarioId: u_id }).filter((t) => rutaVisible(t.ruta, rol))
+      return { kpis, comparativo, alertas: alertas.filter((a) => rutaVisible(a.ruta, rol)), actividad, tareas, generado: ahora() }
     })
   },
 }

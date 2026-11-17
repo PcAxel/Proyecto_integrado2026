@@ -45,6 +45,8 @@ function EditorForm({ inicial, onCambioEstado }) {
   const [base, setBase] = useState(() => JSON.stringify(form))
   const [trabajando, setTrabajando] = useState(false)
   const [rechazo, setRechazo] = useState(null)
+  const [confirmandoRiesgo, setConfirmandoRiesgo] = useState(false) // confirmación extra para aprobar con margen bajo el mínimo
+  const [entiendeRiesgo, setEntiendeRiesgo] = useState(false)
 
   const catalogo = useResource(() => presupuestosService.catalogoMateriales(), [])
   const tarifas = useResource(() => presupuestosService.tarifas(), [])
@@ -96,8 +98,10 @@ function EditorForm({ inicial, onCambioEstado }) {
   })
   const onAprobar = () => accion(async () => {
     const r = await runAction(presupuestosService.aprobar(inicial.id), 'Presupuesto aprobado')
-    if (r) onCambioEstado()
+    if (r) { setConfirmandoRiesgo(false); onCambioEstado() }
   })
+  // Con margen bajo el mínimo, aprobar exige una confirmación extra (casilla de «entiendo el riesgo»); con margen sano aprueba directo.
+  const pedirAprobar = () => (sim.bajoMinimo ? (setEntiendeRiesgo(false), setConfirmandoRiesgo(true)) : onAprobar())
   const onRechazar = () => accion(async () => {
     const r = await runAction(presupuestosService.rechazar(inicial.id, rechazo), 'Presupuesto rechazado')
     if (r) { setRechazo(null); onCambioEstado() }
@@ -184,12 +188,12 @@ function EditorForm({ inicial, onCambioEstado }) {
           </Card>
         </div>
 
-        <SimuladorRentabilidad sim={sim} aprobacion={estado === 'ENVIADO' ? aprobacion : undefined} editable={editable} onAplicarSugerido={() => set('precio_venta_neto', sim.precioSugerido)}>
+        <SimuladorRentabilidad sim={sim} margenActual={inicial.margen_actual} aprobacion={estado === 'ENVIADO' ? aprobacion : undefined} editable={editable} onAplicarSugerido={() => set('precio_venta_neto', sim.precioSugerido)}>
           {editable && <Button className="w-full" variant="secondary" icon={Save} loading={trabajando} disabled={!valido || (!esNuevo && !sucio)} onClick={onGuardar}>Guardar {esNuevo ? 'borrador' : 'cambios'}</Button>}
           {editable && estado === 'BORRADOR' && <Button className="w-full" icon={Send} loading={trabajando} disabled={!valido} onClick={onEnviar}>Guardar y enviar a aprobación</Button>}
           {estado === 'ENVIADO' && can(rol, 'presupuestos.aprobar') && (
             <>
-              <Button className="w-full" icon={CheckCircle2} loading={trabajando} disabled={!aprobacion.ok || sucio} onClick={onAprobar}>Aprobar presupuesto</Button>
+              <Button className="w-full" icon={CheckCircle2} loading={trabajando} disabled={!aprobacion.ok || sucio} onClick={pedirAprobar}>Aprobar presupuesto</Button>
               {sucio && <p className="text-xs text-ink-soft">Guarda los cambios antes de aprobar.</p>}
               <Button className="w-full" variant="secondary" icon={XCircle} disabled={sucio} onClick={() => setRechazo('')}>Rechazar</Button>
             </>
@@ -202,6 +206,18 @@ function EditorForm({ inicial, onCambioEstado }) {
         </SimuladorRentabilidad>
       </div>
 
+      <Modal open={confirmandoRiesgo} onClose={() => setConfirmandoRiesgo(false)} title="Riesgo de Rentabilidad"
+        footer={<><Button variant="secondary" onClick={() => setConfirmandoRiesgo(false)}>Cancelar</Button><Button variant="danger" loading={trabajando} disabled={!entiendeRiesgo} onClick={onAprobar}>Aprobar de todas formas</Button></>}>
+        <div className="space-y-4">
+          <p role="alert" className="rounded-lg border border-crit/30 bg-crit-bg p-3 text-sm text-crit">
+            Este presupuesto tiene un margen de <b>{sim.margenPct} %</b>, bajo el mínimo de 20 %. Si lo apruebas, la empresa se compromete a ejecutarlo con esa rentabilidad.
+          </p>
+          <label className="flex cursor-pointer items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-crit" checked={entiendeRiesgo} onChange={(e) => setEntiendeRiesgo(e.target.checked)} />
+            <span>Entiendo el riesgo y asumo la aprobación de este presupuesto con margen bajo el mínimo.</span>
+          </label>
+        </div>
+      </Modal>
       <Modal open={rechazo !== null} onClose={() => setRechazo(null)} title="Rechazar presupuesto"
         footer={<><Button variant="secondary" onClick={() => setRechazo(null)}>Cancelar</Button><Button variant="danger" loading={trabajando} disabled={!rechazo?.trim()} onClick={onRechazar}>Rechazar</Button></>}>
         <Textarea label="Motivo" value={rechazo ?? ''} onChange={(e) => setRechazo(e.target.value)} />

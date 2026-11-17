@@ -399,10 +399,11 @@ describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
 describe('búsqueda global: el índice respeta los permisos', () => {
   const grupos = (items) => [...new Set(items.map((i) => i.grupo))].sort()
 
-  it('Gerencia encuentra obras, personas, vehículos y usuarios', async () => {
+  it('Gerencia encuentra obras, personas y vehículos, pero nada de Bodega, Terreno ni TI', async () => {
     login(GERENCIA)
     const idx = await busquedaService.indice()
-    expect(grupos(idx)).toEqual(['Artículos', 'Clientes', 'Hojas de servicio', 'Obras', 'Personal', 'Presupuestos', 'Proveedores', 'Usuarios', 'Vehículos'])
+    // Artículos (Bodega), Hojas de servicio (Terreno) y Usuarios (TI) son pantallas que su menú no tiene: la búsqueda no las ofrece
+    expect(grupos(idx)).toEqual(['Clientes', 'Obras', 'Personal', 'Presupuestos', 'Proveedores', 'Vehículos'])
     expect(idx.find((i) => i.codigo === 'OB-0005')).toMatchObject({ grupo: 'Obras', ruta: '/erp/obras/OB-0005' })
     expect(idx.find((i) => i.titulo === 'Técnico Demo 01' && i.grupo === 'Personal')).toBeTruthy()
     expect(idx.find((i) => i.codigo === 'RTJK-45')).toMatchObject({ grupo: 'Vehículos' })
@@ -412,16 +413,18 @@ describe('búsqueda global: el índice respeta los permisos', () => {
     expect(grupos(await busquedaService.indice())).toEqual(['Personal', 'Vehículos'])
     login(BODEGA)
     const b = grupos(await busquedaService.indice())
-    expect(b).toEqual(expect.arrayContaining(['Artículos', 'Obras']))
+    expect(b).toEqual(expect.arrayContaining(['Artículos']))
+    expect(b).not.toEqual(expect.arrayContaining(['Obras'])) // las obras no están en el menú de Bodega
     expect(b).not.toEqual(expect.arrayContaining(['Personal']))
     expect(b).not.toEqual(expect.arrayContaining(['Usuarios']))
   })
-  it('solo Gerencia ve usuarios en la búsqueda, y nunca claves, tarifas ni costos', async () => {
+  it('los usuarios solo aparecen para TI (ya no para Gerencia), y nunca claves, tarifas ni costos', async () => {
     for (const id of [ADMIN, SUPERVISOR, 'U-006']) {
       login(id)
       expect((await busquedaService.indice()).some((i) => i.grupo === 'Usuarios')).toBe(false)
     }
     login(GERENCIA)
+    expect((await busquedaService.indice()).some((i) => i.grupo === 'Usuarios')).toBe(false)
     const texto = JSON.stringify(await busquedaService.indice())
     expect(texto).not.toMatch(/password|costo_hora|costo_unitario|tarifa/i)
   })

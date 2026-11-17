@@ -7,17 +7,16 @@ Para levantarlos: `npm run dev` (raíz) y `python manage.py runserver` (carpeta 
 | Cuenta | Contraseña | Qué ve |
 |---|---|---|
 | `admin@fyag.cl` | `Admin-FYAG-2026` | Todo el ERP (Administrador). Ya tiene el autenticador vinculado |
-| `finanzas@fyag.cl` | `Finanzas-FYAG-2026` | Presupuestos, compras, facturación |
+| `finanzas@fyag.cl` | `Finanzas-FYAG-2026` | **Finanzas**: ve estrictamente Presupuestos, Obras, Compras, Aprobación de Compras, Cobranzas, Finiquitos por Pagar y Clientes y Proveedores (más el Inicio). No ve Bodega y Cardex, Auditoría de Terreno, Log de Auditoría ni Personal y Flota, ni siquiera escribiendo la dirección |
 | `operaciones@fyag.cl` | `Operaciones-FYAG-2026` | **Jefe de Operaciones**: obras, «Delegar a Terreno», «Auditoría Terreno OK», auditoría de hojas. Ya NO opera la bodega ni ve «Bodega y Cardex» |
 | `bodega@fyag.cl` | `Bodega-FYAG-2026` | **Jefe de Bodega**: solo Bodega y Cardex y Compras (recepciones, retiros con escáner, reversas, reglas de stock). No ve obras. Creado en tu base local; en bases nuevas la clave es `Bodega-Apex-2026` |
 | `rrhh@fyag.cl` | `RRHH-FYAG-2026` | Personal, flota, contratos |
-| `superadmin@fyag.cl` | la que fija `seed_fyag` | Super Admin (TI): accesos, log de auditoría y estado del sistema. No ve el negocio |
+| `ti@apexsystems.cl` | `TI-Apex-2026` | **Admin TI** (Super Admin): accesos y usuarios, Gobernanza IA, log de auditoría y estado del sistema. No ve el negocio. Primer ingreso: muestra el QR del autenticador |
 | `comercial@fyag.cl` | la que fija `seed_fyag` | Ejecutivo Comercial: presupuestos y clientes. No aprueba |
-| `ti@apexsystems.cl` | la que fija `seed_fyag` | Jefatura de TI: accesos, Gobernanza IA (bitácora de prompts y políticas del agente) y estado del sistema |
 | `auditor@fyag.cl` | la que fija `seed_fyag` | Auditor Externo: todo en solo lectura; el servidor le rechaza cualquier escritura |
 | `tecnico@fyag.cl` y los otros 15 técnicos | `Tecnico-FYAG-2026` | Solo la app de terreno (`/app`) |
 
-Etapas de una obra: Creado → Asignado a terreno → En ejecución → Auditoría de terreno OK → Facturado (la factura aceptada la deja en «Facturado»).
+Etapas de una obra: Creado → Asignado a terreno → En ejecución → Auditoría de terreno OK → Facturado (la factura aceptada la deja en «Facturado») → Pagada (cuando el cliente paga el total).
 
 Los otros técnicos son `nombre.apellido@fyag.cl` (por ejemplo `cristian.medina@fyag.cl`, `luis.parra@fyag.cl`, `hugo.salazar@fyag.cl`).
 
@@ -39,11 +38,15 @@ se obtiene con `python manage.py totp correo@fyag.cl`. Para reiniciar uno: `pyth
 | Asistente de IA | Botón ✨ abajo a la derecha | Frases en `guia_prompts_ia_fyag.md` (reportes, proyección de stock, compras) |
 | **Reglas de stock** (crítico / mínimo / máximo) | **Bodega y Cardex** → Artículos → lápiz de un artículo → «Reglas de stock» | Como `bodega@fyag.cl`: poner crítico mayor que el mínimo bloquea el guardado; en la tabla aparece «crít. N · máx. N» |
 | **Ingresar recepción** (`bodega@fyag.cl`) | **Bodega y Cardex** → botón «Ingresar recepción» (arriba a la derecha) | Documento de respaldo + artículo(s) + cantidad. Deja `ENTRADA_RECEPCION` en el Cardex; avisa si supera el máximo |
-| **Retiro con escáner (picking)** (`bodega@fyag.cl`) | **Bodega y Cardex** → «Solicitudes de retiro» → una solicitud → «Comenzar retiro» | Escanea el QR o escribe el SKU + Enter; la tabla suma contra lo pedido; «Confirmar retiro» se habilita al completar y deja `SALIDA_RETIRO` |
+| **Retiro con escáner (picking)** (`bodega@fyag.cl`) | **Bodega y Cardex** → «Solicitudes de retiro» → una solicitud → «Comenzar retiro» | Escanea el QR o escribe el SKU + Enter: aparece una **confirmación** con el producto y su stock real («Confirmar Retiro» verde / «Cancelar / Equivocación» rojo); recién al confirmar se suma a la tabla. «Confirmar retiro» (final) se habilita al completar y deja `SALIDA_RETIRO` |
 | **Reversar / Devolver** (`bodega@fyag.cl`) | **Cardex** → botón «Reversar/Devolver» en una salida | Exige nota de justificación; genera `ENTRADA_REVERSA` que suma el stock y apunta al movimiento original |
 | **Delegar a Terreno** (`operaciones@fyag.cl`) | **Obras** → una obra no finalizada → botón «Delegar a Terreno» | Elige técnicos: la obra queda «Asignado a terreno» y en curso (los técnicos la ven en su app) |
 | **Auditoría Terreno OK** (`operaciones@fyag.cl`) | La misma obra → botón verde «Auditoría Terreno OK» | Solo si cumple los 6 requisitos de cierre (si no, dice cuál falta). La obra pasa a Finalizada y **Finanzas recibe un aviso** |
 | **Campanita de avisos** (`finanzas@fyag.cl`) | Ícono de campana arriba a la derecha | Muestra «Auditoría de Terreno completada… Lista para facturar»; al abrirla se marca como leída y al pulsar el aviso baja hasta «Emitir Factura» |
+| **Solicitud de compra** (`bodega@fyag.cl`) | **Bodega y Cardex** → pestaña «Solicitudes de compra» → «Nueva solicitud» | El artículo se busca **escribiendo** el SKU o parte del nombre (filtra al instante, también con teclado ↑ ↓ Enter); «Escanear un repuesto» completa la línea con el producto exacto del QR; o «Cargar los que están bajo el mínimo». Finanzas recibe un aviso en la campanita |
+| **Aprobación de Compras** (`finanzas@fyag.cl`) | Menú **Finanzas → Aprobación de Compras** | Abre una solicitud → «Aprobar y emitir órdenes»: se emite **una orden de compra por proveedor** al último costo; o «Rechazar» con motivo (le llega a Bodega) |
+| **Cobranzas** (`finanzas@fyag.cl`) | Menú **Finanzas → Cobranzas** | «Registrar pago» (fecha, monto, método): admite abonos; al cubrir el total la factura pasa a **PAGADA** y la obra a la etapa «Pagada». Requiere una factura emitida (ver Facturación) |
+| **Simulador de rentabilidad / Riesgo de Rentabilidad** | **Presupuestos** → un presupuesto con margen < 20 % (por ejemplo `PRE-0053`) | Alerta roja «Riesgo de Rentabilidad», desglose de costos y precio sugerido. Finanzas ve que requiere a Gerencia; con `admin@fyag.cl` el botón «Aprobar presupuesto» pide una casilla extra de confirmación |
 | Stickers QR de 1000 productos | **Bodega y Cardex** → pestaña **Etiquetas** | Buscar por SKU, seleccionar, abrir el PDF |
 | Datos de demostración (online) | Variables en Render: `APEX_SEED_DEMO=1` y `FYAG_SEED_PASSWORD` | Deploy; luego quitar `APEX_SEED_DEMO` |
 | Datos de demostración (local) | **Presupuestos**, **Obras**, **Personal y Flota**, **Contratos y Finiquitos**, **Clientes y Proveedores** | Navegar |

@@ -73,6 +73,10 @@ export const CATALOGO_PERMISOS = {
   'compras.ver': { tipo: 'lectura', modulo: 'Compras', descripcion: 'Ver facturas de compra y notas de crédito' },
   'facturacion.ver': { tipo: 'lectura', modulo: 'Facturación', descripcion: 'Ver el estado de la factura electrónica de una obra y descargar su PDF' },
   'facturacion.emitir': { tipo: 'aprobacion', modulo: 'Facturación', descripcion: 'Emitir la factura electrónica (DTE, SII) de una obra finalizada y descargar su PDF' },
+  'compras.aprobar': { tipo: 'aprobacion', modulo: 'Compras', descripcion: 'Aprobar solicitudes de compra de Bodega y emitir las órdenes de compra a proveedores' },
+  'solicitudes_compra.crear': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Solicitar a Finanzas la compra de artículos que faltan en bodega' },
+  'cobranzas.ver': { tipo: 'lectura', modulo: 'Cobranzas', descripcion: 'Ver las facturas emitidas por cobrar y los pagos de los clientes' },
+  'cobranzas.gestionar': { tipo: 'operativa', modulo: 'Cobranzas', descripcion: 'Registrar pagos de clientes (fecha, monto y método) y dejar la factura pagada' },
   'compras.registrar': { tipo: 'operativa', modulo: 'Compras', descripcion: 'Registrar facturas (hasta 3 descuentos) y notas de crédito' },
   'terreno.ver': { tipo: 'lectura', modulo: 'Auditoría de terreno', descripcion: 'Ver las hojas de servicio enviadas desde la app móvil' },
   'hojas.auditar': { tipo: 'operativa', modulo: 'Auditoría de terreno', descripcion: 'Aprobar o devolver hojas de servicio' },
@@ -139,12 +143,14 @@ export const PERMISOS = {
   'cumplimiento.ver': ['ADMIN_GENERAL', 'CONSULTA', 'RRHH'],
   'finiquitos.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'CONSULTA'],
   'facturacion.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'CONSULTA'],
+  'cobranzas.ver': ['ADMIN_GENERAL', 'ADMINISTRACION', 'CONSULTA'],
 
   // ── Aprobación ──
   'presupuestos.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'obras.cerrar': ['ADMIN_GENERAL', 'SUPERVISOR'],
   'conteo.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'facturacion.emitir': ['ADMIN_GENERAL', 'ADMINISTRACION'],
+  'compras.aprobar': ['ADMINISTRACION'],
 
   // ── Operativas ──
   'presupuestos.crear': ['ADMINISTRACION', 'SUPERVISOR', 'COMERCIAL'],
@@ -158,6 +164,8 @@ export const PERMISOS = {
   'cardex.reingresar': ['BODEGA'],
   'conteo.registrar': ['BODEGA'],
   'compras.registrar': ['ADMINISTRACION', 'BODEGA'],
+  'solicitudes_compra.crear': ['BODEGA'],
+  'cobranzas.gestionar': ['ADMINISTRACION'],
   'hojas.auditar': ['SUPERVISOR'],
   'personal.editar': ['RRHH'],
   'rrhh.gestionar': ['RRHH'],

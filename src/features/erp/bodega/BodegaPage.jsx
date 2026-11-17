@@ -8,6 +8,7 @@ import { ArticulosTab } from './ArticulosTab'
 import { CardexTab } from './CardexTab'
 import { SolicitudesTab } from './SolicitudesTab'
 import { EtiquetasTab } from './EtiquetasTab'
+import { SolicitudesCompraTab } from './SolicitudesCompraTab'
 import { ConteoTab } from './ConteoTab'
 import { conteosService } from '@/services'
 import { EscanearModal } from './EscanearModal'
@@ -46,12 +47,14 @@ export function BodegaPage() {
         { id: 'articulos', label: 'Artículos' },
         { id: 'cardex', label: 'Cardex' },
         { id: 'solicitudes', label: 'Solicitudes de retiro', count: pendientes || undefined },
+        { id: 'compra', label: 'Solicitudes de compra' },
         { id: 'conteo', label: 'Conteo físico', count: conteosPendientes || undefined },
         { id: 'etiquetas', label: 'Etiquetas QR' },
       ]} />
       {tab === 'articulos' && <ArticulosTab key={version} onVerKardex={(id) => ir('cardex', id)} />}
       {tab === 'cardex' && <CardexTab key={version} articuloId={articuloId} onArticuloChange={(id) => ir('cardex', id)} />}
       {tab === 'solicitudes' && <SolicitudesTab resource={retiros} />}
+      {tab === 'compra' && <SolicitudesCompraTab />}
       {tab === 'conteo' && <ConteoTab key={articuloId} articuloInicial={articuloId} />}
       {tab === 'etiquetas' && <EtiquetasTab />}
       {recepcionando && <RecepcionModal open onClose={() => setRecepcionando(false)} onSaved={() => setVersion((v) => v + 1)} />}

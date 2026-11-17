@@ -168,7 +168,7 @@ Las crea `python manage.py seed_fyag` (carpeta `backend`, con `DJANGO_DEBUG=True
 
 | Rol | Correo | Contraseña | Entra a |
 |---|---|---|---|
-| Super Admin (TI) | `superadmin@fyag.cl` | `SuperAdmin-Apex-2026` | `/erp` |
+| Super Admin (TI) | `ti@apexsystems.cl` | `TI-Apex-2026` | `/erp` |
 | Gerente General | `admin@fyag.cl` | `Admin-Apex-2026` | `/erp` |
 | Finanzas y Tributario | `finanzas@fyag.cl` | `Finanzas-Apex-2026` | `/erp` |
 | Recursos Humanos | `rrhh@fyag.cl` | `RRHH-Apex-2026` | `/erp` |

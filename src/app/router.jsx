@@ -35,6 +35,8 @@ import { AuditoriaPage } from '@/features/erp/auditoria/AuditoriaPage'
 import { RetiroPage } from '@/features/pwa/retiro/RetiroPage'
 import { SistemaPage } from '@/features/erp/sistema/SistemaPage'
 import { GobernanzaIAPage } from '@/features/erp/sistema/GobernanzaIAPage'
+import { AprobacionComprasPage } from '@/features/erp/finanzas/AprobacionComprasPage'
+import { CobranzasPage } from '@/features/erp/finanzas/CobranzasPage'
 import { ROLES_ERP } from '@/domain/rolesApi'
 
 /**
@@ -80,6 +82,8 @@ export const router = createBrowserRouter([
           { path: 'sistema', element: <RequireRole accion="sistema.ver"><SistemaPage /></RequireRole> },
           { path: 'bodega', element: <RequireRole accion="bodega.ver"><BodegaPage /></RequireRole> },
           { path: 'compras', element: <RequireRole accion="compras.ver"><ComprasPage /></RequireRole> },
+          { path: 'aprobacion-compras', element: <RequireRole accion="compras.aprobar"><AprobacionComprasPage /></RequireRole> },
+          { path: 'cobranzas', element: <RequireRole accion="cobranzas.ver"><CobranzasPage /></RequireRole> },
         ],
       },
       {
