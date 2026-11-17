@@ -12,7 +12,17 @@ export const iaService = {
    * `archivo` llega solo cuando el agente generó un reporte (Excel, Word o PowerPoint): lo entrega el servidor, nunca el modelo.
    * @returns {Promise<{respuesta:string, respuesta_texto:string, accion:'navegar'|'buscar'|'ninguna', ruta:string|null, termino_busqueda:string|null, archivo?:{nombre:string, formato:'xlsx'|'docx'|'pptx', filas:number, url:string}}>}
    */
-  conversar: (mensajes, rutas = []) => api.post('/ai/chat/', { mensajes, rutas }),
+  conversar: (mensajes, rutas = [], origen = '') => api.post('/ai/chat/', { mensajes, rutas, ...(origen ? { origen } : {}) }),
+
+  // ── Gobernanza IA (módulo de TI): trazabilidad de prompts y derechos y deberes del agente por rol ──
+  /** @param {{usuario?:string, rol?:string, estado?:string, riesgo?:string, desde?:string, hasta?:string, alertas?:boolean}} [f] */
+  bitacora: (f = {}) => {
+    const q = new URLSearchParams(Object.entries({ ...f, alertas: f.alertas ? '1' : '' }).filter(([, v]) => v))
+    return api.get(`/ai/gobernanza/bitacora/${q.size ? `?${q}` : ''}`)
+  },
+  politicas: () => api.get('/ai/gobernanza/politicas/'),
+  /** Solo TI. @param {string} rol @param {object} cambios interruptores o `max_acciones` */
+  cambiarPolitica: (rol, cambios) => api.patch(`/ai/gobernanza/politicas/${rol}/`, cambios),
   /** Baja el reporte generado por el agente (solo su dueño puede) con la sesión. @param {{url:string, nombre:string}} archivo el `archivo` de la respuesta */
   descargarReporte: (archivo) => descargarArchivo(archivo.url, archivo.nombre),
   /** @param {string} texto texto de la factura (OCR) @returns {Promise<{proveedor, rut_proveedor, numero_factura, fecha, monto_neto, iva, total, advertencias:string[], requiere_revision:boolean}>} */

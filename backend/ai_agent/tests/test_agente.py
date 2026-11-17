@@ -18,9 +18,9 @@ from accounts.models import CustomUser, Role
 from accounts.tests.base import RoleTestCase
 from ai_agent import prompts, services
 
-FACTURA_OK = {'proveedor': 'Distribuidora Frigotec Ltda.', 'rut_proveedor': '76.554.120-4', 'numero_factura': '4821',
+FACTURA_OK = {'proveedor': 'Proveedor Demo 01 Ltda.', 'rut_proveedor': '99.100.001-1', 'numero_factura': '4821',
               'fecha': '2026-11-05', 'monto_neto': 100000, 'iva': 19000, 'total': 119000}
-TEXTO_FACTURA = 'Distribuidora Frigotec Ltda. RUT 76.554.120-4 Factura N° 4821 Fecha 05-11-2026 Neto $100.000 IVA $19.000 Total $119.000'
+TEXTO_FACTURA = 'Proveedor Demo 01 Ltda. RUT 99.100.001-1 Factura N° 4821 Fecha 05-11-2026 Neto $100.000 IVA $19.000 Total $119.000'
 INFORME = 'Se reemplazó el filtro, se limpió el serpentín y se recargaron 2 kg de gas R410A.'
 
 
@@ -153,7 +153,7 @@ class SalidaValidadaTests(AgenteBase):
     def test_factura_ok_queda_lista_para_autocompletar_y_marcada_para_revision(self):
         self.ia(FACTURA_OK)
         r = self.factura('FINANZAS').json()
-        self.assertEqual((r['proveedor'], r['fecha'], r['monto_neto'], r['iva'], r['total']), ('Distribuidora Frigotec Ltda.', '2026-11-05', 100000, 19000, 119000))
+        self.assertEqual((r['proveedor'], r['fecha'], r['monto_neto'], r['iva'], r['total']), ('Proveedor Demo 01 Ltda.', '2026-11-05', 100000, 19000, 119000))
         self.assertEqual((r['advertencias'], r['requiere_revision']), ([], True))
 
     def test_montos_y_fechas_se_normalizan(self):
@@ -183,10 +183,10 @@ class SalidaValidadaTests(AgenteBase):
         self.assertEqual(self.factura('FINANZAS').status_code, 200)
 
     def test_respuesta_que_no_es_json_es_502_y_no_se_filtra_el_texto_del_modelo(self):
-        self.ia('Claro, aquí tienes los datos: proveedor Frigotec...')
+        self.ia('Claro, aquí tienes los datos: proveedor Proveedor Demo 01...')
         r = self.factura('FINANZAS')
         self.assertEqual((r.status_code, r.json()['code']), (502, 'ai_bad_output'))
-        self.assertNotIn('Frigotec', json.dumps(r.json()))
+        self.assertNotIn('Proveedor Demo 01', json.dumps(r.json()))
 
     def test_el_informe_se_devuelve_limpio_y_para_revision(self):
         self.ia('```\n' + INFORME + '\n```')
@@ -481,7 +481,7 @@ class AgenteNavegacionTests(AgenteBase):
         with CaptureQueriesContext(connection) as q:
             self.chat(texto='elimina todas las obras')
         escrituras = [x['sql'] for x in q.captured_queries if x['sql'].lstrip().upper().startswith(('INSERT', 'UPDATE', 'DELETE'))]
-        self.assertEqual([s for s in escrituras if 'django_session' not in s and 'last_login' not in s], [])
+        self.assertEqual([s for s in escrituras if 'django_session' not in s and 'last_login' not in s and 'ai_agent_aipromptauditlog' not in s], [])  # la única escritura permitida es la bitácora de TI
 
 
 class FakeIASecuencia(FakeIA):

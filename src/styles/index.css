@@ -167,3 +167,18 @@ html.tema-erp ::selection { background: #2E6F73; color: #EADCC8; }
 /* App de terreno: etiquetas y campos de lectura más cómoda para quien usa poco la tecnología. */
 .terreno label > span:first-child { font-size: 1rem; font-weight: 600; }
 .terreno input:not([type='checkbox']):not([type='file']), .terreno select, .terreno textarea { font-size: 1.125rem; border-width: 2px; }
+
+/* Resplandor del asistente de IA (BordeIA): azul hacia dentro y un halo blanco más fino, que respira mientras trabaja. */
+.borde-ia {
+  box-shadow:
+    inset 0 0 0 2px rgba(59, 130, 246, 0.75),
+    inset 0 0 22px 2px rgba(59, 130, 246, 0.55),
+    inset 0 0 70px 6px rgba(96, 165, 250, 0.32),
+    inset 0 0 120px 18px rgba(255, 255, 255, 0.16);
+  animation: borde-ia-respira 2.2s ease-in-out infinite;
+}
+@keyframes borde-ia-respira {
+  0%, 100% { filter: brightness(0.9); }
+  50% { filter: brightness(1.25); }
+}
+@media (prefers-reduced-motion: reduce) { .borde-ia { animation: none; } }

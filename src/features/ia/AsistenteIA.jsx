@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Compass, X, Copy, RotateCcw, FilePlus2, AlertTriangle, ShieldCheck, SendHorizontal, MessageSquarePlus, Download, FileSpreadsheet } from 'lucide-react'
+import { Sparkles, Compass, X, Copy, RotateCcw, FilePlus2, AlertTriangle, ShieldCheck, SendHorizontal, MessageSquarePlus, Download, FileSpreadsheet, Mic, MousePointerClick, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button, Textarea, cn } from '@/components/ui'
 import { iaService, proveedoresService } from '@/services'
@@ -10,7 +10,10 @@ import { formatCLP } from '@/domain/money'
 import { formatFecha } from '@/domain/format'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
-import { catalogoDeRutas, resolverAccion } from './agente'
+import { useAsistenteStore } from '@/stores/asistenteStore'
+import { guiarA, ejecutarPlan } from '@/lib/guiaCursor'
+import { useDictado } from '@/hooks/useDictado'
+import { catalogoDeRutas, resolverAccion, planDeAcciones, resumenDePlan } from './agente'
 
 const copiar = async (texto) => {
   try { await navigator.clipboard.writeText(texto); toast.success('Copiado') } catch { toast.error('No se pudo copiar') }
@@ -116,37 +119,59 @@ function Conversacion({ activo, onCerrar }) {
   const fin = useRef(null)
   const campo = useRef(null)
   const n = useRef(0)
+  const setTrabajando = useAsistenteStore((s) => s.setTrabajando)
+  // Dictado por voz: lo dicho aparece en el cuadro de mensaje (no se envía solo: lo revisas y envías tú).
+  const textoActual = useRef('') // siempre el texto más reciente (el dictado lo actualiza más rápido que React)
+  const enviarRef = useRef(null)
+  const dictado = useDictado({
+    onTexto: (t) => { const v = t.slice(0, CHAT.maxCharsMensaje); textoActual.current = v; setTexto(v); setError(null) },
+    // Al tocar el micrófono para terminar, se envía solo lo dictado (si hay algo); el navegador ya entregó la última frase.
+    onTerminar: () => { if (textoActual.current.trim()) enviarRef.current?.(null, textoActual.current) },
+  })
+  useEffect(() => { if (!activo) dictado.detener() }, [activo]) // eslint-disable-line react-hooks/exhaustive-deps -- al cerrar el panel se apaga el micrófono
 
   useEffect(() => { if (activo) campo.current?.focus() }, [activo])
   useEffect(() => { fin.current?.scrollIntoView?.({ block: 'end' }) }, [mensajes, cargando, error])
 
-  const enviar = async (e) => {
+  const enviar = async (e, textoEnviar) => {
     e?.preventDefault()
     if (cargando) return
-    const v = validarMensajeChat(texto)
+    dictado.detener() // si estaba dictando, se corta antes de enviar (sin envío automático: ya se está enviando)
+    const contenido = textoEnviar ?? texto
+    const v = validarMensajeChat(contenido)
     if (!v.ok) { setError(v.error); return }
-    const nuevo = { id: `u${++n.current}`, role: 'user', content: texto.trim() }
+    const nuevo = { id: `u${++n.current}`, role: 'user', content: contenido.trim() }
     const lista = [...mensajes, nuevo]
     setMensajes(lista)
     setTexto('')
+    textoActual.current = ''
     setError(null)
     setCargando(true)
+    setTrabajando(true) // enciende el resplandor del borde mientras la IA trabaja
     try {
       // Solo lectura: el servidor propone una pantalla o una búsqueda; aquí se vuelve a validar y recién entonces se navega.
       const catalogo = catalogoDeRutas(user)
-      const r = await iaService.conversar(historialParaEnviar(lista), catalogo)
+      const r = await iaService.conversar(historialParaEnviar(lista), catalogo, window.location.pathname)
       const accion = resolverAccion(r, catalogo, user.rol)
-      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion, archivo: r.archivo ?? null, calculo: r.calculo ?? null }])
-      if (accion) navigate(accion.url)
-      if (accion?.ancla) onCerrar?.() // la tarjeta de facturación queda abajo a la derecha, justo donde está el chat: se esconde (la conversación se conserva)
+      // Copiloto: el servidor autoriza una lista de acciones de interfaz (`ui_actions`) y aquí se vuelven a validar antes de ejecutarlas.
+      const plan = planDeAcciones(r.ui_actions, catalogo, user.rol, accion)
+      setMensajes((m) => [...m, { id: `a${++n.current}`, role: 'assistant', content: r.respuesta_texto ?? r.respuesta, accion: plan.length ? null : accion, plan, archivo: r.archivo ?? null, calculo: r.calculo ?? null,
+        opciones: Array.isArray(r.opciones) ? r.opciones.slice(0, 4) : [], bloqueado: r.estado_seguridad === 'BLOQUEADO_POR_ROL', motor: r.motor }])
+      // El cursor del agente recorre el camino a la vista; con el panel acoplado a la derecha (pantalla grande) no tapa lo que se trabaja.
+      if ((accion?.ancla || plan.some((p) => p.tipo !== 'NAVIGATE')) && !window.matchMedia('(min-width: 1024px)').matches) onCerrar?.() // en pantallas chicas el chat flota encima: se esconde (la conversación se conserva)
+      if (plan.length) await ejecutarPlan(plan, navigate)
+      else if (accion) await guiarA(accion.url, navigate) // respuesta sin `ui_actions` (servidor anterior): se navega como siempre
     } catch (err) {
       setError(mensajeErrorIA(err))
       setTexto(nuevo.content) // no se pierde lo escrito: se puede reenviar
+      textoActual.current = nuevo.content
       setMensajes((m) => m.filter((x) => x.id !== nuevo.id))
     } finally {
       setCargando(false)
+      setTrabajando(false)
     }
   }
+  enviarRef.current = enviar // la versión más reciente, para el envío automático al terminar de dictar
   const nueva = () => { setMensajes([mensajeBienvenida()]); setTexto(''); setError(null) }
   const hayConversacion = mensajes.length > 1
 
@@ -155,7 +180,8 @@ function Conversacion({ activo, onCerrar }) {
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
         {mensajes.map((m) => (
           <div key={m.id ?? m.content} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-            <div className={cn('max-w-[88%] rounded-2xl px-3.5 py-2.5', m.role === 'user' ? 'rounded-br-md bg-brand text-white' : 'rounded-bl-md border border-line bg-white text-ink')}>
+            <div className={cn('max-w-[88%] rounded-2xl px-3.5 py-2.5', m.role === 'user' ? 'rounded-br-md bg-brand text-white' : m.bloqueado ? 'rounded-bl-md border border-crit/50 bg-crit-bg text-ink' : 'rounded-bl-md border border-line bg-white text-ink')}>
+              {m.bloqueado && <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-crit"><ShieldAlert className="h-3 w-3" />Fuera del ámbito de tu perfil</p>}
               {m.role === 'user' ? <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</p> : <TextoMarkdown texto={m.content} />}
               {m.calculo && (
                 // Cifras calculadas por el servidor, mostradas tal cual: no dependen de cómo las redacte el modelo.
@@ -167,6 +193,13 @@ function Conversacion({ activo, onCerrar }) {
               {m.archivo && <BotonReporte archivo={m.archivo} />}
               {m.accion && (
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-brand"><Compass className="h-3 w-3" />{m.accion.busqueda ? `Busqué «${m.accion.busqueda}» en ${m.accion.etiqueta}` : `Te llevé a ${m.accion.etiqueta}`}</p>
+              )}
+              {m.plan?.length > 0 && <p className="mt-1.5 flex items-start gap-1 text-[11px] font-semibold text-brand"><MousePointerClick className="mt-px h-3 w-3 shrink-0" />{resumenDePlan(m.plan)}</p>}
+              {m.opciones?.length > 0 && m.id === mensajes.at(-1)?.id && (
+                // Respuestas rápidas: el agente pregunta en vez de adivinar; un toque envía la opción como si la hubieras escrito.
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {m.opciones.map((o) => <button key={o} type="button" disabled={cargando} onClick={() => enviar(null, o)} className="rounded-full border border-brand/40 bg-brand-tint px-3 py-1 text-xs font-medium text-brand hover:bg-brand hover:text-white disabled:opacity-50">{o}</button>)}
+                </div>
               )}
               {m.role === 'assistant' && !m.local && (
                 <button type="button" onClick={() => copiar(m.content)} className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-ink-faint hover:text-ink"><Copy className="h-3 w-3" />Copiar</button>
@@ -184,7 +217,8 @@ function Conversacion({ activo, onCerrar }) {
         <div ref={fin} />
       </div>
       <form onSubmit={enviar} className="space-y-2 border-t border-line bg-white p-3">
-        {error && <p role="alert" className="text-sm font-medium text-crit">{error}</p>}
+        {(error || dictado.error) && <p role="alert" className="text-sm font-medium text-crit">{error || dictado.error}</p>}
+        {dictado.escuchando && <p role="status" className="flex items-center gap-1.5 text-xs font-semibold text-crit"><span className="h-2 w-2 animate-pulse rounded-full bg-crit motion-reduce:animate-none" aria-hidden="true" />Escuchando… habla y toca el micrófono para terminar y enviar.</p>}
         <div className="flex items-end gap-2">
           <textarea
             ref={campo} rows={2} value={texto} maxLength={CHAT.maxCharsMensaje} aria-label="Escribe tu mensaje al asistente" placeholder={PLACEHOLDER_CHAT}
@@ -192,6 +226,15 @@ function Conversacion({ activo, onCerrar }) {
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) enviar(e) }}
             className="min-h-[3.25rem] flex-1 resize-none rounded-xl border border-line-strong bg-white px-3 py-2 text-sm placeholder:text-ink-faint focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
           />
+          {dictado.soportado && (
+            <button type="button" onClick={() => (dictado.escuchando ? dictado.detener({ enviar: true }) : dictado.iniciar(texto))} aria-pressed={dictado.escuchando}
+              aria-label={dictado.escuchando ? 'Terminar el dictado y enviar' : 'Dictar con la voz'} title={dictado.escuchando ? 'Terminar y enviar' : 'Dictar con la voz'}
+              className={cn('relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors',
+                dictado.escuchando ? 'border-crit bg-crit text-white hover:bg-crit/90' : 'border-line-strong bg-white text-ink-soft hover:border-brand hover:text-brand')}>
+              {dictado.escuchando && <span className="absolute inset-0 animate-ping rounded-xl bg-crit/40 motion-reduce:hidden" aria-hidden="true" />}
+              <Mic className="relative h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
           <button type="submit" disabled={cargando || !texto.trim()} aria-label="Enviar mensaje"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand text-white transition-colors hover:bg-brand-dark disabled:opacity-40"><SendHorizontal className="h-5 w-5" /></button>
         </div>
@@ -260,7 +303,8 @@ export function AsistenteIA({ posicion = 'fijo' }) {
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const tarea = tareaIA(user?.rolApi)
-  const [abierto, setAbierto] = useState(false)
+  const abierto = useAsistenteStore((s) => s.abierto)
+  const setAbierto = useAsistenteStore((s) => s.setAbierto)
   const [modo, setModo] = useState('chat')
 
   useEffect(() => {
@@ -292,7 +336,9 @@ export function AsistenteIA({ posicion = 'fijo' }) {
           role="dialog" aria-label="Asistente de IA" aria-hidden={!abierto}
           className={cn(
             'z-30 flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-pop', !abierto && 'hidden',
-            marco ? 'absolute inset-x-3 bottom-20 h-[78%]' : 'fixed bottom-24 right-4 h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] sm:right-6',
+            marco ? 'absolute inset-x-3 bottom-20 h-[78%]'
+              // Pantallas chicas: ventana flotante. Desde `lg`: panel acoplado a todo el alto del borde derecho (el ERP se corre y no queda tapado).
+              : 'fixed bottom-24 right-4 h-[min(36rem,calc(100vh-7rem))] w-[min(26rem,calc(100vw-2rem))] sm:right-6 lg:bottom-0 lg:right-0 lg:top-0 lg:h-auto lg:w-[23rem] lg:rounded-none lg:border-y-0 lg:border-r-0 lg:shadow-none',
           )}
         >
           <header className="flex items-center gap-3 bg-gradient-to-br from-deep to-[#164563] px-4 py-3 text-white">
@@ -310,7 +356,7 @@ export function AsistenteIA({ posicion = 'fijo' }) {
         type="button" onClick={() => setAbierto((v) => !v)} aria-expanded={abierto} aria-label={abierto ? 'Cerrar el asistente de IA' : 'Abrir el asistente de IA'}
         className={cn(
           'z-30 flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white shadow-lift transition-transform hover:bg-brand-dark active:scale-95',
-          marco ? 'absolute bottom-4 right-4' : 'fixed bottom-5 right-4 sm:right-6',
+          marco ? 'absolute bottom-4 right-4' : 'fixed bottom-5 right-4 sm:right-6', !marco && abierto && 'lg:hidden', // acoplado, el panel ya trae su botón de cerrar
         )}
       >
         {abierto ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}

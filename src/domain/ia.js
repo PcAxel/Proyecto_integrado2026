@@ -12,7 +12,7 @@ export const TAREAS_IA = {
     corto: 'Leer factura',
     ayuda: 'Pega el texto de la factura (por ejemplo, copiado de su PDF o de un OCR). El asistente ordena proveedor, fecha, neto, IVA y total para que no los escribas a mano.',
     etiqueta: 'Texto de la factura',
-    placeholder: 'Distribuidora Frigotec Ltda. · RUT 76.554.120-4 · Factura N° 4821 · 05-11-2026 · Neto $100.000 · IVA $19.000 · Total $119.000',
+    placeholder: 'Proveedor Demo 01 Ltda. · RUT 99.100.001-1 · Factura N° 4821 · 05-11-2026 · Neto $100.000 · IVA $19.000 · Total $119.000',
     boton: 'Extraer datos',
     min: 10,
     max: 20_000,
@@ -79,8 +79,8 @@ export const BIENVENIDA_IA = '¡Hola! Soy tu asistente de FYAG. ¿En qué te pue
 export const PLACEHOLDER_CHAT = '¿Qué hacemos hoy? (Ej: Ayúdame a redactar un reporte, o ¿cómo reparo un compresor?)'
 export const CHAT = { maxCharsMensaje: 4_000, maxMensajes: 20 }
 
-const ROLES_CON_CHAT = ['ADMIN', 'FINANZAS', 'OPERACIONES', 'TECNICO', 'RRHH']
-/** Todos los roles tienen conversación; el servidor decide el perfil según el rol de la sesión. */
+const ROLES_CON_CHAT = ['ADMIN', 'FINANZAS', 'OPERACIONES', 'TECNICO', 'RRHH', 'SUPERADMIN', 'COMERCIAL']
+/** Todos los roles tienen conversación, salvo el Auditor Externo (su cuenta solo hace lecturas y el chat es un POST); el servidor decide el perfil según el rol de la sesión. */
 export const tieneAsistente = (rolApi) => ROLES_CON_CHAT.includes(rolApi)
 
 /** Mensaje de bienvenida: se genera aquí, no viene del servidor ni gasta una consulta. */

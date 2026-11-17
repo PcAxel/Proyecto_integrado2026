@@ -35,20 +35,20 @@ describe('asistente de IA: validación y errores', () => {
 })
 
 describe('asistente de IA: factura extraída', () => {
-  const proveedores = [{ id: 'PRV-001', rut: '76.554.120-4', razon_social: 'Distribuidora Frigotec Ltda.' }, { id: 'PRV-002', rut: '77.019.384-1', razon_social: 'Repuestos Refrigeración Biobío SpA' }]
+  const proveedores = [{ id: 'PRV-001', rut: '99.100.001-1', razon_social: 'Proveedor Demo 01 Ltda.' }, { id: 'PRV-002', rut: '77.019.384-1', razon_social: 'Proveedor Demo 02 Ltda.' }]
   it('encuentra el proveedor por RUT, aunque venga con otro formato', () => {
-    expect(proveedorCoincidente({ rut_proveedor: '76554120-4' }, proveedores).id).toBe('PRV-001')
+    expect(proveedorCoincidente({ rut_proveedor: '99100001-1' }, proveedores).id).toBe('PRV-001')
   })
   it('si no hay RUT, por nombre exacto sin tildes ni mayúsculas', () => {
-    expect(proveedorCoincidente({ proveedor: 'repuestos refrigeracion biobio spa' }, proveedores).id).toBe('PRV-002')
+    expect(proveedorCoincidente({ proveedor: 'proveedor demo 02 ltda.' }, proveedores).id).toBe('PRV-002')
   })
   it('no adivina: sin coincidencia clara devuelve null', () => {
-    expect(proveedorCoincidente({ proveedor: 'Frigotec' }, proveedores)).toBeNull()
+    expect(proveedorCoincidente({ proveedor: 'Proveedor Demo 01' }, proveedores)).toBeNull()
     expect(proveedorCoincidente({ proveedor: '', rut_proveedor: null }, proveedores)).toBeNull()
   })
   it('resume los datos para copiar', () => {
-    const t = resumenFactura({ proveedor: 'Frigotec', rut_proveedor: null, numero_factura: '4821', fecha: '2026-11-05', monto_neto: 100000, iva: 19000, total: 119000 })
-    expect(t).toContain('Proveedor: Frigotec')
+    const t = resumenFactura({ proveedor: 'Proveedor Demo 01', rut_proveedor: null, numero_factura: '4821', fecha: '2026-11-05', monto_neto: 100000, iva: 19000, total: 119000 })
+    expect(t).toContain('Proveedor: Proveedor Demo 01')
     expect(t).toContain('N° factura: 4821')
     expect(t).toContain('Total: $119.000')
     expect(t).not.toContain('RUT')

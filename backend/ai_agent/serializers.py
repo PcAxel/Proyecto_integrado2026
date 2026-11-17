@@ -66,6 +66,8 @@ class ChatEntradaSerializer(serializers.Serializer):
     """Historial de la conversación (el cliente lo conserva; el servidor no guarda nada). El rol sale del usuario autenticado."""
     mensajes = MensajeChatSerializer(many=True, allow_empty=False)
     rutas = RutaSerializer(many=True, required=False, max_length=40)
+    # Pantalla desde la que se pregunta: queda en la bitácora de TI. Solo una ruta de la app (nunca texto libre).
+    origen = serializers.RegexField(r'^/(erp|app)(/[A-Za-z0-9_-]+)*$', max_length=80, required=False, allow_blank=True)
 
     def validate_mensajes(self, msgs):
         if len(msgs) > settings.AI_CHAT_MAX_MENSAJES:

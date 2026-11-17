@@ -1,7 +1,7 @@
 """Verifica a mano qué responde el agente según el rol, usando la API real de DeepSeek.
 
   python manage.py ai_probar --rol TECNICO --tarea reporte --texto "cambie filtro, limpie serpentin, recargue 2kg r410a"
-  python manage.py ai_probar --rol FINANZAS --tarea factura --texto "Frigotec Ltda. Factura 4821 05-11-2026 Neto 100.000 IVA 19.000 Total 119.000"
+  python manage.py ai_probar --rol FINANZAS --tarea factura --texto "Proveedor Demo 01 Ltda. Factura 4821 05-11-2026 Neto 100.000 IVA 19.000 Total 119.000"
   python manage.py ai_probar --rol RRHH --tarea chat --texto "Ayúdame a redactar una amonestación por atraso"
   python manage.py ai_probar --rol TECNICO --tarea factura      # debe rechazarse: un técnico no puede extraer facturas
   python manage.py ai_probar --rol FINANZAS --tarea factura --solo-prompt   # muestra qué se enviaría, sin llamar a la API
@@ -18,7 +18,7 @@ class Command(BaseCommand):
     help = 'Prueba el agente de IA para un rol y una tarea (consume tokens de la API real, salvo --solo-prompt).'
 
     def add_arguments(self, parser):
-        parser.add_argument('--rol', required=True, choices=['ADMIN', 'FINANZAS', 'OPERACIONES', 'TECNICO', 'RRHH'])
+        parser.add_argument('--rol', required=True, choices=['ADMIN', 'FINANZAS', 'OPERACIONES', 'TECNICO', 'RRHH', 'SUPERADMIN', 'COMERCIAL'])
         parser.add_argument('--tarea', required=True, choices=['factura', 'reporte', 'chat'])
         parser.add_argument('--texto', default='', help='Texto de la factura (OCR) o notas del trabajo.')
         parser.add_argument('--solo-prompt', action='store_true', help='No llama a la API: muestra el system prompt y los mensajes.')

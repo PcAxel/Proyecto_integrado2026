@@ -47,11 +47,11 @@ class ReportesBase(RoleTestCase):
         p = override_settings(REPORTES_IA_DIR=self.tmp.name)
         p.enable()
         self.addCleanup(p.disable)
-        Registro.objects.create(tabla='clientes', rid='CLI-001', datos={'razon_social': 'Packing Cordillera S.A.', 'activo': True})
+        Registro.objects.create(tabla='clientes', rid='CLI-001', datos={'razon_social': 'Cliente Demo 01 SpA', 'activo': True})
         Registro.objects.create(tabla='presupuestos', rid='PRE-0001', datos={
             'titulo': '=HYPERLINK("http://malo")', 'cliente_id': 'CLI-001', 'estado': 'APROBADO', 'fecha': '2026-09-08', 'precio_venta_neto': 1_000_000,
             'materiales': [{'cantidad': 2, 'costo_unitario': 100_000}], 'mano_obra': [{'horas': 10, 'costo_hora_hombre': 10_000}], 'adicionales': [{'monto': 50_000}]})
-        Registro.objects.create(tabla='personal', rid='T-01', datos={'nombre': 'Jorge Quezada', 'cargo': 'Técnico', 'activo': True, 'rut': '15.387.421-2', 'costo_hora_hombre': 11_500})
+        Registro.objects.create(tabla='personal', rid='T-01', datos={'nombre': 'Técnico Demo 01', 'cargo': 'Técnico', 'activo': True, 'rut': '31.000.001-9', 'costo_hora_hombre': 11_500})
 
     def ia(self, *respuestas):
         fake = FakeIATools(*respuestas)
@@ -70,7 +70,7 @@ class ExtraccionTests(ReportesBase):
         c = datos.get_resumen_presupuestos(self.users['FINANZAS'])
         self.assertEqual([k for k, _, _ in c.columnas][-2:], ['costo', 'margen'])
         self.assertEqual((c.filas[0]['costo'], c.filas[0]['margen']), (350_000, 650_000))
-        self.assertEqual(c.filas[0]['cliente'], 'Packing Cordillera S.A.')
+        self.assertEqual(c.filas[0]['cliente'], 'Cliente Demo 01 SpA')
 
     def test_quien_no_puede_leer_la_tabla_recibe_error_y_no_datos(self):
         for rol in ('RRHH', 'TECNICO'):
@@ -79,15 +79,15 @@ class ExtraccionTests(ReportesBase):
 
     def test_rrhh_ve_el_personal_con_sus_datos_laborales(self):
         c = datos.get_listado_personal(self.users['RRHH'])
-        self.assertEqual(c.filas[0]['nombre'], 'Jorge Quezada')
+        self.assertEqual(c.filas[0]['nombre'], 'Técnico Demo 01')
         self.assertIn('rut', [k for k, _, _ in c.columnas])
 
     def test_operaciones_ve_los_nombres_pero_no_el_rut(self):
         # Misma regla que la pantalla: leen la tabla (para armar equipos) pero los RUT y fecha de ingreso ni siquiera llegan al reporte (el costo hora sí: Operaciones tiene `costos.ver`).
         c = datos.get_listado_personal(self.users['OPERACIONES'])
-        self.assertEqual(c.filas[0]['nombre'], 'Jorge Quezada')
+        self.assertEqual(c.filas[0]['nombre'], 'Técnico Demo 01')
         self.assertFalse({'rut', 'fecha_ingreso'} & {k for k, _, _ in c.columnas})
-        self.assertNotIn('15.387.421-2', json.dumps(c.filas))
+        self.assertNotIn('31.000.001-9', json.dumps(c.filas))
 
     def test_el_tecnico_no_tiene_herramientas(self):
         self.assertEqual(datos.disponibles(self.users['TECNICO']), [])
@@ -494,7 +494,7 @@ class ProyeccionTests(StockBase):
 class CompraCriticaTests(StockBase):
     def setUp(self):
         super().setUp()
-        Registro.objects.create(tabla='proveedores', rid='PRV-1', datos={'razon_social': 'Frigotec Ltda.', 'activo': True})
+        Registro.objects.create(tabla='proveedores', rid='PRV-1', datos={'razon_social': 'Proveedor Demo 01 Ltda.', 'activo': True})
         Registro.objects.create(tabla='proveedores', rid='PRV-2', datos={'razon_social': 'Alfa SpA', 'activo': True})
         self.articulo('ART-1', 'AAA-001', 'Crítico exacto', minimo=10, costo=2000, proveedor='PRV-1')   # stock 10 = mínimo → crítico
         self.articulo('ART-2', 'AAA-002', 'Crítico bajo', minimo=10, costo=500, proveedor='PRV-2')       # stock 3
@@ -512,7 +512,7 @@ class CompraCriticaTests(StockBase):
         self.assertEqual(por_sku['AAA-001']['cantidad'], 30)    # 4 × 10 − 10
         self.assertEqual(por_sku['AAA-002']['cantidad'], 37)    # 4 × 10 − 3
         self.assertEqual(por_sku['AAA-002']['subtotal'], 37 * 500)
-        self.assertEqual([f['proveedor'] for f in c.filas], ['Alfa SpA', 'Frigotec Ltda.'])  # ordenado por proveedor
+        self.assertEqual([f['proveedor'] for f in c.filas], ['Alfa SpA', 'Proveedor Demo 01 Ltda.'])  # ordenado por proveedor
         neto = 30 * 2000 + 37 * 500
         self.assertEqual({e: v for e, v, _ in c.resumen}['Neto'], neto)
         self.assertEqual({e: v for e, v, _ in c.resumen}['Total'], neto + round(neto * 0.19))
@@ -555,6 +555,11 @@ class CompraCriticaTests(StockBase):
 class ToolsStockEnElChatTests(StockBase):
     def setUp(self):
         super().setUp()
+        # Los movimientos de prueba están fechados respecto de HOY2; el chat usa la fecha real, así que se fija «hoy» para que la
+        # proyección no cambie según el día en que corre la prueba (a partir del 16-11-2026 una salida quedaba fuera de los 30 días).
+        reloj = patch('ai_agent.herramientas.timezone.localdate', return_value=HOY2)
+        reloj.start()
+        self.addCleanup(reloj.stop)
         self.articulo()
         self.mov('MOV-1', 'ART-900', 'ENTRADA_COMPRA', 250, 45)
         for i, dias in enumerate((28, 20, 12, 5, 1), 1):

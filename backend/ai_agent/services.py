@@ -98,6 +98,13 @@ MAX_TERMINO_BUSQUEDA = 80
 
 
 def interpretar_respuesta_agente(crudo, rutas):
+    """Acción segura (ver `_interpretar_base`) más los campos opcionales de gobernanza que haya propuesto el modelo (`estado`, `opciones`,
+    `resaltar`, `rellenar`), ya saneados. Estos últimos no se cumplen aquí: los valida `gobernanza.construir_acciones`."""
+    from . import gobernanza
+    return {**_interpretar_base(crudo, rutas), **gobernanza.extras_del_modelo(crudo)}
+
+
+def _interpretar_base(crudo, rutas):
     """Convierte la salida del modelo en una acción segura. Nada de lo que diga el modelo se acepta sin validar:
     la acción debe ser conocida, la ruta debe estar en la lista que el usuario puede abrir y el término se limpia.
     Ante cualquier duda la acción queda en «ninguna» y solo se muestra el texto."""
@@ -127,15 +134,16 @@ def interpretar_respuesta_agente(crudo, rutas):
     return {'respuesta_texto': respuesta or 'Te llevo a esa pantalla.', 'accion': 'navegar', 'ruta': ruta, 'termino_busqueda': None}
 
 
-def conversar(usuario, rol, historial, rutas=()):
+def conversar(usuario, rol, historial, rutas=(), prompt_extra='', con_herramientas=True):
     """Conversación abierta con capacidad de NAVEGAR, BUSCAR y GENERAR REPORTES, sin acceso del modelo a la base de datos: solo propone
     una acción de interfaz o pide una herramienta de la lista cerrada de `herramientas`, que el servidor ejecuta con los permisos del usuario.
     El system prompt lo elige el servidor según el rol; el cliente solo aporta el historial (turnos `user` y `assistant`, nunca `system`).
     La conversación no se guarda en el servidor."""
-    tools = herramientas.herramientas_para(usuario)
+    # `con_herramientas` lo decide la política de TI para el rol; `prompt_extra` es la sección de gobernanza (ámbito, aclaraciones, acciones).
+    tools = herramientas.herramientas_para(usuario) if con_herramientas else []
     nombres = {t['function']['name'] for t in tools}
     mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas, con_reportes=herramientas.NOMBRE_REPORTE in nombres, con_stock=herramientas.NOMBRE_PROYECCION in nombres,
-                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres, con_factura=herramientas.NOMBRE_FACTURA in nombres)},
+                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres, con_factura=herramientas.NOMBRE_FACTURA in nombres) + prompt_extra},
                 *({'role': m['role'], 'content': m['content']} for m in historial)]
     if tools:
         return _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools)

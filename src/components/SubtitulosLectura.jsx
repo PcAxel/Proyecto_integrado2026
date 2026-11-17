@@ -1,17 +1,20 @@
 import { Captions, Pause, Play, Square } from 'lucide-react'
 import { useLectorStore } from '@/stores/lectorStore'
+import { useAsistenteStore } from '@/stores/asistenteStore'
+import { cn } from '@/components/ui'
 
 /**
  * Subtítulos de lo que el lector está diciendo: el trozo en curso en español y, si el navegador traduce y la persona lo activó, también en inglés.
  * Aparece abajo al centro mientras se lee y desaparece al terminar. No lo lee el propio lector (`data-no-leer`).
  */
 export function SubtitulosLectura() {
+  const panelIA = useAsistenteStore((s) => s.abierto)
   const { estado, subtitulos, trozos, indice, ingles, traducciones, traduccion, pausar, reanudar, detener } = useLectorStore()
   if (!subtitulos || estado === 'inactivo' || !trozos[indice]) return null
   const traducido = traducciones[indice]
   return (
     <section data-no-leer role="region" aria-label="Subtítulos de la lectura"
-      className="pointer-events-auto fixed bottom-24 left-4 right-20 z-[70] rounded-xl bg-black/85 p-3.5 text-white shadow-pop backdrop-blur sm:bottom-6 sm:left-1/2 sm:right-auto sm:w-[min(42rem,calc(100vw-9rem))] sm:-translate-x-1/2">
+      className={cn('pointer-events-auto fixed bottom-24 left-4 right-20 z-[70] rounded-xl bg-black/85 p-3.5 text-white shadow-pop backdrop-blur sm:bottom-6 sm:left-1/2 sm:right-auto sm:w-[min(42rem,calc(100vw-9rem))] sm:-translate-x-1/2', panelIA && 'lg:left-[calc((100vw-23rem)/2)] lg:w-[min(42rem,calc(100vw-27rem))]')}>
       <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-white/60">
         <Captions className="h-3.5 w-3.5" aria-hidden="true" />
         <span>Subtítulos · {indice + 1} de {trozos.length}</span>

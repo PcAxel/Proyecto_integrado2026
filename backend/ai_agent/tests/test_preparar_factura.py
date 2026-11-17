@@ -16,8 +16,8 @@ def llamada(args, nombre='preparar_factura'):
 class FacturaIABase(ReportesBase):
     def setUp(self):
         super().setUp()
-        self.cliente('CLI-001', 'Packing Cordillera S.A.', '76.115.402-8')
-        self.cliente('CLI-002', 'Lácteos Valle del Itata Ltda.', '78.054.267-5')
+        self.cliente('CLI-001', 'Cliente Demo 01 SpA', '99.000.001-8')
+        self.cliente('CLI-002', 'Cliente Demo 04 SpA', '99.000.004-2')
         self.obra('OB-0001', 'Cámara de frío N°3', 'CLI-001')
         self.obra('OB-0002', 'Sala de proceso refrigerada', 'CLI-002')
         self.obra('OB-0003', 'Mantención de cámaras', 'CLI-002', estado='EN_CURSO')
@@ -54,10 +54,10 @@ class RolesYBusquedaTests(FacturaIABase):
 
     def test_encuentra_por_nombre_o_cliente_sin_tildes_ni_mayusculas(self):
         self.assertEqual(busqueda.buscar_para_facturar(self.users['FINANZAS'], 'camara de frio').obra.id, 'OB-0001')
-        self.assertEqual(busqueda.buscar_para_facturar(self.users['FINANZAS'], 'lacteos valle').obra.id, 'OB-0002')  # la otra obra de ese cliente no está finalizada
+        self.assertEqual(busqueda.buscar_para_facturar(self.users['FINANZAS'], 'cliente demo 04').obra.id, 'OB-0002')  # la otra obra de ese cliente no está finalizada
 
     def test_si_hay_varias_prefiere_la_que_se_puede_facturar(self):
-        r = busqueda.buscar_para_facturar(self.users['FINANZAS'], 'itata')
+        r = busqueda.buscar_para_facturar(self.users['FINANZAS'], 'demo 04')
         self.assertEqual((r.estado, r.obra.id, r.obra.situacion), ('uno', 'OB-0002', 'facturable'))
 
     def test_varias_facturables_pide_precisar_y_ninguna_coincidencia(self):

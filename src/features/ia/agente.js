@@ -53,3 +53,52 @@ export function resolverAccion(respuesta, catalogo, rol) {
   }
   return { url: destino.ruta, etiqueta: destino.label, busqueda: null }
 }
+
+
+/** Formularios que el agente puede completar (nunca enviar), con el permiso que exige cada uno. Espejo de `FORMULARIOS` del servidor. */
+const FORMULARIOS = {
+  'cliente-nuevo': { ruta: '/erp/maestros', permisos: ['clientes.gestionar', 'maestros.gestionar'], campos: ['rut', 'razon_social', 'giro', 'comuna', 'contacto', 'telefono', 'email'] },
+}
+const ID = /^[a-z0-9-]{1,40}$/
+const texto = (v, largo) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, largo)
+
+/**
+ * Convierte las `ui_actions` del servidor en un plan ejecutable por el cursor del agente, volviendo a validar cada acción aquí:
+ * la pantalla debe estar en el catálogo de esta persona, el objetivo debe ser un identificador simple y el formulario debe ser uno
+ * conocido para el que tenga permiso. Lo que no pasa la validación se descarta en silencio (el servidor ya lo había filtrado).
+ * @param {Array<object>} acciones `ui_actions` de la respuesta  @param {ReturnType<typeof catalogoDeRutas>} catalogo  @param {string} rol
+ * @param {ReturnType<typeof resolverAccion>} [accion] la navegación ya resuelta por `resolverAccion` (trae la URL exacta, p. ej. la de facturación)
+ */
+export function planDeAcciones(acciones, catalogo, rol, accion = null) {
+  const enCatalogo = (ruta) => catalogo.find((r) => r.ruta === ruta)
+  const plan = []
+  for (const a of Array.isArray(acciones) ? acciones.slice(0, 8) : []) {
+    if (a?.tipo === 'NAVIGATE') {
+      // La URL de navegación es la que validó `resolverAccion`; sin ella solo se acepta una pantalla del catálogo.
+      const destino = enCatalogo(a.ruta)
+      if (accion && !accion.busqueda) plan.push({ tipo: 'NAVIGATE', url: accion.url, etiqueta: accion.etiqueta })
+      else if (destino) plan.push({ tipo: 'NAVIGATE', url: destino.ruta, etiqueta: destino.label })
+    } else if (a?.tipo === 'SEARCH_OR_FILTER') {
+      const destino = enCatalogo(a.ruta)
+      const t = texto(a.texto, 80)
+      if (destino?.buscable && t) plan.push({ tipo: 'SEARCH_OR_FILTER', url: `${destino.ruta}?buscar=${encodeURIComponent(t)}`, texto: t, objetivo: 'search-input', etiqueta: destino.label })
+    } else if (a?.tipo === 'HIGHLIGHT_ELEMENT') {
+      const destino = enCatalogo(a.ruta)
+      if (destino && ID.test(String(a.objetivo ?? ''))) plan.push({ tipo: 'HIGHLIGHT_ELEMENT', url: destino.ruta, objetivo: a.objetivo, descripcion: texto(a.descripcion, 80), etiqueta: destino.label })
+    } else if (a?.tipo === 'FILL_FORM') {
+      const f = FORMULARIOS[a.formulario]
+      const destino = f && enCatalogo(f.ruta)
+      if (!destino || !f.permisos.some((p) => can(rol, p)) || !ID.test(String(a.abrir ?? '')) || !ID.test(String(a.confirmar ?? ''))) continue
+      const campos = Object.fromEntries(Object.entries(a.campos ?? {}).filter(([k]) => f.campos.includes(k)).map(([k, v]) => [k, texto(v, 120)]).filter(([, v]) => v))
+      if (Object.keys(campos).length) plan.push({ tipo: 'FILL_FORM', url: destino.ruta, etiqueta: destino.label, nombre: texto(a.nombre, 40) || 'el formulario', abrir: a.abrir, confirmar: a.confirmar, campos })
+    }
+  }
+  // Una navegación seguida de una búsqueda en la misma pantalla se funde en la búsqueda (que ya lleva a esa pantalla con el filtro).
+  return plan.filter((p, i) => !(p.tipo === 'NAVIGATE' && plan[i + 1]?.tipo === 'SEARCH_OR_FILTER' && plan[i + 1].url.split('?')[0] === p.url))
+}
+
+/** Frase de lo que hizo el agente, para dejar constancia bajo su mensaje. */
+export function resumenDePlan(plan) {
+  return plan.map((p) => (p.tipo === 'NAVIGATE' ? `Te llevé a ${p.etiqueta}` : p.tipo === 'SEARCH_OR_FILTER' ? `Busqué «${p.texto}» en ${p.etiqueta}`
+    : p.tipo === 'HIGHLIGHT_ELEMENT' ? `Te mostré ${p.descripcion || 'dónde está'}` : `Completé «${p.nombre}» (falta que lo confirmes)`)).join(' · ')
+}

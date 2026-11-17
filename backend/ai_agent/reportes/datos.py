@@ -120,7 +120,7 @@ def _exigir(user, tabla):
 
 
 def _por_id(user, tabla, campo):
-    """{'CLI-001': 'Packing Cordillera S.A.'}: nombres legibles. Si el rol no ve esa tabla, queda el código."""
+    """{'CLI-001': 'Cliente Demo 01 SpA'}: nombres legibles. Si el rol no ve esa tabla, queda el código."""
     return {r['id']: r.get(campo) or r['id'] for r in snapshot.tabla_para(user, tabla)}
 
 
