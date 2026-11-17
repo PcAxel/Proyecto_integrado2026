@@ -13,6 +13,7 @@ from django.db import connection
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -22,7 +23,7 @@ from config.ip import ip_cliente
 from . import bloqueo, recuperacion
 from .emails import send_onboarding_email
 from .models import GESTORES_DE_USUARIOS, CustomUser, Role
-from .permissions import IsAdminRole
+from .permissions import IsAdminRole, IsSuperAdminRole
 from .serializers import (
     AcceptTermsSerializer,
     LoginSerializer,
@@ -174,6 +175,28 @@ class VerifySetup2FAView(APIView):
         return sesion_response(user)
 
 
+def _contrasena_inicial(propuesta, usuario):
+    """La contraseña que se entrega: la que fijó quien administra (validada) o una generada. 400 con el motivo si la propuesta no sirve."""
+    if propuesta in (None, ''):
+        return secrets.token_urlsafe(9)
+    if not isinstance(propuesta, str):
+        raise ValidationError({'password': ['La contraseña debe ser un texto.']})
+    try:
+        validate_password(propuesta, usuario)
+    except DjangoValidationError as e:
+        raise ValidationError({'password': e.messages})
+    return propuesta
+
+
+def _enviar_credenciales(user, clave):
+    try:
+        send_onboarding_email(user, clave)
+        return True
+    except Exception:
+        logger.warning('onboarding_email_fallo id=%s', user.pk)
+        return False
+
+
 class UserCreateView(APIView):
     """El Administrador registra un trabajador; se le envía un correo con credenciales temporales."""
     permission_classes = [IsAdminRole]
@@ -184,15 +207,13 @@ class UserCreateView(APIView):
     def post(self, request):
         s = UserCreateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        temp_password = secrets.token_urlsafe(9)
+        # La contraseña inicial la puede fijar quien crea el acceso; si no, el servidor genera una. En ambos casos se le devuelve UNA vez para que
+        # pueda entregarla aunque el correo falle. Debe cumplir las mismas reglas de siempre.
+        temp_password = _contrasena_inicial(request.data.get('password'), CustomUser(**s.validated_data))
         user = CustomUser.objects.create_user(password=temp_password, **s.validated_data)
-
-        try:
-            send_onboarding_email(user, temp_password)
-            email_sent = True
-        except Exception:
-            email_sent = False
-        return Response({**UserSerializer(user).data, 'email_sent': email_sent}, status=status.HTTP_201_CREATED)
+        email_sent = _enviar_credenciales(user, temp_password) if request.data.get('enviar_correo', True) is not False else False
+        logger.info('acceso_creado id=%s por=%s correo=%s', user.pk, request.user.pk, email_sent)
+        return Response({**UserSerializer(user).data, 'email_sent': email_sent, 'password_temporal': temp_password}, status=status.HTTP_201_CREATED)
 
 
 def _cortar_sesiones(user):
@@ -200,6 +221,26 @@ def _cortar_sesiones(user):
     from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
     for t in OutstandingToken.objects.filter(user=user):
         BlacklistedToken.objects.get_or_create(token=t)
+
+
+class UserPasswordView(APIView):
+    """POST /api/users/<id>/password/ {password?, enviar_correo?} — TI fija (o genera) una contraseña temporal nueva para otra cuenta: la devuelve una vez,
+    cierra las sesiones abiertas y quita el bloqueo por intentos. No toca el autenticador ni reactiva una cuenta desactivada a propósito."""
+    permission_classes = [IsSuperAdminRole]
+
+    def post(self, request, pk):
+        user = get_object_or_404(CustomUser, pk=pk)
+        if user.pk == request.user.pk:
+            return Response({'detail': 'Para cambiar tu propia contraseña usa «¿Olvidaste tu contraseña?»: otra persona debe restablecerla.', 'code': 'self_forbidden'},
+                            status=status.HTTP_403_FORBIDDEN)
+        clave = _contrasena_inicial(request.data.get('password'), user)
+        user.set_password(clave)
+        user.intentos_fallidos, user.ultimo_fallo_en, user.bloqueo_hasta = 0, None, None
+        user.save(update_fields=['password', 'intentos_fallidos', 'ultimo_fallo_en', 'bloqueo_hasta'])
+        _cortar_sesiones(user)
+        email_sent = _enviar_credenciales(user, clave) if request.data.get('enviar_correo', False) is True else False
+        logger.info('password_restablecida id=%s por=%s', user.pk, request.user.pk)
+        return Response({**UserSerializer(user).data, 'email_sent': email_sent, 'password_temporal': clave})
 
 
 class UserDetailView(APIView):

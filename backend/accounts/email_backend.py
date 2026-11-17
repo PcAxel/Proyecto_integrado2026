@@ -11,6 +11,23 @@ from django.core.mail.backends.base import BaseEmailBackend
 
 logger = logging.getLogger(__name__)
 URL = 'https://api.brevo.com/v3/smtp/email'
+MAX_MENSAJE = 200
+
+
+class CorreoError(Exception):
+    """El proveedor de correo rechazó el envío. `status` es el código HTTP (0 = sin respuesta) y `mensaje` lo que Brevo dijo (nunca la clave ni el cuerpo del correo)."""
+
+    def __init__(self, status, mensaje=''):
+        super().__init__(f'Brevo {status}: {mensaje}')
+        self.status, self.mensaje = status, mensaje
+
+
+def _mensaje_de(e):
+    """Lo que Brevo respondió (su campo `message`), recortado. Vacío si no se puede leer."""
+    try:
+        return str(json.loads(e.read().decode('utf-8', 'replace')).get('message', ''))[:MAX_MENSAJE]
+    except Exception:
+        return ''
 
 
 class BrevoEmailBackend(BaseEmailBackend):
@@ -25,8 +42,13 @@ class BrevoEmailBackend(BaseEmailBackend):
             try:
                 with urllib.request.urlopen(req, timeout=10):
                     enviados += 1
-            except (urllib.error.URLError, TimeoutError) as e:
-                logger.error('brevo_error %s', getattr(e, 'code', type(e).__name__))  # nunca se registra el cuerpo: lleva el código
+            except urllib.error.HTTPError as e:
+                mensaje = _mensaje_de(e)
+                logger.error('brevo_error status=%s mensaje=%s', e.code, mensaje)  # nunca se registra el cuerpo del correo: lleva el código
                 if not self.fail_silently:
-                    raise
+                    raise CorreoError(e.code, mensaje) from e
+            except (urllib.error.URLError, TimeoutError) as e:
+                logger.error('brevo_error sin respuesta (%s)', type(e).__name__)
+                if not self.fail_silently:
+                    raise CorreoError(0, type(e).__name__) from e
         return enviados

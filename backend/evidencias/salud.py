@@ -125,6 +125,27 @@ class EstadoSistemaView(APIView):
         })
 
 
+class ProbarCorreoView(APIView):
+    """POST /api/sistema/probar-correo/ {destinatario}: envía un correo de prueba y explica por qué falla si falla (solo TI). Máx. 5 por minuto."""
+    permission_classes = [PuedeVerSistema]
+
+    def post(self, request):
+        from django.core.cache import cache
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+        from accounts import correo
+        destinatario = str(request.data.get('destinatario') or request.user.email).strip()
+        try:
+            validate_email(destinatario)
+        except ValidationError:
+            return Response({'detail': 'Indica un correo válido.', 'code': 'bad_request'}, status=400)
+        clave = f'probar_correo:{request.user.pk}'
+        if cache.get(clave, 0) >= 5:
+            return Response({'detail': 'Demasiadas pruebas seguidas: espera un minuto.', 'code': 'throttled'}, status=429)
+        cache.set(clave, cache.get(clave, 0) + 1, 60)
+        return Response(correo.probar(destinatario))
+
+
 class SaludView(APIView):
     """GET /api/salud/: estado de cada servicio, sin detalles. 200 si todo responde, 503 si algo falla."""
     authentication_classes = []

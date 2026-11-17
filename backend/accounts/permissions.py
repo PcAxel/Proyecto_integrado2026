@@ -36,6 +36,17 @@ class IsAdminRole(BasePermission):
         return user.role in GESTORES_DE_USUARIOS
 
 
+class IsSuperAdminRole(BasePermission):
+    """Solo TI (Super Admin): lo que puede entregar o cambiar la contraseña de otra cuenta. La Gerencia no, para que nadie pueda tomar la cuenta de TI."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        require_terms(user)
+        return user.role == Role.SUPERADMIN
+
+
 class RolePermission(BasePermission):
     """RBAC por vista. La vista declara qué roles pueden leer y cuáles escribir:
 

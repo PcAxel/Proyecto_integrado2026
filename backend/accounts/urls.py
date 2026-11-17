@@ -14,6 +14,7 @@ urlpatterns = [
     path('health/', views.HealthView.as_view()),
     path('users/', views.UserCreateView.as_view()),
     path('users/<int:pk>/', views.UserDetailView.as_view()),
+    path('users/<int:pk>/password/', views.UserPasswordView.as_view()),
     path('users/<int:pk>/desactivar/', views.UserDesactivarView.as_view()),
     path('users/<int:pk>/reactivar/', views.UserReactivarView.as_view()),
 ]
