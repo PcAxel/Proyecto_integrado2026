@@ -191,10 +191,12 @@ class Lote:
         exigir(str(d.get('nombre') or '').strip(), 'La obra debe tener un nombre.')
         u = d.get('ubicacion') or {}
         exigir(dom.es_numero(u.get('lat')) and dom.es_numero(u.get('lng')), 'Indique la ubicación de la obra.')
-        d.update(estado='PLANIFICADA', etapa=flujo.CREADO, es_emergencia_sin_presupuesto=cu30, presupuesto_id=d.get('presupuesto_id') or None,
+        d.update(estado='PLANIFICADA', etapa=flujo.CREADO, aprobacion_finanzas=flujo.EXENTA if cu30 else flujo.PENDIENTE, es_emergencia_sin_presupuesto=cu30, presupuesto_id=d.get('presupuesto_id') or None,
                  supervisor_id=uid(self.user), fecha_inicio=d.get('fecha_inicio') or hoy(), fecha_cierre=None,
                  sobrantes_conciliados=False, pendientes_sync=0, tecnicos=[])
         d.setdefault('fecha_fin_estimada', None)
+        if d['aprobacion_finanzas'] == flujo.PENDIENTE:
+            flujo.avisar_obra_por_aprobar(d)
 
     def _alta_cardex(self, d):
         d['usuario_id'] = uid(self.user)
@@ -517,6 +519,7 @@ class Lote:
         """Delegar a terreno: Jefe de Operaciones asigna técnicos; la obra queda ASIGNADA y en curso para que la vean en la app de terreno."""
         self.exigir_permiso('obras.delegar')
         exigir(a['estado'] != 'FINALIZADA', 'No se puede delegar una obra finalizada.', 409, 'estado_invalido')
+        exigir(flujo.puede_operar(a), 'La obra espera la aprobación de Finanzas: aún no se puede delegar a terreno.', 409, 'estado_invalido')
         ids = list(dict.fromkeys(c['tecnicos'] or []))
         exigir(ids, 'Asigna al menos un técnico.')
         exigir(all((fila('personal', t) or {}).get('activo') for t in ids), 'Hay un técnico inexistente o inactivo.')
@@ -563,6 +566,7 @@ class Lote:
             if c['estado'] == 'EN_CURSO':
                 self.exigir_permiso('obras.crear')
                 exigir(a['estado'] == 'PLANIFICADA', 'Solo una obra PLANIFICADA puede iniciarse.', 409, 'estado_invalido')
+                exigir(flujo.puede_operar(a), 'La obra espera la aprobación de Finanzas: aún no se puede iniciar.', 409, 'estado_invalido')
                 return {'estado': 'EN_CURSO', 'etapa': flujo.ASIGNADO if a.get('tecnicos') else flujo.etapa_de(a)}
             if c['estado'] == 'FINALIZADA':
                 # El botón «Finalizar» del Panel de Cierre y «Auditoría Terreno OK» son la misma acción.

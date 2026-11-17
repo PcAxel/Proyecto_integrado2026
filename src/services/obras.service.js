@@ -2,7 +2,7 @@ import { db } from '@/mocks/db'
 import { validarCreacionObra, costoRealObra, validarCierreObra } from '@/domain/obras'
 import { can } from '@/domain/rbac'
 import { refrescar } from '@/mocks/db'
-import { etapaDe } from '@/domain/etapasObra'
+import { etapaDe, aprobacionDe } from '@/domain/etapasObra'
 import { respond, requirePermiso, actor, ApiError, ahora } from './http'
 import { api } from './api'
 import { registrarAuditoria } from './auditoria.service'
@@ -22,6 +22,7 @@ function vista(obra, rol) {
   return {
     ...obra,
     etapa: etapaDe(obra),
+    aprobacion_finanzas: aprobacionDe(obra),
     supervisor_nombre: db.find('usuarios', obra.supervisor_id)?.nombre ?? obra.supervisor_id,
     tecnicos_detalle: obra.tecnicos.map((id) => {
       const p = db.find('personal', id)
@@ -182,6 +183,18 @@ export const obrasService = {
   /** Auditoría Terreno OK (Jefe de Operaciones): finaliza la obra si cumple el cierre y avisa a Finanzas. Si no cumple, el servidor dice qué falta. */
   async auditoriaTerrenoOk(id) {
     const r = await api.post(`/erp/obras/${encodeURIComponent(id)}/auditoria-ok/`, {})
+    await refrescar(0)
+    return r
+  },
+  /** Finanzas aprueba una obra nueva: Operaciones ya puede delegarla a terreno. */
+  async aprobarObra(id) {
+    const r = await api.post(`/erp/obras/${encodeURIComponent(id)}/aprobar/`, {})
+    await refrescar(0)
+    return r
+  },
+  /** Finanzas rechaza una obra nueva; el motivo le llega a quien la creó. */
+  async rechazarObra(id, motivo) {
+    const r = await api.post(`/erp/obras/${encodeURIComponent(id)}/rechazar/`, { motivo })
     await refrescar(0)
     return r
   },

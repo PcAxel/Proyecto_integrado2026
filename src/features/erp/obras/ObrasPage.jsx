@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { Plus, AlertTriangle } from 'lucide-react'
-import { PageHeader, Button, Card, DataTable, Select, Mono, ExportMenu } from '@/components/ui'
+import { Plus, AlertTriangle, Hourglass, XCircle } from 'lucide-react'
+import { PageHeader, Button, Card, DataTable, Select, Mono, ExportMenu, Badge } from '@/components/ui'
 import { MoneyCell, ObraStatusBadge, EmergencyBadge, FranjaEstados, TIPO_OBRA_LABEL } from '@/components/domain'
 import { obrasService, clientesService } from '@/services'
 import { TIPOS_OBRA } from '@/domain/obras'
@@ -37,6 +37,8 @@ export function ObrasPage() {
       <div className="flex flex-wrap items-center gap-1.5">
         <ObraStatusBadge estado={o.estado} />
         {o.es_emergencia_sin_presupuesto && <EmergencyBadge />}
+        {o.aprobacion_finanzas === 'PENDIENTE' && <Badge tone="warn" icon={Hourglass}>Por aprobar</Badge>}
+        {o.aprobacion_finanzas === 'RECHAZADA' && <Badge tone="crit" icon={XCircle}>Rechazada</Badge>}
       </div>
     ) },
     { key: 'cierre', header: 'Cierre', mono: true, render: (o) => `${o.cierre.checks.filter((c) => c.ok).length}/6` },

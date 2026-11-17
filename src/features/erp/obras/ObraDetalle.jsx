@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Play, Receipt, AlertTriangle, MapPin, CalendarDays, Users, UserPlus, Send, ClipboardCheck } from 'lucide-react'
-import { PageHeader, Tabs, Card, Button, Skeleton, Mono, ConfirmDialog, Modal } from '@/components/ui'
+import { ArrowLeft, Play, Receipt, AlertTriangle, MapPin, CalendarDays, Users, UserPlus, Send, ClipboardCheck, ShieldCheck, XCircle, Hourglass } from 'lucide-react'
+import { PageHeader, Tabs, Card, Button, Skeleton, Mono, ConfirmDialog, Modal, Textarea } from '@/components/ui'
 import { ObraStatusBadge, EtapaObraBadge, EmergencyBadge, TIPO_OBRA_LABEL, MoneyCell } from '@/components/domain'
 import { obrasService, clientesService } from '@/services'
 import { formatFecha } from '@/domain/format'
-import { puedeDelegar, puedeAuditar } from '@/domain/etapasObra'
+import { puedeDelegar, puedeAuditar, puedeOperarObra } from '@/domain/etapasObra'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
@@ -27,11 +27,16 @@ export function ObraDetalle() {
   const [asignando, setAsignando] = useState(null) // ids elegidos mientras el modal está abierto
   const [delegando, setDelegando] = useState(null) // ídem para «Delegar a terreno»
   const [auditando, setAuditando] = useState(false)
+  const [aprobando, setAprobando] = useState(false)
+  const [rechazo, setRechazo] = useState(null) // motivo mientras el modal de rechazo está abierto
   const obraRes = useResource(() => obrasService.retrieve(id), [id])
   const cliente = useResource(() => clientesService.retrieve(obraRes.data?.cliente_id ?? 'CLI-001').catch(() => null), [obraRes.data?.cliente_id])
   const obra = obraRes.data
   const puedeAsignar = Boolean(obra) && can(rol, 'obras.crear') && obra.estado !== 'FINALIZADA'
   const puedeFlujo = Boolean(obra) && can(rol, 'obras.delegar') // Jefe de Operaciones: delega a terreno y da la auditoría
+  const pendiente = obra?.aprobacion_finanzas === 'PENDIENTE' // Finanzas aún no la aprueba
+  const rechazada = obra?.aprobacion_finanzas === 'RECHAZADA'
+  const habilitada = obra ? puedeOperarObra(obra) : false
   const tecnicos = useResource(() => (puedeAsignar || puedeFlujo ? obrasService.tecnicosDisponibles() : Promise.resolve(null)), [puedeAsignar, puedeFlujo])
 
   // `?facturar=1` (lo pone el asistente de IA): baja hasta la tarjeta de facturación y la resalta unos segundos. NO emite nada: la persona revisa y pulsa.
@@ -80,6 +85,19 @@ export function ObraDetalle() {
     if (r) { setDelegando(null); obraRes.reload() }
   }
 
+  const aprobar = async () => {
+    setTrabajando(true)
+    const r = await runAction(obrasService.aprobarObra(obra.id), 'Obra aprobada: Operaciones ya puede delegarla a terreno')
+    setTrabajando(false)
+    if (r) { setAprobando(false); obraRes.reload() }
+  }
+  const rechazar = async () => {
+    setTrabajando(true)
+    const r = await runAction(obrasService.rechazarObra(obra.id, rechazo), 'Obra rechazada: se le avisó a quien la creó')
+    setTrabajando(false)
+    if (r) { setRechazo(null); obraRes.reload() }
+  }
+
   const auditar = async () => {
     setTrabajando(true)
     const r = await runAction(obrasService.auditoriaTerrenoOk(obra.id), 'Auditoría de terreno OK: se avisó a Finanzas que la obra está lista para facturar')
@@ -95,9 +113,15 @@ export function ObraDetalle() {
         subtitle={<span className="flex flex-wrap items-center gap-2"><Mono>{obra.id}</Mono><ObraStatusBadge estado={obra.estado} /><EtapaObraBadge etapa={obra.etapa} />{obra.es_emergencia_sin_presupuesto && <EmergencyBadge />}</span>}
         actions={(
           <>
-            {puedeFlujo && puedeDelegar(obra) && <Button icon={Send} onClick={() => setDelegando(obra.tecnicos)}>Delegar a Terreno</Button>}
+            {pendiente && can(rol, 'obras.aprobar') && (
+              <>
+                <Button variant="success" icon={ShieldCheck} onClick={() => setAprobando(true)}>Aprobar obra</Button>
+                <Button variant="secondary" icon={XCircle} onClick={() => setRechazo('')}>Rechazar</Button>
+              </>
+            )}
+            {puedeFlujo && puedeDelegar(obra) && <Button icon={Send} disabled={!habilitada} title={habilitada ? undefined : 'Espera la aprobación de Finanzas'} onClick={() => setDelegando(obra.tecnicos)}>Delegar a Terreno</Button>}
             {puedeFlujo && puedeAuditar(obra) && <Button variant="success" icon={ClipboardCheck} onClick={() => setAuditando(true)}>Auditoría Terreno OK</Button>}
-            {obra.estado === 'PLANIFICADA' && can(rol, 'obras.crear') && !puedeFlujo && <Button icon={Play} onClick={() => setIniciando(true)}>Iniciar obra</Button>}
+            {obra.estado === 'PLANIFICADA' && can(rol, 'obras.crear') && !puedeFlujo && <Button icon={Play} disabled={!habilitada} onClick={() => setIniciando(true)}>Iniciar obra</Button>}
             {obra.estado === 'FINALIZADA' && can(rol, 'facturacion.emitir') && (
               // Atajo a la tarjeta de facturación electrónica (está en el Resumen, abajo a la derecha): cambia a ese tab y baja hasta ella.
               <Button variant="secondary" icon={Receipt} onClick={() => { setTab('resumen'); setTimeout(() => document.getElementById('facturacion')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}>Facturar</Button>
@@ -106,6 +130,18 @@ export function ObraDetalle() {
         )}
       />
 
+      {pendiente && (
+        <div role="status" className="flex items-start gap-3 rounded-xl border border-warn/40 bg-warn-bg p-4 text-sm text-warn">
+          <Hourglass className="mt-0.5 h-4 w-4 shrink-0" />
+          <p><b>Esperando la aprobación de Finanzas.</b> {can(rol, 'obras.aprobar') ? 'Revisa los datos y aprueba o rechaza la obra: hasta entonces Operaciones no puede delegarla a terreno.' : 'Hasta que la apruebe no se puede iniciar ni delegar a terreno. Finanzas ya recibió el aviso.'}</p>
+        </div>
+      )}
+      {rechazada && (
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-crit/40 bg-crit-bg p-4 text-sm text-crit">
+          <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p><b>Finanzas rechazó esta obra.</b> Motivo: {obra.motivo_rechazo_finanzas || 'sin detalle'}. No puede iniciarse ni delegarse a terreno.</p>
+        </div>
+      )}
       {obra.es_emergencia_sin_presupuesto && obra.estado !== 'FINALIZADA' && (
         <div role="alert" className="flex items-start gap-3 rounded-xl border border-warn/40 bg-warn-bg p-4 text-sm text-warn">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -159,6 +195,12 @@ export function ObraDetalle() {
             <SelectorTecnicos tecnicos={tecnicos.data ?? undefined} value={delegando} onChange={setDelegando} compacto />
           </div>
         )}
+      </Modal>
+      <ConfirmDialog open={aprobando} onClose={() => setAprobando(false)} onConfirm={aprobar} loading={trabajando} confirmLabel="Aprobar obra"
+        title="Aprobar obra" message="Operaciones podrá delegar esta obra a terreno (asignar técnicos) y comenzar el trabajo. Se le avisará a quien la creó." />
+      <Modal open={rechazo !== null} onClose={() => setRechazo(null)} title="Rechazar obra"
+        footer={<><Button variant="secondary" onClick={() => setRechazo(null)}>Cancelar</Button><Button variant="danger" loading={trabajando} disabled={!rechazo?.trim()} onClick={rechazar}>Rechazar</Button></>}>
+        <Textarea label="Motivo (le llegará a Operaciones)" value={rechazo ?? ''} onChange={(e) => setRechazo(e.target.value)} />
       </Modal>
       <ConfirmDialog open={auditando} onClose={() => setAuditando(false)} onConfirm={auditar} loading={trabajando} confirmLabel="Auditoría OK"
         title="Auditoría Terreno OK" message="Confirmas que el trabajo de terreno está conforme. La obra pasará a «Finalizada» (si cumple los 6 requisitos de cierre) y se avisará a Finanzas que está lista para facturar." />

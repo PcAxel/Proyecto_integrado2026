@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { ETAPAS, ETAPA_LABEL, etapaDe, puedeDelegar, puedeAuditar } from '../etapasObra'
+import { ETAPAS, ETAPA_LABEL, etapaDe, puedeDelegar, puedeAuditar, aprobacionDe, puedeOperarObra } from '../etapasObra'
+import { construirTareas } from '../tareas'
 import { can, PERMISOS } from '../rbac'
 import { ERP_NAV, itemVisible, itemDeRuta } from '@/layouts/nav'
 import { rolUiDesdeApi } from '../rolesApi'
@@ -79,5 +80,20 @@ describe('Operaciones y Bodega son roles separados', () => {
     // y tampoco se abren escribiendo la dirección
     for (const ruta of ['/erp/usuarios', '/erp/gobernanza-ia', '/erp/bodega', '/erp/terreno']) expect(itemVisible(itemDeRuta(ruta), 'ADMIN_GENERAL')).toBe(false)
     for (const ruta of ['/erp/cobranzas', '/erp/auditoria', '/erp/rrhh', '/erp/obras/OB-0001']) expect(itemVisible(itemDeRuta(ruta), 'ADMIN_GENERAL')).toBe(true)
+  })
+})
+
+describe('aprobación de Finanzas de una obra nueva', () => {
+  it('pendiente y rechazada no pueden operar; aprobada, exenta y las antiguas sí', () => {
+    expect(aprobacionDe({})).toBe('APROBADA') // obra anterior a la regla
+    for (const [estado, puede] of [['PENDIENTE', false], ['RECHAZADA', false], ['APROBADA', true], ['EXENTA', true]]) expect(puedeOperarObra({ aprobacion_finanzas: estado })).toBe(puede)
+    expect(puedeOperarObra({})).toBe(true)
+  })
+  it('solo Finanzas tiene la aprobación y le aparece como tarea en sus pendientes', () => {
+    expect(PERMISOS['obras.aprobar']).toEqual(['ADMINISTRACION'])
+    const fuentes = { obrasPorAprobar: [{ id: 'OB-0060', nombre: 'Cámara nueva' }] }
+    const finanzas = construirTareas({ rol: 'ADMINISTRACION', fuentes })
+    expect(finanzas).toEqual([expect.objectContaining({ id: 'aob-OB-0060', titulo: 'Aprobar obra OB-0060', ruta: '/erp/obras/OB-0060' })])
+    for (const rol of ['SUPERVISOR', 'BODEGA', 'ADMIN_GENERAL', 'COMERCIAL']) expect(construirTareas({ rol, fuentes }).some((t) => t.id.startsWith('aob-'))).toBe(false)
   })
 })

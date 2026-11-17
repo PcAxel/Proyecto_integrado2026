@@ -25,3 +25,13 @@ export const puedeDelegar = (obra) => obra?.estado !== 'FINALIZADA'
 
 /** ¿Se puede dar la auditoría de terreno OK? Obra en curso y ya delegada a terreno. */
 export const puedeAuditar = (obra) => obra?.estado === 'EN_CURSO' && ['ASIGNADO_A_TERRENO', 'EN_EJECUCION'].includes(etapaDe(obra))
+
+/**
+ * Aprobación de Finanzas de una obra nueva (la fija el servidor): PENDIENTE (Operaciones aún no puede delegarla), APROBADA, RECHAZADA o
+ * EXENTA (emergencias y garantías, que son urgentes). Las obras anteriores a esta regla no traen el campo y se consideran APROBADA.
+ * @param {{aprobacion_finanzas?: string}} obra
+ */
+export const aprobacionDe = (obra) => obra?.aprobacion_finanzas || 'APROBADA'
+
+/** ¿Ya puede iniciarse o delegarse a terreno? */
+export const puedeOperarObra = (obra) => ['APROBADA', 'EXENTA'].includes(aprobacionDe(obra))

@@ -8,7 +8,7 @@
 | Rol | Código | Qué hace | Lectura | Aprobación | Operativas | Sistema |
 | --- | --- | --- | :-: | :-: | :-: | :-: |
 | **Gerente General** | `ADMIN_GENERAL` | Dirección ejecutiva: aprueba presupuestos con margen bajo, cierra obras y ve toda la gestión. Administra accesos mientras no exista un área de TI. No ejecuta tareas operativas. | 21 | 4 | 0 | 3 |
-| **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 17 | 4 | 6 | 0 |
+| **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 17 | 5 | 6 | 0 |
 | **Jefe de Bodega** | `BODEGA` | Inventario y Cardex: artículos, reglas de stock, recepciones, retiros con escáner, conteos y reversas. No ve ni gestiona obras, presupuestos ni facturación. | 8 | 0 | 8 | 0 |
 | **Jefe de Operaciones** | `SUPERVISOR` | Obras: delegar a terreno, auditar el trabajo de terreno (avisa a Finanzas) y CU30. Ve el inventario solo para consultar; no lo opera. No emite facturas ni toca estados financieros. | 11 | 1 | 5 | 0 |
 | **Técnico en Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio, horas, reloj control y retiro de materiales. | 0 | 0 | 2 | 0 |
@@ -33,6 +33,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Obras | `obras.crear` | Operativa | Crear, iniciar y regularizar obras | — | ✅ | — | ✅ | — | — | — | — | — |
 | Obras | `obras.emergencia` | Operativa | Abrir obras de emergencia o garantía sin presupuesto previo (CU30) | — | — | — | ✅ | — | — | — | — | — |
 | Obras | `obras.cerrar` | Aprobación | Dar la Auditoría de terreno OK: finalizar una obra que cumple los 6 requisitos de cierre y avisar a Finanzas | ✅ | — | — | ✅ | — | — | — | — | — |
+| Obras | `obras.aprobar` | Aprobación | Aprobar o rechazar una obra nueva que creó Operaciones, antes de que pueda delegarse a terreno | — | ✅ | — | — | — | — | — | — | — |
 | Obras | `obras.delegar` | Operativa | Delegar una obra a terreno: asignar técnicos y dejarla lista para que trabajen | — | — | — | ✅ | — | — | — | — | — |
 | Bodega | `bodega.ver` | Lectura | Ver artículos, stock, Cardex y solicitudes de retiro | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | — | — |
 | Bodega | `articulos.gestionar` | Operativa | Crear, editar y desactivar artículos | — | — | ✅ | — | — | — | — | — | — |
@@ -95,7 +96,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Finanzas y el Gerente General ya no lo modifican |
 | ✅ | Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera | rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración |
 | ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 52 acciones catalogadas |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 53 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)

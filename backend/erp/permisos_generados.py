@@ -24,6 +24,7 @@ PERMISOS = {
     'cobranzas.ver': {'ADMIN', 'AUDITOR', 'FINANZAS'},
     'presupuestos.aprobar': {'ADMIN', 'FINANZAS'},
     'obras.cerrar': {'ADMIN', 'OPERACIONES'},
+    'obras.aprobar': {'FINANZAS'},
     'conteo.aprobar': {'ADMIN', 'FINANZAS'},
     'facturacion.emitir': {'ADMIN', 'FINANZAS'},
     'compras.aprobar': {'FINANZAS'},

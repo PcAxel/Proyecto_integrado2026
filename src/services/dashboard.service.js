@@ -4,6 +4,7 @@ import { costoRealObra, validarCierreObra } from '@/domain/obras'
 import { evaluarChecklist } from '@/domain/checklist'
 import { simularRentabilidad } from '@/domain/rentabilidad'
 import { construirTareas } from '@/domain/tareas'
+import { aprobacionDe } from '@/domain/etapasObra'
 import { rutaVisible } from '@/layouts/nav'
 import { kpisGerencia, comparativoObras } from '@/domain/kpis'
 import { alertasOperativas, alertasVencimiento, ordenarAlertas, diasHasta } from '@/domain/alertas'
@@ -64,6 +65,7 @@ export const dashboardService = {
           obra: o, presupuesto: o.presupuesto_id ? db.find('presupuestos', o.presupuesto_id) : null,
           hojas: db.all('hojas'), movimientos: cardex, pendientesSync: o.pendientes_sync ?? 0,
         }).puedeFinalizar).map((o) => ({ id: o.id, nombre: o.nombre })),
+        obrasPorAprobar: (obras ?? []).filter((o) => aprobacionDe(o) === 'PENDIENTE').map((o) => ({ id: o.id, nombre: o.nombre })),
         obrasCU30: (obras ?? []).filter((o) => o.es_emergencia_sin_presupuesto && o.estado !== 'FINALIZADA').map((o) => ({ id: o.id, nombre: o.nombre })),
         hojasPorAuditar: (hojas ?? []).filter((h) => h.estado === 'ENVIADA').map((h) => ({
           id: h.id, obra_nombre: db.find('obras', h.obra_id)?.nombre ?? h.obra_id,

@@ -113,3 +113,78 @@ class FlujoObraTests(Negocio):
         self.assertTrue(marcar_etapa('OB-0009', 'EN_EJECUCION'))
         self.assertFalse(marcar_etapa('OB-0009', 'ASIGNADO_A_TERRENO'))  # nunca retrocede
         self.assertEqual(self.obra()['etapa'], 'EN_EJECUCION')
+
+
+class AprobacionDeObraTests(Negocio):
+    """Una obra nueva espera la aprobación de Finanzas antes de poder delegarse a terreno."""
+
+    def setUp(self):
+        super().setUp()
+        crear('presupuestos', 'PRE-0020', estado='APROBADO', titulo='Cámara', cliente_id='CLI-001')
+        from erp.escritura import siguiente_id
+        self.nueva = siguiente_id('obras')
+        fila = {'id': self.nueva, 'nombre': 'Cámara nueva', 'tipo': 'INSTALACION', 'cliente_id': 'CLI-001', 'presupuesto_id': 'PRE-0020',
+                'ubicacion': {'lat': -36.6, 'lng': -72.1}, 'aprobacion_finanzas': 'APROBADA'}
+        self.assertEqual(self.insertar('OPERACIONES', 'obras', fila).status_code, 200)
+
+    def obra(self, rid=None):
+        return Registro.objects.get(tabla='obras', rid=rid or self.nueva).datos
+
+    def post(self, rol, accion, datos=None, rid=None):
+        self.as_role(rol)
+        return self.client.post(f'/api/erp/obras/{rid or self.nueva}/{accion}/', datos or {}, format='json')
+
+    def test_nace_pendiente_aunque_el_cliente_diga_aprobada_y_avisa_a_finanzas(self):
+        self.assertEqual(self.obra()['aprobacion_finanzas'], 'PENDIENTE')
+        n = Notification.objects.get()
+        self.assertEqual((n.usuario_destino.role, n.tipo), ('FINANZAS', 'GENERAL'))
+        self.assertIn(self.nueva, n.mensaje)
+        self.assertIn('Espera tu aprobación', n.mensaje)
+
+    def test_mientras_esta_pendiente_no_se_delega_ni_se_inicia(self):
+        r = self.post('OPERACIONES', 'delegar', {'tecnicos': ['T-01']})
+        self.assertEqual(r.status_code, 409)
+        self.assertIn('aprobación de Finanzas', r.json()['detail'])
+        self.assertEqual(self.parchar('OPERACIONES', 'obras', self.nueva, {'estado': 'EN_CURSO'}).status_code, 409)
+        self.assertEqual(self.obra()['estado'], 'PLANIFICADA')
+
+    def test_finanzas_aprueba_y_le_avisa_a_operaciones_que_ya_puede_delegar(self):
+        self.assertEqual(self.post('FINANZAS', 'aprobar').status_code, 200)
+        o = self.obra()
+        self.assertEqual((o['aprobacion_finanzas'], o['motivo_rechazo_finanzas']), ('APROBADA', None))
+        aviso = Notification.objects.filter(usuario_destino__role='OPERACIONES').get()
+        self.assertIn('Ya puedes delegarla a terreno', aviso.mensaje)
+        self.assertEqual(self.post('OPERACIONES', 'delegar', {'tecnicos': ['T-01']}).status_code, 200)
+        self.assertEqual(Registro.objects.filter(tabla='auditoria', datos__accion='APROBAR_OBRA').count(), 1)
+
+    def test_solo_finanzas_resuelve_y_una_sola_vez(self):
+        for rol in ('OPERACIONES', 'JEFE_BODEGA', 'ADMIN', 'TECNICO', 'AUDITOR', 'COMERCIAL'):
+            self.assertEqual(self.post(rol, 'aprobar').status_code, 403, rol)
+            self.assertEqual(self.post(rol, 'rechazar', {'motivo': 'x'}).status_code, 403, rol)
+        self.assertEqual(self.post('FINANZAS', 'aprobar').status_code, 200)
+        self.assertEqual(self.post('FINANZAS', 'aprobar').status_code, 409)
+        self.assertEqual(self.post('FINANZAS', 'aprobar', rid='OB-9999').status_code, 404)
+
+    def test_rechazar_exige_motivo_y_se_lo_dice_a_quien_la_creo(self):
+        self.assertEqual(self.post('FINANZAS', 'rechazar', {'motivo': '  '}).status_code, 422)
+        self.assertEqual(self.post('FINANZAS', 'rechazar', {'motivo': 'El cliente no tiene crédito aprobado'}).status_code, 200)
+        o = self.obra()
+        self.assertEqual((o['aprobacion_finanzas'], o['motivo_rechazo_finanzas']), ('RECHAZADA', 'El cliente no tiene crédito aprobado'))
+        self.assertIn('crédito', Notification.objects.filter(usuario_destino__role='OPERACIONES').get().mensaje)
+        self.assertEqual(self.post('OPERACIONES', 'delegar', {'tecnicos': ['T-01']}).status_code, 409)  # rechazada: sigue bloqueada
+
+    def test_no_se_aprueba_sola_por_el_lote_generico(self):
+        for cambios in ({'aprobacion_finanzas': 'APROBADA'}, {'tecnicos': ['T-01'], 'aprobacion_finanzas': 'APROBADA'}):
+            self.assertEqual(self.parchar('OPERACIONES', 'obras', self.nueva, cambios).status_code, 403)
+            self.assertEqual(self.parchar('FINANZAS', 'obras', self.nueva, cambios).status_code, 403)
+        self.assertEqual(self.obra()['aprobacion_finanzas'], 'PENDIENTE')
+
+    def test_emergencia_nace_exenta_y_las_obras_antiguas_se_consideran_aprobadas(self):
+        from erp.escritura import siguiente_id
+        nueva = siguiente_id('obras')
+        fila = {'id': nueva, 'nombre': 'Falla urgente', 'tipo': 'EMERGENCIA', 'cliente_id': 'CLI-001', 'ubicacion': {'lat': -36.6, 'lng': -72.1}}
+        self.assertEqual(self.insertar('OPERACIONES', 'obras', fila).status_code, 200)
+        self.assertEqual(self.obra(nueva)['aprobacion_finanzas'], 'EXENTA')
+        self.assertTrue(flujo.puede_operar(self.obra(nueva)))
+        self.assertEqual(flujo.aprobacion_de({'estado': 'EN_CURSO'}), 'APROBADA')  # obra anterior a la regla: sin campo
+        self.assertEqual(Notification.objects.filter(tipo='GENERAL', mensaje__contains=nueva).count(), 0)  # la exenta no molesta a Finanzas

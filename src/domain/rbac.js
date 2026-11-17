@@ -61,6 +61,7 @@ export const CATALOGO_PERMISOS = {
   'obras.crear': { tipo: 'operativa', modulo: 'Obras', descripcion: 'Crear, iniciar y regularizar obras' },
   'obras.emergencia': { tipo: 'operativa', modulo: 'Obras', descripcion: 'Abrir obras de emergencia o garantía sin presupuesto previo (CU30)' },
   'obras.cerrar': { tipo: 'aprobacion', modulo: 'Obras', descripcion: 'Dar la Auditoría de terreno OK: finalizar una obra que cumple los 6 requisitos de cierre y avisar a Finanzas' },
+  'obras.aprobar': { tipo: 'aprobacion', modulo: 'Obras', descripcion: 'Aprobar o rechazar una obra nueva que creó Operaciones, antes de que pueda delegarse a terreno' },
   'obras.delegar': { tipo: 'operativa', modulo: 'Obras', descripcion: 'Delegar una obra a terreno: asignar técnicos y dejarla lista para que trabajen' },
   'bodega.ver': { tipo: 'lectura', modulo: 'Bodega', descripcion: 'Ver artículos, stock, Cardex y solicitudes de retiro' },
   'articulos.gestionar': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Crear, editar y desactivar artículos' },
@@ -148,6 +149,7 @@ export const PERMISOS = {
   // ── Aprobación ──
   'presupuestos.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'obras.cerrar': ['ADMIN_GENERAL', 'SUPERVISOR'],
+  'obras.aprobar': ['ADMINISTRACION'],
   'conteo.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'facturacion.emitir': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'compras.aprobar': ['ADMINISTRACION'],

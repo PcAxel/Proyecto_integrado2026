@@ -35,6 +35,11 @@ export function construirTareas({ rol, fuentes, limite = 8, usuarioId }) {
       t.push({ id: `apr-${p.id}`, severidad: p.bajoMinimo ? 'ADVERTENCIA' : 'INFO', titulo: `Aprobar ${p.id}`, detalle: `${p.titulo}. Margen ${formatPct(p.margenPct)}${p.bajoMinimo ? ', bajo el mínimo' : ''}`, ruta: `/erp/presupuestos/${p.id}`, cta: 'Revisar' })
     }
   }
+  if (can(rol, 'obras.aprobar')) {
+    for (const o of f.obrasPorAprobar ?? []) {
+      t.push({ id: `aob-${o.id}`, severidad: 'ADVERTENCIA', titulo: `Aprobar obra ${o.id}`, detalle: `${o.nombre}. Creada por Operaciones, espera tu aprobación`, ruta: `/erp/obras/${o.id}`, cta: 'Revisar' })
+    }
+  }
   if (can(rol, 'obras.cerrar')) {
     for (const o of f.obrasListasParaCerrar ?? []) {
       t.push({ id: `cer-${o.id}`, severidad: 'INFO', titulo: `Finalizar ${o.id}`, detalle: `${o.nombre}. Cumple los 6 requisitos de cierre`, ruta: `/erp/obras/${o.id}`, cta: 'Cerrar obra' })

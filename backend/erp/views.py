@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import TermsAccepted
 
-from . import compras, escritura, flujo, snapshot
+from . import aprobacion_obras, compras, escritura, flujo, snapshot
 from .reglas import ReglaError
 
 logger = logging.getLogger(__name__)
@@ -102,3 +102,34 @@ class RechazarSolicitudView(APIView):
 
     def post(self, request, solicitud_id):
         return _resolver_solicitud(request, solicitud_id, compras.rechazar, 'RECHAZAR_SOLICITUD_COMPRA', motivo=request.data.get('motivo'))
+
+
+def _resolver_obra(request, obra_id, funcion, accion, **kwargs):
+    ip = request.META.get('REMOTE_ADDR')
+    try:
+        obra = funcion(request.user, obra_id, **kwargs)
+    except ReglaError as e:
+        return Response({'detail': e.mensaje, 'code': e.code}, status=e.status)
+    try:  # quién la resolvió y cuándo; si la auditoría falla, la decisión ya está tomada y no se deshace
+        escritura.Lote(request.user, ip).insertar('auditoria', {
+            'id': escritura.siguiente_id('auditoria'), 'entidad': 'Obra', 'entidad_id': obra_id, 'accion': accion,
+            'anterior': {'aprobacion_finanzas': flujo.PENDIENTE}, 'nuevo': {'aprobacion_finanzas': obra['aprobacion_finanzas'], 'motivo': obra.get('motivo_rechazo_finanzas')}})
+    except Exception:
+        logger.exception('obra_aprobacion_auditoria_error obra=%s', obra_id)
+    return Response(obra)
+
+
+class AprobarObraView(APIView):
+    """POST /api/erp/obras/<id>/aprobar/ — Finanzas aprueba una obra nueva: Operaciones ya puede delegarla a terreno."""
+    permission_classes = [TermsAccepted]
+
+    def post(self, request, obra_id):
+        return _resolver_obra(request, obra_id, aprobacion_obras.aprobar, 'APROBAR_OBRA')
+
+
+class RechazarObraView(APIView):
+    """POST /api/erp/obras/<id>/rechazar/ {motivo} — Finanzas rechaza la obra; el motivo le llega a quien la creó."""
+    permission_classes = [TermsAccepted]
+
+    def post(self, request, obra_id):
+        return _resolver_obra(request, obra_id, aprobacion_obras.rechazar, 'RECHAZAR_OBRA', motivo=request.data.get('motivo'))

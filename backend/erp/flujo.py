@@ -21,3 +21,26 @@ def avisar_a_finanzas(obra):
     destino = CustomUser.objects.filter(role=Role.FINANZAS, is_active=True)
     nombre = obra.get('nombre') or obra['id']
     return notificar(destino, f"Auditoría de Terreno completada para la Obra {nombre} ({obra['id']}). Lista para facturar.", Notification.Tipo.FACTURACION_LISTA)
+
+
+# Aprobación de Finanzas: una obra nueva nace PENDIENTE y Operaciones no puede delegarla a terreno hasta que Finanzas la APRUEBE.
+# Las de emergencia o garantía (CU30) nacen EXENTA: son urgentes y ya tienen su propio camino (regularizar con un presupuesto aprobado).
+# Las obras anteriores a esta regla no traen el campo y se consideran APROBADA.
+PENDIENTE, APROBADA, RECHAZADA, EXENTA = 'PENDIENTE', 'APROBADA', 'RECHAZADA', 'EXENTA'
+
+
+def aprobacion_de(obra):
+    return obra.get('aprobacion_finanzas') or APROBADA
+
+
+def puede_operar(obra):
+    """¿Ya puede iniciarse o delegarse a terreno? Solo si Finanzas la aprobó (o está exenta)."""
+    return aprobacion_de(obra) in (APROBADA, EXENTA)
+
+
+def avisar_obra_por_aprobar(obra):
+    """Aviso a Finanzas: Operaciones creó una obra que espera su aprobación."""
+    from accounts.models import CustomUser, Role
+    from notificaciones.models import Notification, notificar
+    destino = CustomUser.objects.filter(role=Role.FINANZAS, is_active=True)
+    return notificar(destino, f"Nueva obra {obra['id']} ({obra.get('nombre') or 'sin nombre'}) creada por Operaciones. Espera tu aprobación.", Notification.Tipo.GENERAL)
