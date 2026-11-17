@@ -28,7 +28,7 @@ class DTEBase(RoleTestCase):
         self.crear_orden('OB-0001')
 
     def crear_orden(self, rid, estado='FINALIZADA', venta=1_000_000, presupuesto='APROBADO', cliente=True):
-        Registro.objects.get_or_create(tabla='clientes', rid='CLI-001', defaults={'datos': {'rut': '76.115.402-8', 'razon_social': 'Packing Cordillera S.A.', 'activo': True}})
+        Registro.objects.get_or_create(tabla='clientes', rid='CLI-001', defaults={'datos': {'rut': '99.000.001-8', 'razon_social': 'Cliente Demo 01 SpA', 'activo': True}})
         if not cliente:
             Registro.objects.filter(tabla='clientes').delete()
         pid = f'PRE-{rid[-4:]}'
@@ -104,7 +104,7 @@ class ReglasDeLaOrdenTests(DTEBase):
         self.as_role('FINANZAS')
         r = self.client.post('/api/facturacion/emitir/OB-0001/', {'neto': 5, 'total': 5}, format='json')
         self.assertEqual((r.data['neto'], r.data['iva'], r.data['total']), (1_000_000, 190_000, 1_190_000))
-        self.assertEqual((r.data['receptor_rut'], r.data['receptor_razon_social']), ('76.115.402-8', 'Packing Cordillera S.A.'))
+        self.assertEqual((r.data['receptor_rut'], r.data['receptor_razon_social']), ('99.000.001-8', 'Cliente Demo 01 SpA'))
 
     def test_id_con_caracteres_raros_no_llega_a_la_vista(self):
         self.as_role('FINANZAS')
@@ -218,7 +218,7 @@ class EstadoYPdfTests(DTEBase):
 class AdaptadorTests(DTEBase):
     def datos(self, folio=9999):
         from datetime import date
-        return DatosFactura('OB-0001', '76.115.402-8', 'Packing Cordillera S.A.', 'Cámara', 1000, 190, 1190, '/api/facturacion/OB-0001/pdf/', folio, date(2026, 11, 13))
+        return DatosFactura('OB-0001', '99.000.001-8', 'Cliente Demo 01 SpA', 'Cámara', 1000, 190, 1190, '/api/facturacion/OB-0001/pdf/', folio, date(2026, 11, 13))
 
     def test_el_proveedor_base_es_abstracto(self):
         with self.assertRaises(TypeError):
@@ -243,7 +243,7 @@ class AdaptadorTests(DTEBase):
 
         from pypdf import PdfReader
         texto = PdfReader(BytesIO(pdf)).pages[0].extract_text()
-        for esperado in ('FACTURA ELECTRÓNICA', '9999', 'Packing Cordillera S.A.', '$1.190', 'SIMULADO'):
+        for esperado in ('FACTURA ELECTRÓNICA', '9999', 'Cliente Demo 01 SpA', '$1.190', 'SIMULADO'):
             self.assertIn(esperado, texto)
 
     def test_el_proveedor_se_elige_por_configuracion_y_uno_desconocido_se_rechaza(self):

@@ -1,7 +1,7 @@
 """Datos iniciales de desarrollo: un usuario por rol y una base limpia lista para trabajar.
 
 Por defecto (base limpia) se carga solo lo que es "maestro": clientes, proveedores, artículos, presupuestos, obras y la
-flota, más UNA ficha de personal: la del técnico real (tecnico@fyag.cl). Los registros operativos (asistencia, hojas de
+flota, más UNA ficha de personal: la del técnico de demostración (tecnico@fyag.cl). Los registros operativos (asistencia, hojas de
 servicio, retiros, movimientos de bodega, facturas, auditoría) NO se siembran: nacen desde la app. Con --demo se carga
 además el dataset de ejemplo completo (16 técnicos con asistencia, historial de bodega, etc.).
 
@@ -29,11 +29,18 @@ from erp.models import Registro
 
 USUARIOS = [
     # correo, contraseña, rol, nombre, apellido
-    ('admin@fyag.cl', 'Admin-FYAG-2026', Role.ADMIN, 'Alejandra', 'Soto'),
-    ('finanzas@fyag.cl', 'Finanzas-FYAG-2026', Role.FINANZAS, 'Felipe', 'Rojas'),
-    ('operaciones@fyag.cl', 'Operaciones-FYAG-2026', Role.OPERACIONES, 'Olga', 'Muñoz'),
-    ('tecnico@fyag.cl', 'Tecnico-FYAG-2026', Role.TECNICO, 'Jorge', 'Quezada'),
-    ('rrhh@fyag.cl', 'RRHH-FYAG-2026', Role.RRHH, 'Rosa', 'Gómez'),
+    # Nombres ficticios. Los correos de ingreso se mantienen: son las cuentas que ya existen (renombrarlos exige migrar usuarios reales).
+    ('admin@fyag.cl', 'Admin-Apex-2026', Role.ADMIN, 'Administrador', 'Demo'),
+    ('finanzas@fyag.cl', 'Finanzas-Apex-2026', Role.FINANZAS, 'Finanzas', 'Demo'),
+    ('operaciones@fyag.cl', 'Operaciones-Apex-2026', Role.OPERACIONES, 'Operaciones', 'Demo'),
+    ('tecnico@fyag.cl', 'Tecnico-Apex-2026', Role.TECNICO, 'Técnico', 'Demo 01'),
+    ('rrhh@fyag.cl', 'RRHH-Apex-2026', Role.RRHH, 'RRHH', 'Demo'),
+    # Roles corporativos: van al final para no mover los ids (U-00x) de las cuentas anteriores.
+    ('superadmin@fyag.cl', 'SuperAdmin-Apex-2026', Role.SUPERADMIN, 'Super Admin', 'Demo'),
+    ('comercial@fyag.cl', 'Comercial-Apex-2026', Role.COMERCIAL, 'Comercial', 'Demo'),
+    ('auditor@fyag.cl', 'Auditor-Apex-2026', Role.AUDITOR, 'Auditor', 'Demo'),
+    # Área de TI y Ciberseguridad: administra accesos y la gobernanza del agente de IA (rol SUPERADMIN).
+    ('ti@apexsystems.cl', 'TI-Apex-2026', Role.SUPERADMIN, 'Jefatura TI', 'Demo'),
 ]
 # Ids de usuario del dataset original → usuario real que los reemplaza
 USUARIO_ORIGINAL = {'U-001': 'admin@fyag.cl', 'U-002': 'finanzas@fyag.cl', 'U-003': 'operaciones@fyag.cl',
@@ -53,7 +60,7 @@ def reemplazar(valor, mapa):
 
 # Registros que genera la operación diaria desde la app: no se siembran en la base limpia.
 OPERATIVAS = {'asistencia', 'hojas', 'retiros', 'cardex', 'facturas', 'notas_credito', 'auditoria'}
-FICHA_REAL = 'T-01'  # Jorge Quezada, el técnico real (tecnico@fyag.cl)
+FICHA_REAL = 'T-01'  # Técnico Demo 01 (tecnico@fyag.cl)
 
 
 def depurar(datos):
@@ -146,7 +153,7 @@ class Command(BaseCommand):
                 password = unica or generadas.setdefault(email, secrets.token_urlsafe(12))
             u, _ = CustomUser.objects.get_or_create(email=email, defaults={'role': role})
             u.first_name, u.last_name, u.role, u.is_active = first, last, role, True
-            u.is_staff = u.is_superuser = role == Role.ADMIN
+            u.is_staff = u.is_superuser = role in (Role.ADMIN, Role.SUPERADMIN)
             u.set_password(password)
             u.terms_accepted_at = u.terms_accepted_at or ahora
             u.terms_accepted_ip = u.terms_accepted_ip or '127.0.0.1'
@@ -187,6 +194,10 @@ class Command(BaseCommand):
         if opts['demo']:
             from rrhh.demo import cargar_demo_rrhh
             n = cargar_demo_rrhh()
+            from rrhh.demo import cargar_demo_cumplimiento
+            n += cargar_demo_cumplimiento()  # casos del art. 159 N°4 y bajas históricas para la rotación
+            from ai_agent.demo import cargar_demo_gobernanza
+            n += cargar_demo_gobernanza()    # bitácora inicial de prompts de IA para el módulo de TI
             self.stdout.write(f'RR. HH. de demostración: {n} registros (contratos, finiquitos y un anexo por firmar).' if n else 'RR. HH. de demostración: ya cargado.')
         self.stdout.write(self.style.SUCCESS(f'Semilla lista ({creados} registros nuevos).'))
         self.stdout.write('\nUsuarios de prueba (sin 2FA: el primer ingreso muestra el QR para vincular el autenticador):')

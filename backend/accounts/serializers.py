@@ -68,6 +68,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return value
 
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """Lo único que se edita de un acceso: nombre y rol. El correo es la identidad de la cuenta y no cambia."""
+
+    class Meta:
+        model = CustomUser
+        fields = ('first_name', 'last_name', 'role')
+
+
 class RecuperarSolicitudSerializer(serializers.Serializer):
     email = serializers.EmailField()
 

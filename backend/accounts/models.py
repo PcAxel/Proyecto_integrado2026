@@ -10,6 +10,14 @@ class Role(models.TextChoices):
     OPERACIONES = 'OPERACIONES', 'Operaciones'
     TECNICO = 'TECNICO', 'Técnico'
     RRHH = 'RRHH', 'Recursos Humanos'
+    # Roles corporativos (segregación de funciones). Se agregan al final: los cinco anteriores conservan su código y sus permisos.
+    SUPERADMIN = 'SUPERADMIN', 'Super Admin (TI y Seguridad)'
+    COMERCIAL = 'COMERCIAL', 'Ejecutivo Comercial'
+    AUDITOR = 'AUDITOR', 'Auditor Externo'
+
+
+# Quiénes administran los accesos: TI (Super Admin) y, mientras la empresa no tenga área de TI, la Gerencia General (ADMIN).
+GESTORES_DE_USUARIOS = frozenset({Role.SUPERADMIN, Role.ADMIN})
 
 
 class UsuariosNoSeEliminan(Exception):
@@ -37,7 +45,7 @@ class CustomUserManager(BaseUserManager.from_queryset(UserQuerySet)):
         return self._create(email, password, **extra)
 
     def create_superuser(self, email, password=None, **extra):
-        extra.setdefault('role', Role.ADMIN)
+        extra.setdefault('role', Role.SUPERADMIN)  # la cuenta técnica (manage.py createsuperuser) es de TI, no de Gerencia
         extra['is_staff'] = True
         extra['is_superuser'] = True
         return self._create(email, password, **extra)

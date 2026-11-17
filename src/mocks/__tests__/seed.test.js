@@ -36,10 +36,10 @@ describe('seed', () => {
   })
   it('trae los usuarios con acceso, con RUT válido y sin duplicados', async () => {
     const { validarRut } = await import('@/domain/rut')
-    expect(s.usuarios).toHaveLength(7)
+    expect(s.usuarios).toHaveLength(9)
     expect(s.usuarios.every((u) => validarRut(u.rut) && u.activo)).toBe(true)
-    expect(new Set(s.usuarios.map((u) => u.rut)).size).toBe(7)
-    expect(new Set(s.usuarios.map((u) => u.email)).size).toBe(7)
+    expect(new Set(s.usuarios.map((u) => u.rut)).size).toBe(9)
+    expect(new Set(s.usuarios.map((u) => u.email)).size).toBe(9)
     expect(s.usuarios.filter((u) => u.rol === 'ADMIN_GENERAL')).toHaveLength(1)
     expect(s.usuarios.find((u) => u.id === 'U-005').rut).toBe(s.personal[0].rut)
     expect(s.usuarios.some((u) => 'password_hash' in u)).toBe(false)

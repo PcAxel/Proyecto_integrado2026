@@ -12,7 +12,8 @@ describe('segregación de funciones', () => {
 
   it('Administrador General: gestiona usuarios y autoriza, pero no ejecuta', () => {
     expect(permisosDe(ROLES.ADMIN_GENERAL, 'operativa')).toEqual([])
-    expect(permisosDe(ROLES.ADMIN_GENERAL, 'sistema').sort()).toEqual(['usuarios.crear', 'usuarios.editar'])
+    expect(permisosDe(ROLES.ADMIN_GENERAL, 'sistema').sort()).toEqual(['gobernanza_ia.ver', 'usuarios.crear', 'usuarios.editar']) // la gobernanza de IA la ve, pero no la cambia
+    expect(can('ADMIN_GENERAL', 'gobernanza_ia.gestionar')).toBe(false)
     expect(permisosDe(ROLES.ADMIN_GENERAL, 'aprobacion').sort()).toEqual(['conteo.aprobar', 'facturacion.emitir', 'obras.cerrar', 'presupuestos.aprobar'])
     for (const a of ['cardex.crear', 'cardex.reversar', 'compras.registrar', 'articulos.gestionar', 'hojas.auditar', 'personal.editar', 'maestros.gestionar', 'presupuestos.crear', 'obras.crear', 'pwa.usar']) {
       expect(can('ADMIN_GENERAL', a)).toBe(false)
@@ -30,11 +31,29 @@ describe('segregación de funciones', () => {
     expect(PERMISOS['personal.editar']).toEqual(['RRHH'])
     expect(can('ADMINISTRACION', 'personal.editar')).toBe(false)
     expect(can('ADMINISTRACION', 'personal.ver')).toBe(true) // sigue viendo tarifas para costear
-    expect(permisosDe(ROLES.RRHH).sort()).toEqual(['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver'])
+    expect(permisosDe(ROLES.RRHH).sort()).toEqual(['asistencia.ver', 'cumplimiento.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver'])
   })
 
-  it('las acciones de sistema son solo del Administrador General', () => {
-    for (const a of Object.keys(PERMISOS).filter((x) => CATALOGO_PERMISOS[x].tipo === 'sistema')) expect(PERMISOS[a]).toEqual(['ADMIN_GENERAL'])
+  it('las acciones de sistema son solo de TI (Super Admin) y, sin área de TI, de la Gerencia General', () => {
+    for (const a of Object.keys(PERMISOS).filter((x) => CATALOGO_PERMISOS[x].tipo === 'sistema')) {
+      expect(PERMISOS[a]).toContain('SUPER_ADMIN')
+      expect(PERMISOS[a].filter((r) => !['SUPER_ADMIN', 'ADMIN_GENERAL'].includes(r))).toEqual([])
+    }
+  })
+
+  it('el Super Admin no opera ni aprueba el negocio, ni ve costos', () => {
+    expect(permisosDe(ROLES.SUPER_ADMIN).sort()).toEqual(['auditoria.ver', 'dashboard.ver', 'gobernanza_ia.gestionar', 'gobernanza_ia.ver', 'sistema.ver', 'usuarios.crear', 'usuarios.editar', 'usuarios.ver'])
+  })
+
+  it('el Ejecutivo Comercial prepara presupuestos y clientes, pero no aprueba ni toca proveedores', () => {
+    expect(permisosDe(ROLES.COMERCIAL, 'operativa').sort()).toEqual(['clientes.gestionar', 'presupuestos.crear'])
+    expect(permisosDe(ROLES.COMERCIAL, 'aprobacion')).toEqual([])
+    for (const a of ['proveedores.ver', 'maestros.gestionar', 'facturacion.emitir', 'obras.ver', 'bodega.ver']) expect(PERMISOS[a]).not.toContain('COMERCIAL')
+  })
+
+  it('el Auditor Externo (CONSULTA) solo tiene lecturas, incluidas facturación y finiquitos', () => {
+    expect(permisosDe(ROLES.CONSULTA).every((a) => CATALOGO_PERMISOS[a].tipo === 'lectura')).toBe(true)
+    for (const a of ['facturacion.ver', 'finiquitos.ver', 'presupuestos.ver', 'auditoria.ver']) expect(PERMISOS[a]).toContain('CONSULTA')
   })
 })
 

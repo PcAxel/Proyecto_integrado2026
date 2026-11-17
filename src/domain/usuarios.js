@@ -23,7 +23,7 @@ export function generarPasswordInicial(azar = Math.random) {
   return `${cuerpo}-${pick(digitos)}${pick(digitos)}${pick(digitos)}`
 }
 
-/** "Camila Torres" → "CT". @param {string} nombre */
+/** "Usuario Demo" → "UD". @param {string} nombre */
 export const iniciales = (nombre) => nombre.split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 
 const mismoCorreo = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()

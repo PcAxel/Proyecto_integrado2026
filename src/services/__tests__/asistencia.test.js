@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { configureHttp, asistenciaService, auditoriaService } from '@/services'
 
 const login = (id) => entrarComo(id)
-const TECNICO = 'U-005' // Jorge Quezada (T-01)
+const TECNICO = 'U-005' // Técnico Demo 01 (T-01)
 const SUPERVISOR = 'U-004'
 const RRHH = 'U-007'
 const BODEGA = 'U-003'

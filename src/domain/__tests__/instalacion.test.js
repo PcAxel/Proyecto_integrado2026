@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { rutaPorEstado, redireccionRequerida, terminosAceptados, terminosPendientes, RUTAS_INSTALAR as R } from '../instalacion'
 
 const sinSesion = { access: null, user: null }
-const sinTerminos = { access: 'a', user: { email: 'x@fyag.cl', terms_accepted_at: null } }
-const conTerminos = { access: 'a', user: { email: 'x@fyag.cl', terms_accepted_at: '2026-11-05T14:00:00Z' } }
+const sinTerminos = { access: 'a', user: { email: 'x@apex.demo', terms_accepted_at: null } }
+const conTerminos = { access: 'a', user: { email: 'x@apex.demo', terms_accepted_at: '2026-11-05T14:00:00Z' } }
 
 describe('instalación: estado de aceptación → ruta', () => {
   it('terms_accepted_at nulo o ausente no cuenta como aceptado', () => {
@@ -32,7 +32,7 @@ describe('instalación: estado de aceptación → ruta', () => {
 })
 
 describe('los términos solo los exige el Técnico', () => {
-  const sesion = (rolApi) => ({ access: 'a', user: { email: 'x@fyag.cl', rolApi, terms_accepted_at: null } })
+  const sesion = (rolApi) => ({ access: 'a', user: { email: 'x@apex.demo', rolApi, terms_accepted_at: null } })
   it('Técnico sin aceptar debe pasar por los términos', () => {
     expect(terminosPendientes(sesion('TECNICO').user)).toBe(true)
     expect(rutaPorEstado(sesion('TECNICO'))).toBe(R.terminos)

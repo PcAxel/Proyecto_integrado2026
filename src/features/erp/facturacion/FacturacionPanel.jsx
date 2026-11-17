@@ -17,7 +17,8 @@ import { useAuthStore } from '@/stores/authStore'
  */
 export function FacturacionPanel({ obraId, resaltar = false }) {
   const rol = useAuthStore((s) => s.user?.rol)
-  const permitido = can(rol, 'facturacion.emitir')
+  const puedeEmitir = can(rol, 'facturacion.emitir')
+  const permitido = puedeEmitir || can(rol, 'facturacion.ver') // quien solo la ve (Auditor Externo) no tiene botón de emisión
   const [dte, setDte] = useState(null)
   const [emitiendo, setEmitiendo] = useState(false)
   const [bajando, setBajando] = useState(false)
@@ -83,7 +84,8 @@ export function FacturacionPanel({ obraId, resaltar = false }) {
         {modo === 'bloqueado' && <p className="rounded-lg bg-slate-50 p-3 text-sm text-ink-soft">{dte?.motivo ?? 'Esta orden no se puede facturar todavía.'}</p>}
         {error && <p role="alert" className="rounded-lg bg-crit-bg p-3 text-sm font-medium text-crit">{error}</p>}
 
-        {(modo === 'emitir' || modo === 'rechazado') && (
+        {(modo === 'emitir' || modo === 'rechazado') && !puedeEmitir && <p className="rounded-lg bg-slate-50 p-3 text-sm text-ink-soft">Factura pendiente de emisión. Tu cuenta solo puede consultarla.</p>}
+        {(modo === 'emitir' || modo === 'rechazado') && puedeEmitir && (
           <Button icon={Send} onClick={emitir} className="w-full">{modo === 'rechazado' ? 'Reintentar emisión (SII)' : 'Emitir Factura Electrónica (SII)'}</Button>
         )}
 

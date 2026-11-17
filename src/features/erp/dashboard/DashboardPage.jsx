@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Truck, Gauge, ShieldAlert, HardHat, Package, ClipboardCheck, FileText, Wallet, Banknote, AlertTriangle, CheckCircle2, Layers, PackageOpen, ChevronDown, Bell, TrendingUp } from 'lucide-react'
+import { Users, Truck, Gauge, ShieldAlert, HardHat, Package, ClipboardCheck, FileText, Wallet, Banknote, AlertTriangle, CheckCircle2, Layers, PackageOpen, ChevronDown, Bell, TrendingUp, Receipt, Landmark, FileWarning } from 'lucide-react'
 import { KpiTile, Card, EmptyState, Skeleton, Button, cn } from '@/components/ui'
-import { dashboardService } from '@/services'
+import { dashboardService, facturacionService } from '@/services'
+import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
 import { formatCLP } from '@/domain/money'
@@ -22,6 +23,9 @@ export function DashboardPage() {
   const { data, loading, error } = useResource(() => dashboardService.resumen(), [])
   const [todos, setTodos] = useState(false)
   const k = data?.kpis ?? {}
+  // Cifras tributarias: solo se piden si el rol puede ver la facturación (Finanzas, Gerencia y Auditor Externo).
+  const veDte = can(user.rol, 'facturacion.ver')
+  const dte = useResource(() => (veDte ? facturacionService.resumen().catch(() => null) : Promise.resolve(null)), [veDte]).data
   const definido = (v) => v !== undefined && v !== null
   const docsVencidos = (data?.alertas ?? []).filter((a) => a.severidad === 'CRITICA' && ['LICENCIA', 'REVISION_TECNICA', 'PERMISO_CIRCULACION', 'SEGURO'].includes(a.tipo)).length
   const enfoque = ENFOQUES[user.rol] ?? ENFOQUES.CONSULTA
@@ -32,6 +36,9 @@ export function DashboardPage() {
     definido(k.margenPonderado) && { id: 'margen', label: 'Margen ponderado', value: formatPct(k.margenPonderado), icon: TrendingUp, tone: k.margenPonderado < MARGEN_MINIMO ? 'crit' : k.margenPonderado < MARGEN_SALUDABLE ? 'warn' : 'ok', hint: `${k.presupuestosBajoMargen} presupuesto(s) bajo ${MARGEN_MINIMO} %` },
     definido(k.costoRealObrasActivas) && { id: 'costo', label: 'Costo real obras activas', value: formatCLP(k.costoRealObrasActivas), icon: Wallet, hint: 'Materiales netos + horas-hombre' },
     definido(k.valorInventario) && { id: 'inv', label: 'Valor de inventario', value: formatCLP(k.valorInventario), icon: Package, hint: 'Stock × último costo' },
+    dte && { id: 'facturado', label: 'Facturado en el mes (neto)', value: formatCLP(dte.mes.neto), icon: Receipt, hint: `${dte.mes.emitidas} facturas electrónicas aceptadas` },
+    dte && { id: 'iva', label: `IVA débito del mes (${dte.tasa_iva} %)`, value: formatCLP(dte.mes.iva), icon: Landmark, hint: `Total con IVA: ${formatCLP(dte.mes.total)}` },
+    dte && { id: 'dte', label: 'DTE con observaciones', value: dte.rechazadas + dte.procesando, icon: FileWarning, tone: dte.rechazadas ? 'crit' : dte.procesando ? 'warn' : 'ok', hint: `${dte.rechazadas} rechazadas · ${dte.procesando} en proceso` },
     definido(k.presupuestosEnCurso) && { id: 'pres', label: 'Presupuestos en curso', value: k.presupuestosEnCurso, icon: FileText, tone: k.presupuestosBajoMargen ? 'warn' : 'neutral', hint: `${k.presupuestosBajoMargen} bajo ${MARGEN_MINIMO} % de margen` },
     definido(k.obrasActivas) && { id: 'obras', label: 'Obras en curso', value: k.obrasActivas, icon: HardHat, hint: `${k.obrasPlanificadas} planificadas · ${k.obrasFinalizadas} finalizadas` },
     definido(k.cu30Pendientes) && { id: 'cu30', label: 'CU30 por regularizar', value: k.cu30Pendientes, icon: AlertTriangle, tone: k.cu30Pendientes ? 'warn' : 'ok', hint: 'Emergencias sin presupuesto' },
@@ -50,7 +57,7 @@ export function DashboardPage() {
     const pb = prioridad.indexOf(b.id)
     return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb)
   })
-  const conBandeja = user.rol !== 'CONSULTA' // el rol de solo lectura no tiene nada que resolver
+  const conBandeja = !['CONSULTA', 'SUPER_ADMIN'].includes(user.rol) // solo lectura y TI no tienen tareas de negocio que resolver
   const cuantos = conBandeja ? VISIBLES.conBandeja : VISIBLES.sinBandeja
   const visibles = todos ? ordenados : ordenados.slice(0, cuantos)
   const hayMas = ordenados.length > cuantos
@@ -66,8 +73,8 @@ export function DashboardPage() {
       )}
 
       <div className={cn('grid items-start gap-6', conBandeja && 'xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')}>
-        {conBandeja && (data ? <BandejaTareas tareas={tareas} /> : <div className="rounded-xl border border-fyag-ice/15 bg-fyag-panel"><Skeleton rows={5} /></div>)}
-        <section aria-label="Indicadores">
+        {conBandeja && (data ? <div data-agent-target="bandeja-tareas"><BandejaTareas tareas={tareas} /></div> : <div className="rounded-xl border border-fyag-ice/15 bg-fyag-panel"><Skeleton rows={5} /></div>)}
+        <section aria-label="Indicadores" data-agent-target="kpi-indicadores">
           <div className={cn('grid grid-cols-2 gap-3 sm:gap-4', conBandeja ? '' : 'lg:grid-cols-3 min-[1900px]:grid-cols-6')}>
             {!data && Array.from({ length: 4 }, (_, i) => <div key={i} className="h-[116px] rounded-xl border border-fyag-ice/15 bg-fyag-panel"><Skeleton rows={2} /></div>)}
             {visibles.map(({ id, ...t }) => <KpiTile key={id} {...t} animar oscuro />)}
@@ -93,7 +100,7 @@ export function DashboardPage() {
               <ActividadReciente logs={data.actividad} />
             </Card>
           )}
-          <Card oscuro className={cn('lg:col-span-3', data.comparativo || data.actividad ? '2xl:col-span-1' : '2xl:col-span-4')} title="Alertas del sistema" subtitle={data.alertas.length ? `${data.alertas.length} activas` : undefined} icon={Bell}>
+          <Card oscuro className={cn('lg:col-span-3', data.comparativo || data.actividad ? '2xl:col-span-1' : '2xl:col-span-4')} data-agent-target="alertas-sistema" title="Alertas del sistema" subtitle={data.alertas.length ? `${data.alertas.length} activas` : undefined} icon={Bell}>
             {data.alertas.length === 0
               ? <EmptyState icon={CheckCircle2} title="Todo en orden" hint="No hay alertas activas para tu rol." />
               : <ListaAlertas alertas={data.alertas} limite={12} columnas />}

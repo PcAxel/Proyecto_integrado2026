@@ -3,8 +3,8 @@
 import { writeFileSync } from 'node:fs'
 import { PERMISOS } from '../src/domain/rbac.js'
 
-// Rol de la matriz → rol del backend. Operaciones absorbe a Bodega; Consulta no existe en el backend.
-const A_API = { ADMIN_GENERAL: 'ADMIN', ADMINISTRACION: 'FINANZAS', BODEGA: 'OPERACIONES', SUPERVISOR: 'OPERACIONES', TECNICO: 'TECNICO', RRHH: 'RRHH' }
+// Rol de la matriz → rol del backend. Operaciones absorbe a Bodega; Consulta es el Auditor Externo.
+const A_API = { ADMIN_GENERAL: 'ADMIN', ADMINISTRACION: 'FINANZAS', BODEGA: 'OPERACIONES', SUPERVISOR: 'OPERACIONES', TECNICO: 'TECNICO', RRHH: 'RRHH', SUPER_ADMIN: 'SUPERADMIN', COMERCIAL: 'COMERCIAL', CONSULTA: 'AUDITOR' }
 
 const filas = Object.entries(PERMISOS).map(([accion, roles]) => {
   const api = [...new Set(roles.map((r) => A_API[r]).filter(Boolean))].sort()

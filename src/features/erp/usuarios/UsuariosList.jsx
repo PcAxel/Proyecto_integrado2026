@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { normalizar } from '@/domain/busqueda'
 import { FiltroBusqueda } from '@/components/FiltroBusqueda'
-import { UserPlus, ShieldCheck, ShieldOff, UserX, UserCheck } from 'lucide-react'
+import { UserPlus, ShieldCheck, ShieldOff, UserX, UserCheck, Pencil } from 'lucide-react'
 import { PageHeader, Button, Card, DataTable, Modal, Input, Select, Badge, Mono, ConfirmDialog } from '@/components/ui'
 import { RolBadge } from '@/components/domain'
+import { ROL_API_LABEL } from '@/components/domain/RolBadge'
+import { ROL_DESCRIPCION } from '@/domain/rbac'
+import { rolUiDesdeApi } from '@/domain/rolesApi'
 import { ErrorEstado } from '@/components/ErrorEstado'
 import { usuariosService } from '@/services'
 import { formatFechaHora } from '@/domain/format'
@@ -13,7 +16,43 @@ import { toast } from 'sonner'
 import { runAction } from '@/hooks/runAction'
 import { useAuthStore } from '@/stores/authStore'
 
-const ROLES = [{ value: 'ADMIN', label: 'Administrador' }, { value: 'FINANZAS', label: 'Finanzas' }, { value: 'OPERACIONES', label: 'Operaciones' }, { value: 'TECNICO', label: 'Técnico' }, { value: 'RRHH', label: 'Recursos Humanos' }]
+const ROLES = Object.entries(ROL_API_LABEL).map(([value, label]) => ({ value, label }))
+
+/** Edita el nombre y el rol de un acceso existente. El correo no cambia; el rol propio tampoco (lo impide también el servidor). */
+function EditarUsuarioModal({ usuario, esPropio, onClose, onSaved }) {
+  const [f, setF] = useState({ first_name: usuario.first_name ?? '', last_name: usuario.last_name ?? '', role: usuario.role })
+  const [guardando, setGuardando] = useState(false)
+  const [errores, setErrores] = useState({})
+  const set = (k) => (ev) => setF({ ...f, [k]: ev.target.value })
+  const cambiaRol = f.role !== usuario.role
+  const guardar = async (ev) => {
+    ev.preventDefault()
+    setGuardando(true)
+    setErrores({})
+    try {
+      await usuariosService.update(usuario.id, esPropio ? { first_name: f.first_name, last_name: f.last_name } : f)
+      toast.success(cambiaRol ? `Rol actualizado. ${usuario.email} deberá iniciar sesión de nuevo.` : 'Acceso actualizado')
+      onSaved()
+      onClose()
+    } catch (err) { setErrores(err.data && typeof err.data === 'object' && !err.data.detail ? err.data : { _: [err.message] }) } finally { setGuardando(false) }
+  }
+  return (
+    <Modal open onClose={onClose} title="Editar acceso"
+      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-editar-usuario" loading={guardando}>Guardar cambios</Button></>}>
+      <form id="form-editar-usuario" onSubmit={guardar} className="space-y-4">
+        <p className="text-sm text-ink-soft">{usuario.email}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Nombre" value={f.first_name} onChange={set('first_name')} />
+          <Input label="Apellido" value={f.last_name} onChange={set('last_name')} />
+        </div>
+        <Select label="Rol" value={f.role} onChange={set('role')} options={ROLES} disabled={esPropio} error={errores.role?.[0]} />
+        <p className="rounded-lg bg-slate-50 p-3 text-xs text-ink-soft">{esPropio ? 'No puedes cambiar tu propio rol: debe hacerlo otra persona que administre accesos.' : ROL_DESCRIPCION[rolUiDesdeApi(f.role)]}</p>
+        {cambiaRol && <p className="text-xs font-medium text-warn">Al cambiar el rol se cerrarán las sesiones abiertas de esta persona.</p>}
+        {errores._ && <p role="alert" className="text-sm font-medium text-crit">{errores._[0]}</p>}
+      </form>
+    </Modal>
+  )
+}
 
 function UsuarioModal({ onClose, onSaved }) {
   const [f, setF] = useState({ email: '', first_name: '', last_name: '', role: 'TECNICO' })
@@ -42,6 +81,7 @@ function UsuarioModal({ onClose, onSaved }) {
           <Input label="Apellido" value={f.last_name} onChange={set('last_name')} />
         </div>
         <Select label="Rol" value={f.role} onChange={set('role')} options={ROLES} error={errores.role?.[0]} />
+        <p className="rounded-lg bg-slate-50 p-3 text-xs text-ink-soft">{ROL_DESCRIPCION[rolUiDesdeApi(f.role)]}</p>
         <p className="text-xs text-ink-soft">El servidor genera una contraseña temporal y la envía por correo junto al link de instalación de la app.</p>
         {errores._ && <p role="alert" className="text-sm font-medium text-crit">{errores._[0]}</p>}
       </form>
@@ -53,7 +93,8 @@ export function UsuariosList() {
   const [params, setParams] = useSearchParams()
   const buscar = params.get('buscar') ?? ''
   const [modal, setModal] = useState(params.get('nuevo') === '1')
-  const yo = useAuthStore((s) => s.user?.id)
+  const yo = useAuthStore((s) => s.user?.pk) // id numérico del servidor, el mismo que trae cada fila
+  const [editando, setEditando] = useState(null)
   const { data, loading, error, reload } = useResource(() => usuariosService.list(), [])
   const [cambio, setCambio] = useState(null) // usuario a desactivar o reactivar
   const [procesando, setProcesando] = useState(false)
@@ -70,9 +111,14 @@ export function UsuariosList() {
     { key: '2fa', header: '2FA', render: (u) => (u.is_2fa_enabled ? <Badge tone="ok" icon={ShieldCheck}>Vinculado</Badge> : <Badge tone="warn" icon={ShieldOff}>Pendiente</Badge>) },
     { key: 'terms', header: 'Términos', render: (u) => (u.terms_accepted_at ? <Mono className="text-xs">{formatFechaHora(u.terms_accepted_at)}</Mono> : <Badge tone="warn">Sin aceptar</Badge>) },
     // Nunca se elimina un usuario (trazabilidad): solo se desactiva el acceso o se devuelve. Nadie puede desactivarse a sí mismo.
-    { key: 'acciones', header: '', align: 'right', render: (u) => (u.id === yo ? <span className="text-xs text-ink-soft">Tu cuenta</span> : (
-      <Button size="sm" variant="secondary" icon={u.is_active ? UserX : UserCheck} onClick={() => setCambio(u)}>{u.is_active ? 'Desactivar' : u.bloqueada ? 'Desbloquear' : 'Reactivar'}</Button>
-    )) },
+    { key: 'acciones', header: '', align: 'right', render: (u) => (
+      <div className="flex items-center justify-end gap-2">
+        <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditando(u)}>Editar</Button>
+        {u.id === yo ? <span className="text-xs text-ink-soft">Tu cuenta</span> : (
+          <Button size="sm" variant="secondary" icon={u.is_active ? UserX : UserCheck} onClick={() => setCambio(u)}>{u.is_active ? 'Desactivar' : u.bloqueada ? 'Desbloquear' : 'Reactivar'}</Button>
+        )}
+      </div>
+    ) },
   ]
   return (
     <div className="space-y-5">
@@ -85,6 +131,7 @@ export function UsuariosList() {
         )}
       </Card>
       {modal && <UsuarioModal onClose={() => setModal(false)} onSaved={reload} />}
+      {editando && <EditarUsuarioModal usuario={editando} esPropio={editando.id === yo} onClose={() => setEditando(null)} onSaved={reload} />}
       <ConfirmDialog
         open={Boolean(cambio)} onClose={() => setCambio(null)} onConfirm={confirmarCambio} loading={procesando}
         tone={cambio?.is_active ? 'danger' : 'primary'}

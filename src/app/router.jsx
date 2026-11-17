@@ -29,13 +29,17 @@ import { TerrenoPage } from '@/features/erp/terreno/TerrenoPage'
 import { PersonalPage } from '@/features/erp/personal/PersonalPage'
 import { ModuloRRHH } from '@/features/erp/rrhh/ModuloRRHH'
 import { ModuloFinanzas } from '@/features/erp/rrhh/ModuloFinanzas'
+import { CumplimientoPage } from '@/features/erp/rrhh/CumplimientoPage'
 import { MaestrosPage } from '@/features/erp/maestros/MaestrosPage'
 import { AuditoriaPage } from '@/features/erp/auditoria/AuditoriaPage'
 import { RetiroPage } from '@/features/pwa/retiro/RetiroPage'
+import { SistemaPage } from '@/features/erp/sistema/SistemaPage'
+import { GobernanzaIAPage } from '@/features/erp/sistema/GobernanzaIAPage'
+import { ROLES_ERP } from '@/domain/rolesApi'
 
 /**
  * Todas las rutas cuelgan de AppGate: sin servidor no hay pantalla alguna.
- * /erp solo para Admin, Finanzas, Operaciones y RRHH; /app solo para el Técnico (el servidor valida igual cada llamada).
+ * /erp para todos los roles de oficina (Gerencia, Finanzas, Operaciones, RRHH, Super Admin, Comercial y Auditor); /app solo para el Técnico (el servidor valida igual cada llamada).
  */
 export const router = createBrowserRouter([
   {
@@ -50,7 +54,7 @@ export const router = createBrowserRouter([
       {
         path: '/erp',
         element: (
-          <RoleProtectedRoute allowedRoles={['ADMIN', 'FINANZAS', 'OPERACIONES', 'RRHH']}>
+          <RoleProtectedRoute allowedRoles={ROLES_ERP}>
             <RequireRole accion="dashboard.ver">
               <ErpLayout />
             </RequireRole>
@@ -67,10 +71,13 @@ export const router = createBrowserRouter([
           { path: 'terreno', element: <RequireRole accion="terreno.ver"><TerrenoPage /></RequireRole> },
           { path: 'personal', element: <RequireRole accion="personal.ver"><PersonalPage /></RequireRole> },
           { path: 'rrhh', element: <RequireRole accion="rrhh.ver"><ModuloRRHH /></RequireRole> },
+          { path: 'cumplimiento', element: <RequireRole accion="cumplimiento.ver"><CumplimientoPage /></RequireRole> },
           { path: 'finanzas', element: <RequireRole accion="finiquitos.ver"><ModuloFinanzas /></RequireRole> },
           { path: 'maestros', element: <RequireRole accion="maestros.ver"><MaestrosPage /></RequireRole> },
           { path: 'auditoria', element: <RequireRole accion="auditoria.ver"><AuditoriaPage /></RequireRole> },
           { path: 'usuarios', element: <RequireRole accion="usuarios.ver"><UsuariosList /></RequireRole> },
+          { path: 'gobernanza-ia', element: <RequireRole accion="gobernanza_ia.ver"><GobernanzaIAPage /></RequireRole> },
+          { path: 'sistema', element: <RequireRole accion="sistema.ver"><SistemaPage /></RequireRole> },
           { path: 'bodega', element: <RequireRole accion="bodega.ver"><BodegaPage /></RequireRole> },
           { path: 'compras', element: <RequireRole accion="compras.ver"><ComprasPage /></RequireRole> },
         ],

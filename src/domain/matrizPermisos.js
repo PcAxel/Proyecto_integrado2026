@@ -1,6 +1,9 @@
 import { ROLES, ROL_LABEL, ROL_DESCRIPCION, PERMISOS, CATALOGO_PERMISOS, permisosDe, TIPOS_ACCION } from './rbac.js'
 
-const ABREV = { ADMIN_GENERAL: 'Admin. General', ADMINISTRACION: 'Administración', BODEGA: 'Bodega', SUPERVISOR: 'Supervisor', TECNICO: 'Técnico', CONSULTA: 'Consulta', RRHH: 'RRHH' }
+const ABREV = { ADMIN_GENERAL: 'Gerente Gral.', ADMINISTRACION: 'Finanzas', BODEGA: 'Bodega', SUPERVISOR: 'Operaciones', TECNICO: 'Técnico', CONSULTA: 'Auditor', RRHH: 'RRHH', SUPER_ADMIN: 'Super Admin', COMERCIAL: 'Comercial' }
+/** Quiénes pueden administrar accesos: TI y, mientras no exista área de TI, la Gerencia General. */
+const GESTORES = ['SUPER_ADMIN', 'ADMIN_GENERAL']
+const dentroDe = (roles, permitidos) => roles.length > 0 && roles.every((x) => permitidos.includes(x))
 const ROLES_ORDEN = Object.values(ROLES)
 const TIPO_LABEL = { lectura: 'Lectura', aprobacion: 'Aprobación', operativa: 'Operativa', sistema: 'Sistema' }
 
@@ -16,29 +19,36 @@ export function verificarSegregacion() {
   const sistema = Object.keys(PERMISOS).filter((a) => CATALOGO_PERMISOS[a]?.tipo === 'sistema')
   const opAdmin = permisosDe(ROLES.ADMIN_GENERAL, 'operativa')
   const consulta = permisosDe(ROLES.CONSULTA)
+  const negocioSuper = permisosDe(ROLES.SUPER_ADMIN).filter((a) => !['dashboard.ver', 'auditoria.ver'].includes(a) && CATALOGO_PERMISOS[a]?.tipo !== 'sistema' && !a.startsWith('usuarios.'))
   const noLectura = consulta.filter((a) => CATALOGO_PERMISOS[a]?.tipo !== 'lectura')
   const rrhh = permisosDe(ROLES.RRHH)
-  const rrhhEsperado = ['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver']
+  const rrhhEsperado = ['asistencia.ver', 'cumplimiento.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver']
   const sinCatalogo = Object.keys(PERMISOS).filter((a) => !CATALOGO_PERMISOS[a])
   const rolesInvalidos = Object.entries(PERMISOS).flatMap(([a, roles]) => roles.filter((r) => !ROLES_ORDEN.includes(r)).map((r) => `${a}:${r}`))
   const borrado = Object.keys(PERMISOS).filter((a) => /eliminar|borrar|delete|remove|destroy/i.test(a))
 
   const r = (id, regla, cumple, detalleOk, detalleMal) => ({ id, regla, cumple, detalle: cumple ? detalleOk : detalleMal })
   return [
-    r('usuarios-exclusivo', 'Solo el Administrador General gestiona usuarios', usuarios.length === 3 && usuarios.every((a) => iguales(PERMISOS[a], ['ADMIN_GENERAL'])),
-      `usuarios.ver, usuarios.crear y usuarios.editar son exclusivos del Administrador General`, `Hay roles ajenos en: ${usuarios.filter((a) => !iguales(PERMISOS[a], ['ADMIN_GENERAL'])).join(', ')}`),
-    r('sistema-exclusivo', 'Toda acción de administración del sistema es exclusiva del Administrador General', sistema.length > 0 && sistema.every((a) => iguales(PERMISOS[a], ['ADMIN_GENERAL'])),
+    r('usuarios-exclusivo', 'Solo TI (Super Admin) y la Gerencia General gestionan usuarios', usuarios.length === 3 && usuarios.every((a) => dentroDe(PERMISOS[a], GESTORES) && PERMISOS[a].includes('SUPER_ADMIN')),
+      `usuarios.ver, usuarios.crear y usuarios.editar son solo del Super Admin y del Gerente General`, `Hay roles ajenos en: ${usuarios.filter((a) => !dentroDe(PERMISOS[a], GESTORES)).join(', ')}`),
+    r('sistema-exclusivo', 'Toda acción de administración del sistema es de TI (Super Admin) o de la Gerencia General', sistema.length > 0 && sistema.every((a) => dentroDe(PERMISOS[a], GESTORES)),
       `${sistema.length} acciones de clase «sistema»`, 'Una acción de sistema tiene otros roles'),
-    r('admin-no-ejecuta', 'El Administrador General no ejecuta tareas operativas', opAdmin.length === 0,
+    r('superadmin-fuera-del-negocio', 'El Super Admin no opera ni aprueba nada del negocio, ni ve costos', negocioSuper.length === 0,
+      'Solo accesos, auditoría técnica y estado del sistema', `Tiene acciones de negocio: ${negocioSuper.join(', ')}`),
+    r('comercial-no-aprueba', 'El Ejecutivo Comercial prepara presupuestos y clientes, pero no aprueba', permisosDe(ROLES.COMERCIAL, 'aprobacion').length === 0 && iguales(permisosDe(ROLES.COMERCIAL, 'operativa'), ['clientes.gestionar', 'presupuestos.crear']),
+      'Operativas: presupuestos.crear y clientes.gestionar; 0 aprobaciones', `Operativas: ${permisosDe(ROLES.COMERCIAL, 'operativa').join(', ')} · aprobaciones: ${permisosDe(ROLES.COMERCIAL, 'aprobacion').join(', ')}`),
+    r('operaciones-sin-finanzas', 'Operaciones y Bodega no emite facturas ni paga', ['facturacion.emitir', 'finiquitos.pagar', 'presupuestos.aprobar'].every((a) => !PERMISOS[a].includes(ROLES.SUPERVISOR) && !PERMISOS[a].includes(ROLES.BODEGA)),
+      'Sin facturacion.emitir, finiquitos.pagar ni presupuestos.aprobar', 'Operaciones tiene una acción financiera'),
+    r('admin-no-ejecuta', 'El Gerente General no ejecuta tareas operativas', opAdmin.length === 0,
       'Tiene 0 acciones operativas: solo lectura, aprobación y sistema', `Conserva acciones operativas: ${opAdmin.join(', ')}`),
-    r('admin-autoriza', 'El Administrador General conserva la autorización (margen < 20 % y cierre de obras)',
+    r('admin-autoriza', 'El Gerente General conserva la autorización (margen < 20 % y cierre de obras)',
       ['presupuestos.aprobar', 'obras.cerrar'].every((a) => PERMISOS[a].includes(ROLES.ADMIN_GENERAL)), 'Puede aprobar presupuestos y finalizar obras', 'Perdió una aprobación que exige la regla de negocio'),
-    r('consulta-lectura', 'Consulta es estrictamente solo lectura', consulta.length > 0 && noLectura.length === 0,
+    r('consulta-lectura', 'El Auditor Externo es estrictamente solo lectura', consulta.length > 0 && noLectura.length === 0,
       `${consulta.length} permisos y todos son de lectura`, `Tiene permisos que no son de lectura: ${noLectura.join(', ')}`),
     r('rrhh-solo-personal', 'RRHH controla únicamente Personal y Flota, contratos y finiquitos', iguales(rrhh, rrhhEsperado),
       `Solo ${rrhhEsperado.join(', ')}`, `Permisos de RRHH: ${rrhh.join(', ')}`),
     r('personal-exclusivo', 'Solo RRHH modifica el personal y la flota (personal.editar)', iguales(PERMISOS['personal.editar'], ['RRHH']),
-      'Administración (Finanzas) y el Administrador General ya no lo modifican', `personal.editar tiene: ${PERMISOS['personal.editar'].join(', ')}`),
+      'Finanzas y el Gerente General ya no lo modifican', `personal.editar tiene: ${PERMISOS['personal.editar'].join(', ')}`),
     r('finiquito-segregado', 'Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera',
       iguales(PERMISOS['rrhh.gestionar'], ['RRHH']) && iguales(PERMISOS['finiquitos.pagar'], ['ADMINISTRACION']),
       'rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración', `rrhh.gestionar: ${PERMISOS['rrhh.gestionar'].join(', ')} · finiquitos.pagar: ${PERMISOS['finiquitos.pagar'].join(', ')}`),
@@ -56,6 +66,9 @@ export const OBSERVACIONES = [
   '**Supervisor crea obras, las cierra y audita las hojas de sus técnicos.** Es la combinación más amplia fuera de la Gerencia; si se quiere separar, `obras.cerrar` o `hojas.auditar` pasarían a otro rol.',
   '**Administración y Bodega registran compras** sin una aprobación posterior de otro rol.',
   '**Administración ve las tarifas y fichas del personal** (`personal.ver`) para costear presupuestos, pero ya no las modifica.',
+  '**La Gerencia General también administra accesos** (`usuarios.*`), además de aprobar. Se conserva para que ninguna instalación quede sin quien cree usuarios; con un Super Admin activo, la segregación estricta es quitar `ADMIN_GENERAL` de esas tres acciones.',
+  '**La Gerencia General y Finanzas emiten la factura electrónica** (`facturacion.emitir`). En una segregación estricta la emisión sería solo de Finanzas y Tributario.',
+  '**Finanzas y Operaciones siguen pudiendo crear presupuestos**, aunque ahora existe el Ejecutivo Comercial. Se dejó así para no cortar el flujo actual.',
 ]
 
 /** Documento Markdown de la matriz de permisos. Determinista: no incluye fechas, así que puede compararse con el archivo guardado. */
@@ -99,10 +112,11 @@ export function generarMatrizMarkdown() {
   L.push('')
 
   L.push('## 5. Reglas de negocio que complementan los permisos', '')
-  L.push('- Un presupuesto con **margen < 20 %** solo lo aprueba el Administrador General, aunque Administración tenga `presupuestos.aprobar` (`domain/rentabilidad.js`).')
+  L.push('- Un presupuesto con **margen < 20 %** solo lo aprueba el Gerente General, aunque Finanzas tenga `presupuestos.aprobar` (`domain/rentabilidad.js`).')
   L.push('- El **Técnico** solo ve las obras en las que está asignado y nunca ve costos.')
   L.push('- Los **costos** se ocultan en los servicios a quien no tiene `costos.ver` o `costos_compra.ver`.')
-  L.push('- Un acceso no se elimina: se desactiva. No se puede desactivar el propio acceso ni dejar al sistema sin un Administrador General activo.')
+  L.push('- Un acceso no se elimina: se desactiva. No se puede desactivar el propio acceso ni dejar al sistema sin un Gerente General activo.')
+  L.push('- El **Auditor Externo** solo puede hacer lecturas: el servidor rechaza con 403 cualquier petición suya que no sea `GET` (`accounts/authentication.py`), sin depender de esta matriz.')
   L.push('')
   return L.join('\n')
 }

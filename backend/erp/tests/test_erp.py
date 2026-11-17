@@ -17,8 +17,8 @@ class ErpBase(RoleTestCase):
         crear('obras', 'OB-0001', nombre='Cámara 3', tecnicos=['T-01'], estado='EN_CURSO')
         crear('obras', 'OB-0002', nombre='Túnel', tecnicos=['T-02'], estado='EN_CURSO')
         crear('articulos', 'ART-001', sku='REF-1', nombre='Gas', categoria='Ref', unidad='un', costo_unitario=1000, stock_minimo=1, activo=True)
-        crear('proveedores', 'PRV-001', rut='76.554.120-4', razon_social='Frigotec', activo=True)
-        crear('clientes', 'CLI-001', rut='76.115.402-8', razon_social='Packing', activo=True)
+        crear('proveedores', 'PRV-001', rut='99.100.001-1', razon_social='Proveedor Demo 01', activo=True)
+        crear('clientes', 'CLI-001', rut='99.000.001-8', razon_social='Packing', activo=True)
         crear('personal', 'T-01', nombre='Jorge', cargo='Técnico', costo_hora_hombre=9000, usuario_id=uid(self.users['TECNICO']), activo=True)
         crear('personal', 'T-02', nombre='Luis', cargo='Técnico', costo_hora_hombre=8000, usuario_id='U-999', activo=True)
         crear('hojas', 'HS-0001', obra_id='OB-0001', tecnico_id='T-01', estado='ENVIADA')
@@ -166,11 +166,11 @@ class EscrituraTests(ErpBase):
         self.assertEqual(self.lote('FINANZAS', {'op': 'patch', 'tabla': 'auditoria', 'id': 'LOG-000001', 'cambios': {'accion': 'x'}}).status_code, 403)
 
     def test_maestros_validan_rut_y_duplicados(self):
-        fila = {'id': 'CLI-002', 'rut': '76.115.402-8', 'razon_social': 'A'}
+        fila = {'id': 'CLI-002', 'rut': '99.000.001-8', 'razon_social': 'A'}
         self.assertEqual(self.lote('FINANZAS', {'op': 'insert', 'tabla': 'clientes', 'fila': fila}).status_code, 409)  # ya existe
         malo = {**fila, 'rut': '11.111.111-2'}
         self.assertEqual(self.lote('FINANZAS', {'op': 'insert', 'tabla': 'clientes', 'fila': malo}).status_code, 422)
-        bueno = {**fila, 'rut': '77.248.913-7'}
+        bueno = {**fila, 'rut': '99.000.002-6'}
         self.assertEqual(self.lote('FINANZAS', {'op': 'insert', 'tabla': 'clientes', 'fila': bueno}).status_code, 200)
 
     def test_tecnico_odometro_solo_avanza(self):

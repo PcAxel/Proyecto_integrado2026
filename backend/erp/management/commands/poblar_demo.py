@@ -25,7 +25,7 @@ class Command(BaseCommand):
         self.stdout.write(f'\nArtículos bajo su stock mínimo: {bajo} · sin stock: {sum(1 for a in m.articulos_ if m.stock_final[a["id"]] <= 0)}')
         self.stdout.write('\nTécnicos (cada uno entra a la app con su correo; en el primer ingreso vinculan su autenticador):')
         for t in m.tecnicos:
-            clave = '(la de FYAG_SEED_PASSWORD)' if m.unica else m.claves.get(t['usuario'].email, 'Tecnico-FYAG-2026' if not m.publico else '(ya existía: no se cambió)')
+            clave = '(la de FYAG_SEED_PASSWORD)' if m.unica else m.claves.get(t['usuario'].email, 'Tecnico-Apex-2026' if not m.publico else '(ya existía: no se cambió)')
             self.stdout.write(f"  {t['ficha']}  {t['usuario'].email:<42}{clave}")
         if m.claves:
             self.stdout.write(self.style.WARNING('Guarda estas contraseñas ahora: no se vuelven a mostrar.'))

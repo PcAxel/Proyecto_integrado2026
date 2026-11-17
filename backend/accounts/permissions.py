@@ -1,7 +1,7 @@
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .models import Role
+from .models import GESTORES_DE_USUARIOS, Role
 
 
 def require_terms(user):
@@ -26,12 +26,14 @@ class TermsAccepted(BasePermission):
 
 
 class IsAdminRole(BasePermission):
+    """Administración de accesos: Super Admin (TI) y Gerencia General. Conserva el nombre por compatibilidad."""
+
     def has_permission(self, request, view):
         user = request.user
         if not (user and user.is_authenticated):
             return False
         require_terms(user)
-        return user.role == Role.ADMIN
+        return user.role in GESTORES_DE_USUARIOS
 
 
 class RolePermission(BasePermission):

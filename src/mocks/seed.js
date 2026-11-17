@@ -13,14 +13,14 @@ const fd = (dias) => f(dias).slice(0, 10)
 const pad = (n, w = 3) => String(n).padStart(w, '0')
 
 const CLIENTES = [
-  ['76.115.402', 'Packing Cordillera S.A.', 'Embalaje de fruta fresca', 'Chillán Viejo', 'Andrea Poblete', '+56 9 8421 3307'],
-  ['77.248.913', 'Frutícola Río Ñuble SpA', 'Producción y exportación de fruta', 'San Carlos', 'Héctor Navarrete', '+56 9 7712 4550'],
-  ['76.903.158', 'Agrícola Los Maitenes Ltda.', 'Cultivo de berries', 'Quillón', 'Marcela Rebolledo', '+56 9 9034 1182'],
-  ['78.054.267', 'Lácteos Valle del Itata Ltda.', 'Elaboración de productos lácteos', 'Yungay', 'Iván Carrasco', '+56 9 6650 2941'],
-  ['76.420.835', 'Carnes Selectas Chillán SpA', 'Faenamiento y distribución de carnes', 'Chillán', 'Paulina Ortiz', '+56 9 8890 7716'],
-  ['77.613.092', 'Viñedos San Carlos Ltda.', 'Producción vitivinícola', 'San Carlos', 'Ricardo Alarcón', '+56 9 5521 0834'],
-  ['76.298.744', 'Congelados Bulnes SpA', 'Procesamiento de vegetales congelados', 'Bulnes', 'Soledad Henríquez', '+56 9 7340 9925'],
-  ['78.337.581', 'Hortalizas Pinto Ltda.', 'Producción hortícola', 'Pinto', 'Claudio Vergara', '+56 9 6218 4473'],
+  ['76.115.402', 'Cliente Demo 01 SpA', 'Embalaje de fruta fresca', 'Chillán Viejo', 'Contacto Demo 01', '+56 9 0000 0001'],
+  ['77.248.913', 'Cliente Demo 02 SpA', 'Producción y exportación de fruta', 'San Carlos', 'Contacto Demo 02', '+56 9 0000 0002'],
+  ['76.903.158', 'Cliente Demo 03 SpA', 'Cultivo de berries', 'Quillón', 'Contacto Demo 03', '+56 9 0000 0003'],
+  ['78.054.267', 'Cliente Demo 04 SpA', 'Elaboración de productos lácteos', 'Yungay', 'Contacto Demo 04', '+56 9 0000 0004'],
+  ['76.420.835', 'Cliente Demo 05 SpA', 'Faenamiento y distribución de carnes', 'Chillán', 'Contacto Demo 05', '+56 9 0000 0005'],
+  ['77.613.092', 'Cliente Demo 06 SpA', 'Producción vitivinícola', 'San Carlos', 'Contacto Demo 06', '+56 9 0000 0006'],
+  ['76.298.744', 'Cliente Demo 07 SpA', 'Procesamiento de vegetales congelados', 'Bulnes', 'Contacto Demo 07', '+56 9 0000 0007'],
+  ['78.337.581', 'Cliente Demo 08 SpA', 'Producción hortícola', 'Pinto', 'Contacto Demo 08', '+56 9 0000 0008'],
 ].map(([rut, razon_social, giro, comuna, contacto, telefono], i) => ({
   id: `CLI-${pad(i + 1)}`,
   rut: formatRut(rut.replace(/\./g, '')),
@@ -34,11 +34,11 @@ const CLIENTES = [
 }))
 
 const PROVEEDORES = [
-  ['76.554.120', 'Distribuidora Frigotec Ltda.', 'Concepción', 'Sergio Bravo', '30 días', [10, 5, 0]],
-  ['77.019.384', 'Repuestos Refrigeración Biobío SpA', 'Los Ángeles', 'Natalia Pino', '30 días', [8, 0, 0]],
-  ['76.730.915', 'Eléctrica Industrial Chillán Ltda.', 'Chillán', 'Mauricio Soto', '45 días', [5, 3, 2]],
-  ['78.112.640', 'Cobres y Metales del Sur S.A.', 'Talcahuano', 'Daniela Muñoz', 'Contado', [4, 0, 0]],
-  ['76.845.277', 'Aislantes Térmicos Ñuble SpA', 'Chillán', 'Felipe Araya', '30 días', [6, 2, 0]],
+  ['76.554.120', 'Proveedor Demo 01 Ltda.', 'Concepción', 'Contacto Proveedor Demo 01', '30 días', [10, 5, 0]],
+  ['77.019.384', 'Proveedor Demo 02 Ltda.', 'Los Ángeles', 'Contacto Proveedor Demo 02', '30 días', [8, 0, 0]],
+  ['76.730.915', 'Proveedor Demo 03 Ltda.', 'Chillán', 'Contacto Proveedor Demo 03', '45 días', [5, 3, 2]],
+  ['78.112.640', 'Proveedor Demo 04 Ltda.', 'Talcahuano', 'Contacto Proveedor Demo 04', 'Contado', [4, 0, 0]],
+  ['76.845.277', 'Proveedor Demo 05 Ltda.', 'Chillán', 'Contacto Proveedor Demo 05', '30 días', [6, 2, 0]],
 ].map(([rut, razon_social, comuna, contacto, condicion_pago, descuentos], i) => ({
   id: `PRV-${pad(i + 1)}`,
   rut: formatRut(rut.replace(/\./g, '')),
@@ -104,22 +104,22 @@ const art = (sku) => ARTICULOS.find((a) => a.sku === sku)
 
 /** [nombre, cargo/especialidad, costo hora-hombre, ingreso, usuario] */
 const TECNICOS = [
-  ['Jorge Quezada', 'Técnico Frigorista Senior', 11500, '2018-03-12', 'U-005'],
-  ['Cristian Medina', 'Técnico Frigorista Senior', 11200, '2017-08-01'],
-  ['Luis Parra', 'Técnico Frigorista', 9800, '2019-05-20'],
-  ['Marco Riquelme', 'Técnico Frigorista', 9600, '2020-01-13'],
-  ['Felipe Cáceres', 'Técnico Frigorista', 9400, '2020-09-07'],
-  ['Sebastián Gutiérrez', 'Técnico Electricista', 9900, '2019-11-04'],
-  ['Pablo Illanes', 'Técnico Electricista', 9200, '2021-03-15'],
-  ['Nicolás Vidal', 'Técnico Frigorista', 8800, '2021-07-26'],
-  ['Andrés Torres', 'Soldador Especialista', 10400, '2018-10-09'],
-  ['Gonzalo Fierro', 'Soldador', 8900, '2022-02-14'],
-  ['Matías Escobar', 'Técnico Frigorista Junior', 7200, '2023-04-03'],
-  ['Diego Lagos', 'Técnico Frigorista Junior', 7000, '2023-06-19'],
-  ['Cristóbal Sandoval', 'Ayudante Técnico', 6500, '2024-01-22'],
-  ['Ignacio Pereira', 'Ayudante Técnico', 6500, '2024-03-11'],
-  ['Rodolfo Zúñiga', 'Montajista de Paneles', 8300, '2022-09-05'],
-  ['Hugo Salazar', 'Montajista de Paneles', 8100, '2022-11-28'],
+  ['Técnico Demo 01', 'Técnico Frigorista Senior', 11500, '2018-03-12', 'U-005'],
+  ['Técnico Demo 02', 'Técnico Frigorista Senior', 11200, '2017-08-01'],
+  ['Técnico Demo 03', 'Técnico Frigorista', 9800, '2019-05-20'],
+  ['Técnico Demo 04', 'Técnico Frigorista', 9600, '2020-01-13'],
+  ['Técnico Demo 05', 'Técnico Frigorista', 9400, '2020-09-07'],
+  ['Técnico Demo 06', 'Técnico Electricista', 9900, '2019-11-04'],
+  ['Técnico Demo 07', 'Técnico Electricista', 9200, '2021-03-15'],
+  ['Técnico Demo 08', 'Técnico Frigorista', 8800, '2021-07-26'],
+  ['Técnico Demo 09', 'Soldador Especialista', 10400, '2018-10-09'],
+  ['Técnico Demo 10', 'Soldador', 8900, '2022-02-14'],
+  ['Técnico Demo 11', 'Técnico Frigorista Junior', 7200, '2023-04-03'],
+  ['Técnico Demo 12', 'Técnico Frigorista Junior', 7000, '2023-06-19'],
+  ['Técnico Demo 13', 'Ayudante Técnico', 6500, '2024-01-22'],
+  ['Técnico Demo 14', 'Ayudante Técnico', 6500, '2024-03-11'],
+  ['Técnico Demo 15', 'Montajista de Paneles', 8300, '2022-09-05'],
+  ['Técnico Demo 16', 'Montajista de Paneles', 8100, '2022-11-28'],
 ].map(([nombre, cargo, tarifa, ingreso, usuario], i) => ({
   id: `T-${pad(i + 1, 2)}`,
   rut: formatRut(15_000_000 + (i + 1) * 387_421),
@@ -158,12 +158,12 @@ const OBRAS_BASE = [
 
 /** Materiales de presupuesto: [sku, cantidad] */
 const PRESUPUESTOS_BASE = [
-  ['Cámara de frío N°3 – Packing Cordillera', 1, 'INSTALACION', 'APROBADO', -45, 32, [['REF-404A', 2], ['CMP-5HP', 1], ['EVA-2500', 2], ['CU-12', 40], ['AIS-C58', 40], ['ELE-CON25', 3], ['CTL-DIG', 1]], [['Instalación y montaje', 120], ['Puesta en marcha', 16]], [['Flete y viáticos', 180000]]],
-  ['Mantención túnel de congelado – Congelados Bulnes', 7, 'MANTENCION', 'APROBADO', -20, 28, [['LUB-POE', 4], ['FIL-SEC', 2], ['ELE-CAP40', 3], ['INS-DES', 2]], [['Mantención preventiva', 48]], [['Viáticos', 60000]]],
-  ['Sala refrigerada – Lácteos Valle del Itata', 4, 'INSTALACION', 'APROBADO', -70, 35, [['REF-134A', 2], ['CMP-SCR3', 1], ['EVA-2500', 1], ['AIS-PU100', 24], ['CU-38', 30], ['AIS-C38', 30]], [['Montaje de paneles', 90], ['Instalación frigorífica', 70]], [['Flete', 150000]]],
-  ['Cámara de maduración – Agrícola Los Maitenes', 3, 'INSTALACION', 'APROBADO', -10, 26, [['REF-448A', 1], ['CMP-SCR3', 1], ['EVA-2500', 1], ['CTL-DIG', 2], ['AIS-PU100', 36]], [['Montaje de paneles', 110], ['Instalación frigorífica', 80]], [['Flete', 120000]]],
-  ['Reparación condensación – Viñedos San Carlos', 6, 'REPARACION', 'APROBADO', -25, 30, [['CND-5HP', 1], ['CU-58', 25], ['SOL-AG15', 6]], [['Reparación y soldadura', 40]], [['Viáticos', 40000]]],
-  ['Ampliación cámara de hortalizas – Hortalizas Pinto', 8, 'INSTALACION', 'BORRADOR', -3, 14, [['CMP-HER1', 2], ['EVA-2500', 1], ['AIS-PU100', 18], ['VAL-TXV', 2]], [['Montaje', 60]], [['Flete', 90000]]],
+  ['Cámara de frío N°3 – Cliente Demo 01', 1, 'INSTALACION', 'APROBADO', -45, 32, [['REF-404A', 2], ['CMP-5HP', 1], ['EVA-2500', 2], ['CU-12', 40], ['AIS-C58', 40], ['ELE-CON25', 3], ['CTL-DIG', 1]], [['Instalación y montaje', 120], ['Puesta en marcha', 16]], [['Flete y viáticos', 180000]]],
+  ['Mantención túnel de congelado – Cliente Demo 07', 7, 'MANTENCION', 'APROBADO', -20, 28, [['LUB-POE', 4], ['FIL-SEC', 2], ['ELE-CAP40', 3], ['INS-DES', 2]], [['Mantención preventiva', 48]], [['Viáticos', 60000]]],
+  ['Sala refrigerada – Cliente Demo 04', 4, 'INSTALACION', 'APROBADO', -70, 35, [['REF-134A', 2], ['CMP-SCR3', 1], ['EVA-2500', 1], ['AIS-PU100', 24], ['CU-38', 30], ['AIS-C38', 30]], [['Montaje de paneles', 90], ['Instalación frigorífica', 70]], [['Flete', 150000]]],
+  ['Cámara de maduración – Cliente Demo 03', 3, 'INSTALACION', 'APROBADO', -10, 26, [['REF-448A', 1], ['CMP-SCR3', 1], ['EVA-2500', 1], ['CTL-DIG', 2], ['AIS-PU100', 36]], [['Montaje de paneles', 110], ['Instalación frigorífica', 80]], [['Flete', 120000]]],
+  ['Reparación condensación – Cliente Demo 06', 6, 'REPARACION', 'APROBADO', -25, 30, [['CND-5HP', 1], ['CU-58', 25], ['SOL-AG15', 6]], [['Reparación y soldadura', 40]], [['Viáticos', 40000]]],
+  ['Ampliación cámara de hortalizas – Cliente Demo 08', 8, 'INSTALACION', 'BORRADOR', -3, 14, [['CMP-HER1', 2], ['EVA-2500', 1], ['AIS-PU100', 18], ['VAL-TXV', 2]], [['Montaje', 60]], [['Flete', 90000]]],
   ['Reemplazo de evaporadores – Carnes Selectas', 5, 'INSTALACION', 'ENVIADO', -6, 24, [['EVA-2500', 2], ['MOT-VEN', 4], ['VAL-SOL', 2], ['CU-38', 20]], [['Instalación', 56]], [['Flete', 70000]]],
 ]
 
@@ -186,7 +186,7 @@ const HOJAS_BASE = [
 ]
 
 /**
- * Marcas de entrada de hoy para que el panel de RRHH no parta vacío. Jorge Quezada (T-01, usuario demo de la app)
+ * Marcas de entrada de hoy para que el panel de RRHH no parta vacío. Técnico Demo 01 (T-01, usuario demo de la app)
  * queda sin marcar para poder probar el reloj; dos técnicos no marcan y una marca cae fuera de la geocerca.
  * Solo se siembran marcas que ya ocurrieron a la hora de creación.
  */
@@ -397,7 +397,7 @@ export function createSeed() {
   // ── Log de auditoría derivado de los datos semilla ────────────────
   const LOG = []
   const log = (fecha, usuario_id, entidad, entidad_id, accion, anterior, nuevo) => {
-    const u = { 'U-001': ['Carolina Fuentealba', 'ADMIN_GENERAL'], 'U-002': ['Matías Contreras', 'ADMINISTRACION'], 'U-003': ['Rodrigo Sepúlveda', 'BODEGA'], 'U-004': ['Patricio Mella', 'SUPERVISOR'] }[usuario_id]
+    const u = { 'U-001': ['Usuario Demo 04', 'ADMIN_GENERAL'], 'U-002': ['Usuario Demo 01', 'ADMINISTRACION'], 'U-003': ['Usuario Demo 03', 'BODEGA'], 'U-004': ['Usuario Demo 02', 'SUPERVISOR'] }[usuario_id]
     LOG.push({ id: '', fecha, usuario_id, usuario_nombre: u[0], rol: u[1], entidad, entidad_id, accion, anterior, nuevo, ip: `192.168.10.${20 + (LOG.length % 9)}` })
   }
   FACTURAS.forEach((fc) => log(`${fc.fecha}T10:30:00`, 'U-003', 'FacturaCompra', fc.id, 'CREAR', null, { total: fc.total }))
@@ -411,7 +411,7 @@ export function createSeed() {
   ARTICULOS.forEach((a) => { a.costo_unitario = lastCost(a.id) })
 
   // Usuarios con acceso al sistema. Los de demostración entran por tarjeta de perfil, sin contraseña almacenada.
-  const RUT_USUARIO = { 'U-001': 10_234_567, 'U-002': 12_456_789, 'U-003': 13_567_891, 'U-004': 11_678_912, 'U-006': 9_876_543, 'U-007': 14_321_098 }
+  const RUT_USUARIO = { 'U-001': 10_234_567, 'U-002': 12_456_789, 'U-003': 13_567_891, 'U-004': 11_678_912, 'U-006': 9_876_543, 'U-007': 14_321_098, 'U-008': 15_432_109, 'U-009': 16_543_210 }
   const USUARIOS = USUARIOS_DEMO.map((u, i) => ({
     ...u,
     rut: u.id === 'U-005' ? TECNICOS[0].rut : formatRut(RUT_USUARIO[u.id]),

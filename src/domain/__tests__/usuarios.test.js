@@ -3,13 +3,13 @@ import { PERMISOS, ROLES } from '../rbac.js'
 import { validarPassword, generarPasswordInicial, validarNuevoUsuario, puedeCambiarEstado, validarEdicionUsuario, iniciales } from '../usuarios.js'
 import { normalizarRut, validarRut } from '../rut.js'
 
-const existentes = [{ id: 'U-001', rut: '12.345.678-5', email: 'cfuentealba@fyag.cl', rol: 'ADMIN_GENERAL', activo: true }]
-const valido = { nombre: 'Andrea Poblete', rut: '76.086.428-5', cargo: 'Asistente administrativa', rol: 'ADMINISTRACION', email: 'apoblete@fyag.cl', password: 'Inicial-2026' }
+const existentes = [{ id: 'U-001', rut: '12.345.678-5', email: 'usuario.demo04@apex.demo', rol: 'ADMIN_GENERAL', activo: true }]
+const valido = { nombre: 'Contacto Demo 01', rut: '99.900.001-0', cargo: 'Asistente administrativa', rol: 'ADMINISTRACION', email: 'usuario.demo@apex.demo', password: 'Inicial-2026' }
 
 describe('permisos de gestión de accesos (sin área de TI)', () => {
-  it('solo ADMIN_GENERAL tiene usuarios.ver, usuarios.crear y usuarios.editar', () => {
-    for (const a of ['usuarios.ver', 'usuarios.crear', 'usuarios.editar']) expect(PERMISOS[a]).toEqual(['ADMIN_GENERAL'])
-    for (const rol of Object.values(ROLES).filter((r) => r !== 'ADMIN_GENERAL')) {
+  it('solo el Super Admin (TI) y ADMIN_GENERAL tienen usuarios.ver, usuarios.crear y usuarios.editar', () => {
+    for (const a of ['usuarios.ver', 'usuarios.crear', 'usuarios.editar']) expect(PERMISOS[a]).toEqual(['SUPER_ADMIN', 'ADMIN_GENERAL'])
+    for (const rol of Object.values(ROLES).filter((r) => !['ADMIN_GENERAL', 'SUPER_ADMIN'].includes(r))) {
       expect(Object.keys(PERMISOS).filter((a) => a.startsWith('usuarios.') && PERMISOS[a].includes(rol))).toEqual([])
     }
   })
@@ -33,8 +33,8 @@ describe('contraseña inicial', () => {
 
 describe('RUT escrito por el usuario', () => {
   it('se normaliza al formato oficial', () => {
-    expect(normalizarRut('760864285')).toBe('76.086.428-5')
-    expect(normalizarRut('76086428-5')).toBe('76.086.428-5')
+    expect(normalizarRut('999000010')).toBe('99.900.001-0')
+    expect(normalizarRut('99900001-0')).toBe('99.900.001-0')
     expect(validarRut(normalizarRut('12345678-5'))).toBe(true)
     expect(normalizarRut('abc')).toBe('abc')
   })
@@ -42,9 +42,9 @@ describe('RUT escrito por el usuario', () => {
 
 describe('validarNuevoUsuario', () => {
   it('acepta un alta correcta y devuelve datos normalizados', () => {
-    const r = validarNuevoUsuario({ ...valido, rut: '760864285', email: ' APoblete@FYAG.cl ' }, existentes)
+    const r = validarNuevoUsuario({ ...valido, rut: '999000010', email: ' Usuario.Demo@APEX.demo ' }, existentes)
     expect(r.ok).toBe(true)
-    expect(r.datos).toMatchObject({ rut: '76.086.428-5', email: 'apoblete@fyag.cl', nombre: 'Andrea Poblete' })
+    expect(r.datos).toMatchObject({ rut: '99.900.001-0', email: 'usuario.demo@apex.demo', nombre: 'Contacto Demo 01' })
     expect(r.datos.password).toBeUndefined()
   })
   it('informa un error por campo', () => {
@@ -53,7 +53,7 @@ describe('validarNuevoUsuario', () => {
   })
   it('rechaza RUT y correo duplicados (sin distinguir mayúsculas)', () => {
     expect(validarNuevoUsuario({ ...valido, rut: '12.345.678-5' }, existentes).errores.rut).toMatch(/Ya existe/)
-    expect(validarNuevoUsuario({ ...valido, email: 'CFuentealba@fyag.cl' }, existentes).errores.email).toMatch(/Ya existe/)
+    expect(validarNuevoUsuario({ ...valido, email: 'usuario.demo04@apex.demo' }, existentes).errores.email).toMatch(/Ya existe/)
   })
 })
 

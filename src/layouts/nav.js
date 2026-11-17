@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, HardHat, Package, ShoppingCart, ClipboardCheck, Users, Building2, ScrollText, Shield, FileSignature, Wallet } from 'lucide-react'
+import { LayoutDashboard, FileText, HardHat, Package, ShoppingCart, ClipboardCheck, Users, Building2, ScrollText, Shield, FileSignature, Wallet, Activity, Scale, BrainCircuit } from 'lucide-react'
 
 /** Menú del ERP. `accion` enlaza con domain/rbac.js; `buscable`: la pantalla filtra su lista con `?buscar=` (lo usa el asistente de IA); `grupo` ordena el menú por tipo de tarea. */
 export const ERP_NAV = [
@@ -10,8 +10,11 @@ export const ERP_NAV = [
   { to: '/erp/terreno', grupo: 'Operación', label: 'Auditoría de Terreno', icon: ClipboardCheck, palabras: ['hojas de servicio','checklist','fotos','tecnicos','gps'], accion: 'terreno.ver' },
   { to: '/erp/personal', grupo: 'Personas y socios', label: 'Personal y Flota', icon: Users, palabras: ['empleados','tecnicos','rrhh','flota','vehiculos','kilometraje','tarifas'], accion: 'personal.ver', buscable: true },
   { to: '/erp/rrhh', grupo: 'Personas y socios', label: 'Contratos y Finiquitos', icon: FileSignature, palabras: ['contratos','finiquito','despido','amonestacion','anexo','sueldo','indemnizacion','vacaciones'], accion: 'rrhh.ver' },
+  { to: '/erp/cumplimiento', grupo: 'Personas y socios', label: 'Cumplimiento y Rotación', icon: Scale, palabras: ['plazo fijo','indefinido','renovacion','recontratar','rotacion','historial','alertas legales','articulo 159','people analytics'], accion: 'cumplimiento.ver' },
   { to: '/erp/finanzas', grupo: 'Personas y socios', label: 'Finiquitos por Pagar', icon: Wallet, palabras: ['finiquitos','pagos','transferencia','comprobante','tesoreria'], accion: 'finiquitos.ver' },
   { to: '/erp/maestros', grupo: 'Personas y socios', label: 'Clientes y Proveedores', icon: Building2, palabras: ['clientes','proveedores','rut'], accion: 'maestros.ver', buscable: true },
   { to: '/erp/auditoria', grupo: 'Control', label: 'Log de Auditoría', icon: ScrollText, palabras: ['log','historial','cambios','registro'], accion: 'auditoria.ver' },
   { to: '/erp/usuarios', grupo: 'Control', label: 'Accesos y Usuarios', icon: Shield, palabras: ['usuarios','accesos','roles','permisos','claves','contrasenas'], accion: 'usuarios.ver', buscable: true },
+  { to: '/erp/gobernanza-ia', grupo: 'Control', label: 'Gobernanza IA', icon: BrainCircuit, palabras: ['ia','prompts','trazabilidad','agente','politicas','seguridad','bloqueos','ti'], accion: 'gobernanza_ia.ver' },
+  { to: '/erp/sistema', grupo: 'Control', label: 'Estado del Sistema', icon: Activity, palabras: ['salud','servidor','integraciones','api','servicios','ti','seguridad'], accion: 'sistema.ver' },
 ]

@@ -5,10 +5,11 @@ Ninguna devuelve ni registra hosts, URIs ni mensajes del servidor: quien falla s
 import io
 import uuid
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -78,6 +79,50 @@ def comprobar_mongodb():
             mongo.get_fotos_bucket().delete(archivo_id)
         if doc_id is not None:
             col.delete_one({'_id': doc_id})
+
+
+class PuedeVerSistema(BasePermission):
+    """Acción `sistema.ver` de la matriz: el panel técnico es de TI (Super Admin)."""
+
+    def has_permission(self, request, view):
+        from erp import tablas
+        user = request.user
+        return bool(user and user.is_authenticated) and tablas.tiene(user, ['sistema.ver'])
+
+
+class EstadoSistemaView(APIView):
+    """GET /api/sistema/estado/: salud de los servicios, integraciones configuradas y resumen de accesos.
+
+    Nunca devuelve claves, hosts ni URIs: de cada integración solo dice si está configurada.
+    """
+    permission_classes = [PuedeVerSistema]
+
+    def get(self, request):
+        from accounts.models import CustomUser, Role
+        servicios = {}
+        for nombre, fn in (('postgresql', comprobar_postgresql), ('valkey', comprobar_valkey), ('mongodb', comprobar_mongodb_liviano)):
+            try:
+                fn()
+                servicios[nombre] = 'ok'
+            except Exception:
+                servicios[nombre] = 'fallo'
+        activos = CustomUser.objects.filter(is_active=True)
+        return Response({
+            'servicios': servicios,
+            'integraciones': {
+                'ia': bool(settings.DEEPSEEK_API_KEY),
+                'correo': bool(settings.BREVO_API_KEY),
+                'dte_proveedor': settings.DTE_PROVEEDOR,
+            },
+            'accesos': {
+                'activos': activos.count(),
+                'inactivos': CustomUser.objects.filter(is_active=False).count(),
+                'bloqueados': CustomUser.objects.filter(bloqueada_en__isnull=False).count(),
+                'sin_2fa': activos.filter(is_2fa_enabled=False).count(),
+                'por_rol': {r: activos.filter(role=r).count() for r in Role.values},
+            },
+            'entorno': {'debug': settings.DEBUG, 'version_terminos': settings.TERMS_VERSION},
+        })
 
 
 class SaludView(APIView):

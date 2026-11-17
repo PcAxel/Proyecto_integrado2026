@@ -7,7 +7,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.http import FileResponse, Http404
 from django.utils import timezone
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
@@ -23,6 +23,7 @@ from .servicios_dte import DatosFactura, almacen_dte, generar_pdf_dte, guardar_p
 
 logger = logging.getLogger(__name__)
 ACCION = 'facturacion.emitir'
+ACCION_VER = 'facturacion.ver'
 PROCESANDO_VIGENTE = timedelta(minutes=2)  # un «Procesando» más viejo se considera caído y se puede reintentar
 
 
@@ -35,7 +36,8 @@ class PuedeFacturar(BasePermission):
         if not (user and user.is_authenticated):
             return False
         require_terms(user)
-        return tablas.tiene(user, [ACCION])
+        # Consultar el estado o descargar el PDF es lectura (también la tiene el Auditor Externo); emitir exige el permiso de emisión.
+        return tablas.tiene(user, [ACCION, ACCION_VER] if request.method in SAFE_METHODS else [ACCION])
 
 
 class DTEThrottle(UserRateThrottle):
@@ -60,6 +62,30 @@ def serializar(f: FacturaDTE | None, id_orden, orden=None, motivo=None):
         datos = {}
     emitible = motivo is None and (f is None or f.estado_sii in (FacturaDTE.EstadoSII.NO_EMITIDO, FacturaDTE.EstadoSII.RECHAZADO))
     return {**base, **datos, 'emitible': emitible, 'motivo': motivo}
+
+
+class ResumenDTEView(_Base):
+    """GET /api/facturacion/resumen/ — cifras tributarias para el inicio de Finanzas, Gerencia y Auditoría: facturas aceptadas y su
+    desglose neto / IVA / total (del mes en curso y acumulado), más las que están en proceso o rechazadas. Solo lectura."""
+
+    def get(self, request):
+        from django.db.models import Count, Sum
+        aceptadas = FacturaDTE.objects.filter(estado_sii=FacturaDTE.EstadoSII.ACEPTADO)
+        hoy = timezone.localdate()
+
+        def cifras(qs):
+            a = qs.aggregate(emitidas=Count('id'), neto=Sum('monto_neto'), iva=Sum('monto_iva'), total=Sum('monto_total'))
+            return {k: v or 0 for k, v in a.items()}
+
+        return Response({
+            'periodo': hoy.strftime('%Y-%m'),
+            'tasa_iva': 19,
+            'mes': cifras(aceptadas.filter(emitido_en__year=hoy.year, emitido_en__month=hoy.month)),
+            'acumulado': cifras(aceptadas),
+            'procesando': FacturaDTE.objects.filter(estado_sii=FacturaDTE.EstadoSII.PROCESANDO).count(),
+            'rechazadas': FacturaDTE.objects.filter(estado_sii=FacturaDTE.EstadoSII.RECHAZADO).count(),
+            'ultimo_folio': aceptadas.order_by('-folio_sii').values_list('folio_sii', flat=True).first(),
+        })
 
 
 class EstadoDTEView(_Base):

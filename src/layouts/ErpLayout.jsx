@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react'
+import { Eye, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { PanelApariencia } from '@/components/PanelApariencia'
@@ -14,6 +14,8 @@ import { cn } from '@/components/ui'
 import { Avatar, BrandMark } from '@/components/domain'
 import { ERP_NAV } from './nav'
 import { GlobalSearch } from './GlobalSearch'
+import { BordeIA } from '@/components/BordeIA'
+import { useAsistenteStore } from '@/stores/asistenteStore'
 import { AsistenteIA } from '@/features/ia/AsistenteIA'
 
 const esMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform ?? navigator.userAgent)
@@ -25,6 +27,7 @@ function BotonBuscar({ onClick }) {
       type="button"
       onClick={onClick}
       aria-label="Abrir búsqueda global"
+      data-agent-target="search-input"
       aria-keyshortcuts="Control+K Meta+K"
       className="group flex items-center gap-2.5 rounded-md border border-fyag-ice/15 bg-fyag-deep/20 px-3 py-1.5 text-xs text-fyag-ice transition-colors duration-150 hover:border-fyag-ice/30 md:w-72 lg:w-96"
     >
@@ -60,6 +63,7 @@ function Navegacion({ collapsed, onNavigate, modo = 'riel' }) {
                 <NavLink
                   to={to}
                   end={end}
+                  data-agent-target={`menu-${to === '/erp' ? 'inicio' : to.split('/').pop()}`}
                   onClick={onNavigate}
                   title={modo === 'riel' ? label : undefined}
                   className={({ isActive }) =>
@@ -137,6 +141,7 @@ const FONDO_LATERAL = 'bg-fyag-bg'
 
 export function ErpLayout() {
   const { user, logout } = useAuthStore()
+  const asistenteAbierto = useAsistenteStore((s) => s.abierto) // el panel de la IA se acopla a la derecha y el contenido le deja su lugar
   const { sidebarCollapsed, toggleSidebar, mobileSidebarOpen, setMobileSidebar } = useUiStore()
   const navigate = useNavigate()
   const [buscando, setBuscando] = useState(false)
@@ -150,6 +155,7 @@ export function ErpLayout() {
 
   // Día/noche, paleta y tamaño de letra: se recuerdan por persona; el ERP empieza oscuro mientras no elija otra cosa.
   useApariencia(user.id, 100)
+  const soloLectura = user.rolApi === 'AUDITOR'
 
   // Ctrl+K (Windows/Linux) o ⌘K (Mac) abren y cierran la búsqueda desde cualquier pantalla del ERP.
   useEffect(() => {
@@ -164,7 +170,7 @@ export function ErpLayout() {
   }, [])
 
   return (
-    <div className="flex h-full bg-fyag-bg text-fyag-cream">
+    <div className={cn('flex h-full bg-fyag-bg text-fyag-cream transition-[padding] duration-200', asistenteAbierto && 'lg:pr-[23rem]')}>
       <aside className={cn('relative hidden shrink-0 flex-col border-r border-fyag-ice/10 text-fyag-cream transition-[width] duration-200 sm:flex', FONDO_LATERAL, sidebarCollapsed ? 'w-[72px]' : 'w-[72px] xl:w-64')}>
         <div className="relative flex min-h-0 flex-1 flex-col">
           <MarcaLateral collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
@@ -190,6 +196,11 @@ export function ErpLayout() {
           <button type="button" aria-label="Abrir menú" onClick={() => setMobileSidebar(true)} className="flex h-10 w-10 items-center justify-center rounded-lg text-fyag-ice hover:bg-fyag-deep/30 hover:text-fyag-cream sm:hidden"><Menu className="h-5 w-5" /></button>
           <BotonBuscar onClick={() => setBuscando(true)} />
           <div className="ml-auto flex items-center gap-3">
+            {soloLectura && (
+              <span role="status" title="Tu cuenta es de auditoría: puedes consultar y exportar, pero no modificar ningún registro." className="inline-flex items-center gap-1.5 rounded-full border border-fyag-ice/30 bg-fyag-deep/40 px-3 py-1 text-xs font-semibold text-fyag-ice">
+                <Eye className="h-3.5 w-3.5" aria-hidden="true" />Modo lectura
+              </span>
+            )}
             <PanelApariencia nivelDefecto={100} />
             <OpcionesInclusion />
             <div className="flex items-center gap-2 sm:hidden"><Avatar nombre={user.nombre} rol={user.rol} size="sm" /></div>
@@ -201,6 +212,7 @@ export function ErpLayout() {
       </div>
       <GlobalSearch open={buscando} onClose={() => setBuscando(false)} />
       <AsistenteIA />
+      <BordeIA />
       <LecturaSeleccion />
       <SubtitulosLectura />
     </div>

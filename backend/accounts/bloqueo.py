@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from .models import Role
 
-OFICINA = frozenset({Role.ADMIN, Role.FINANZAS, Role.OPERACIONES, Role.RRHH})
+OFICINA = frozenset({Role.ADMIN, Role.FINANZAS, Role.OPERACIONES, Role.RRHH, Role.SUPERADMIN, Role.COMERCIAL, Role.AUDITOR})
 MAX_INTENTOS_OFICINA = 5
 SUGERIR_RECUPERAR_DESDE = 3
 OLVIDO_SEGUNDOS = 12 * 3600

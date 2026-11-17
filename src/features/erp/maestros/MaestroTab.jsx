@@ -13,9 +13,9 @@ import { useBusquedaUrl, coincide } from '@/hooks/useBusquedaUrl'
  * Tabla + formulario genérico para un maestro (cliente o proveedor). Nunca borra: desactiva.
  * @param {{singular:string, plural:string, servicio:any, campos:Array<{clave:string,label:string,tipo?:string,ancho?:string}>, columnas:any[], exportar:any[]}} props
  */
-export function MaestroTab({ singular, plural, servicio, campos, columnas, exportar }) {
+export function MaestroTab({ singular, plural, servicio, campos, columnas, exportar, permisos = ['maestros.gestionar'] }) {
   const rol = useAuthStore((s) => s.user.rol)
-  const gestiona = can(rol, 'maestros.gestionar')
+  const gestiona = permisos.some((a) => can(rol, a))
   const { data, loading, reload } = useResource(() => servicio.list({ incluirInactivos: true }), [])
   const [form, setForm] = useState(null) // { id?, datos }
   const [toggle, setToggle] = useState(null)
@@ -58,7 +58,7 @@ export function MaestroTab({ singular, plural, servicio, campos, columnas, expor
           <Mono className="text-xs text-ink-soft">{filas.length} resultados</Mono>
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
             <ExportMenu nombre={plural} titulo={plural} columnas={exportar} filas={filas} />
-            {gestiona && <Button icon={Plus} onClick={() => setForm({ datos: {} })}>Nuevo {singular.toLowerCase()}</Button>}
+            {gestiona && <Button icon={Plus} data-agent-target={`btn-nuevo-${singular.toLowerCase()}`} onClick={() => setForm({ datos: {} })}>Nuevo {singular.toLowerCase()}</Button>}
           </div>
         </div>
         <DataTable columns={cols} rows={filas} rowKey={(r) => r.id} loading={loading && !data} />
@@ -66,10 +66,10 @@ export function MaestroTab({ singular, plural, servicio, campos, columnas, expor
 
       {form && (
         <Modal open onClose={() => setForm(null)} size="lg" title={form.id ? `Editar ${form.datos.razon_social}` : `Nuevo ${singular.toLowerCase()}`}
-          footer={<><Button variant="secondary" onClick={() => setForm(null)}>Cancelar</Button><Button loading={guardando} disabled={!valido} onClick={guardar}>Guardar</Button></>}>
+          footer={<><Button variant="secondary" onClick={() => setForm(null)}>Cancelar</Button><Button data-agent-target="btn-guardar-maestro" loading={guardando} disabled={!valido} onClick={guardar}>Guardar</Button></>}>
           <div className="grid gap-4 sm:grid-cols-2">
             {campos.map((c) => (
-              <Input key={c.clave} className={c.ancho} label={c.label} type={c.tipo} mono={c.clave === 'rut'} value={form.datos[c.clave] ?? ''}
+              <Input key={c.clave} data-agent-field={c.clave} className={c.ancho} label={c.label} type={c.tipo} mono={c.clave === 'rut'} value={form.datos[c.clave] ?? ''}
                 disabled={c.clave === 'rut' && Boolean(form.id)} hint={c.clave === 'rut' && !form.id ? 'Formato 12.345.678-5' : undefined}
                 error={c.clave === 'rut' && rutInvalido ? 'RUT inválido (dígito verificador)' : undefined}
                 onChange={(e) => setForm({ ...form, datos: { ...form.datos, [c.clave]: e.target.value } })} />

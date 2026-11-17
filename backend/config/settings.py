@@ -129,7 +129,7 @@ CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', '')
 REST_FRAMEWORK = {
     'NUM_PROXIES': int(os.getenv('PROXIES_DE_CONFIANZA', '0')),  # sin esto DRF confía en X-Forwarded-For y el límite de intentos se esquiva
     'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
-    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework_simplejwt.authentication.JWTAuthentication'],
+    'DEFAULT_AUTHENTICATION_CLASSES': ['accounts.authentication.JWTConAuditorSoloLectura'],  # JWT + el Auditor Externo solo lee
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
         'accounts.permissions.TermsAccepted',

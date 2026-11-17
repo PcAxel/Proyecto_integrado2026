@@ -10,6 +10,8 @@ const POR_ROL = {
   TECNICO: 'from-[#5B6B7A] to-[#93A3B2] text-white',
   CONSULTA: 'from-[#6B7F8C] to-[#A9B8C3] text-white',
   RRHH: 'from-[#8B6BB1] to-[#B79CD6] text-white',
+  SUPER_ADMIN: 'from-[#1D2B36] to-[#4A5F70] text-white',
+  COMERCIAL: 'from-[#C2542D] to-[#E58A5E] text-white',
 }
 const TAMANOS = { sm: 'h-7 w-7 text-[11px]', md: 'h-9 w-9 text-xs', lg: 'h-11 w-11 text-sm', xl: 'h-14 w-14 text-base' }
 

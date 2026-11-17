@@ -3,9 +3,12 @@
  * El backend es la fuente de verdad del rol; el frontend solo lo traduce para mostrar u ocultar menús
  * (cada endpoint vuelve a validar el permiso en el servidor).
  */
-export const ROLES_API = { ADMIN: 'ADMIN', FINANZAS: 'FINANZAS', OPERACIONES: 'OPERACIONES', TECNICO: 'TECNICO', RRHH: 'RRHH' }
+export const ROLES_API = { ADMIN: 'ADMIN', FINANZAS: 'FINANZAS', OPERACIONES: 'OPERACIONES', TECNICO: 'TECNICO', RRHH: 'RRHH', SUPERADMIN: 'SUPERADMIN', COMERCIAL: 'COMERCIAL', AUDITOR: 'AUDITOR' }
 
-const A_ROL_UI = { ADMIN: 'ADMIN_GENERAL', FINANZAS: 'ADMINISTRACION', OPERACIONES: 'SUPERVISOR', TECNICO: 'TECNICO', RRHH: 'RRHH' }
+/** Roles que trabajan en el ERP del navegador (todos menos el Técnico, que solo usa la app de terreno). */
+export const ROLES_ERP = Object.values(ROLES_API).filter((r) => r !== 'TECNICO')
+
+const A_ROL_UI = { ADMIN: 'ADMIN_GENERAL', FINANZAS: 'ADMINISTRACION', OPERACIONES: 'SUPERVISOR', TECNICO: 'TECNICO', RRHH: 'RRHH', SUPERADMIN: 'SUPER_ADMIN', COMERCIAL: 'COMERCIAL', AUDITOR: 'CONSULTA' }
 
 /** Rol de la matriz de permisos para un rol del backend; desconocido → null (sin acceso). */
 export const rolUiDesdeApi = (rolApi) => A_ROL_UI[rolApi] ?? null

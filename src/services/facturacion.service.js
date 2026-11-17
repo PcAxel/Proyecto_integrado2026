@@ -7,6 +7,8 @@ import { api, descargarArchivo } from './api'
 const orden = (id) => encodeURIComponent(id)
 
 export const facturacionService = {
+  /** Cifras tributarias (neto, IVA, total) del mes y acumuladas. Lo ven Gerencia, Finanzas y el Auditor Externo. */
+  resumen: () => api.get('/facturacion/resumen/'),
   /** Estado de la factura de una orden y si se puede emitir. @returns {Promise<DTE>} */
   estado: (obraId) => api.get(`/facturacion/${orden(obraId)}/`),
   /** Emite la factura (el simulador tarda ~2 s). 200 = aceptada; 409 = ya emitida o en proceso; 422 = la orden no es facturable; 502 = rechazada. @returns {Promise<DTE>} */

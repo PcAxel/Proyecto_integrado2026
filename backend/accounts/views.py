@@ -21,7 +21,7 @@ from config.ip import ip_cliente
 
 from . import bloqueo, recuperacion
 from .emails import send_onboarding_email
-from .models import CustomUser, Role
+from .models import GESTORES_DE_USUARIOS, CustomUser, Role
 from .permissions import IsAdminRole
 from .serializers import (
     AcceptTermsSerializer,
@@ -32,6 +32,7 @@ from .serializers import (
     SetupConfirmSerializer,
     UserCreateSerializer,
     UserSerializer,
+    UserUpdateSerializer,
 )
 from .throttles import LoginRateThrottle, RecuperarRateThrottle, RefreshRateThrottle
 
@@ -201,6 +202,36 @@ def _cortar_sesiones(user):
         BlacklistedToken.objects.get_or_create(token=t)
 
 
+class UserDetailView(APIView):
+    """PATCH /api/users/<id>/ — cambia el nombre o el ROL de un acceso. Solo quien administra accesos (Super Admin o Gerencia).
+
+    Cambiar un rol es una acción crítica: nadie cambia el suyo (no hay auto-ascenso), la Gerencia no se queda sin su último
+    Administrador, y al cambiar se cierran las sesiones abiertas de esa persona para que vuelva a entrar con sus permisos nuevos.
+    """
+    permission_classes = [IsAdminRole]
+
+    def patch(self, request, pk):
+        user = get_object_or_404(CustomUser, pk=pk)
+        s = UserUpdateSerializer(user, data=request.data, partial=True)
+        s.is_valid(raise_exception=True)
+        nuevo = s.validated_data.get('role', user.role)
+        if nuevo != user.role:
+            if user.pk == request.user.pk:
+                return Response({'detail': 'No puedes cambiar tu propio rol.', 'code': 'self_role'}, status=status.HTTP_403_FORBIDDEN)
+            if user.is_active and user.role == Role.ADMIN and not CustomUser.objects.filter(role=Role.ADMIN, is_active=True).exclude(pk=user.pk).exists():
+                return Response({'detail': 'Debe quedar al menos un Administrador activo.', 'code': 'last_admin'}, status=status.HTTP_409_CONFLICT)
+            anterior = user.role
+            user = s.save()
+            # El acceso al panel técnico de Django acompaña al rol: quien deja de administrar accesos lo pierde.
+            user.is_staff = user.is_superuser = nuevo in GESTORES_DE_USUARIOS
+            user.save(update_fields=['is_staff', 'is_superuser'])
+            _cortar_sesiones(user)
+            logger.info('usuario_cambio_rol id=%s de=%s a=%s por=%s', user.pk, anterior, nuevo, request.user.pk)
+        else:
+            user = s.save()
+        return Response(UserSerializer(user).data)
+
+
 class UserDesactivarView(APIView):
     """POST /api/users/<id>/desactivar/ — solo el Administrador. Borrado lógico: la cuenta pierde el acceso y se conserva todo su historial.
     No existe ningún endpoint para eliminar usuarios."""
@@ -210,6 +241,8 @@ class UserDesactivarView(APIView):
         user = get_object_or_404(CustomUser, pk=pk)
         if user.pk == request.user.pk:
             return Response({'detail': 'No puedes desactivar tu propia cuenta.', 'code': 'self_deactivation'}, status=status.HTTP_400_BAD_REQUEST)
+        # Quien desactiva es otro gestor de accesos (nadie se desactiva a sí mismo), así que siempre queda uno; además la Gerencia
+        # no puede quedarse sin su último Administrador.
         if user.is_active and user.role == Role.ADMIN and not CustomUser.objects.filter(role=Role.ADMIN, is_active=True).exclude(pk=user.pk).exists():
             return Response({'detail': 'Debe quedar al menos un Administrador activo.', 'code': 'last_admin'}, status=status.HTTP_409_CONFLICT)
         if user.is_active:

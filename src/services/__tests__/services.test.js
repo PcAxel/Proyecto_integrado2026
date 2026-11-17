@@ -266,7 +266,7 @@ describe('rol RRHH', () => {
     expect(v.estado).toBe('EN_TALLER')
     login(GERENCIA)
     const [l] = await auditoriaService.list({ accion: 'ACTUALIZAR_ESTADO' })
-    expect(l).toMatchObject({ entidad: 'Vehiculo', entidad_id: 'VH-02', usuario_nombre: 'Camila Torres', anterior: { estado: 'ACTIVO' }, nuevo: { estado: 'EN_TALLER' } })
+    expect(l).toMatchObject({ entidad: 'Vehiculo', entidad_id: 'VH-02', usuario_nombre: 'Usuario Demo 06', anterior: { estado: 'ACTIVO' }, nuevo: { estado: 'EN_TALLER' } })
     login(TECNICO)
     await expect(personalService.setEstadoVehiculo('VH-02', 'ACTIVO')).rejects.toMatchObject({ status: 403 })
   })
@@ -314,7 +314,7 @@ describe('kilometraje en la hoja de servicio', () => {
 })
 
 describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
-  const nuevo = (extra = {}) => ({ nombre: 'Andrea Poblete', rut: '760864285', cargo: 'Asistente administrativa', rol: 'ADMINISTRACION', email: 'apoblete@fyag.cl', password: 'Inicial-2026', ...extra })
+  const nuevo = (extra = {}) => ({ nombre: 'Contacto Demo 01', rut: '999000010', cargo: 'Asistente administrativa', rol: 'ADMINISTRACION', email: 'usuario.demo@apex.demo', password: 'Inicial-2026', ...extra })
 
   it('solo la Gerencia General entra al módulo; el resto recibe 403', async () => {
     for (const id of [ADMIN, BODEGA, SUPERVISOR, TECNICO, 'U-006', 'U-007']) {
@@ -329,8 +329,8 @@ describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
 
   it('crea un acceso: normaliza datos, guarda la clave cifrada y no la expone', async () => {
     login(GERENCIA)
-    const u = await usuariosService.create(nuevo({ email: 'APoblete@FYAG.cl' }))
-    expect(u).toMatchObject({ id: 'U-008', rut: '76.086.428-5', email: 'apoblete@fyag.cl', rol: 'ADMINISTRACION', activo: true, debe_cambiar_password: true, tiene_password: true })
+    const u = await usuariosService.create(nuevo({ email: 'Usuario.Demo@APEX.demo' }))
+    expect(u).toMatchObject({ id: 'U-008', rut: '99.900.001-0', email: 'usuario.demo@apex.demo', rol: 'ADMINISTRACION', activo: true, debe_cambiar_password: true, tiene_password: true })
     expect(JSON.stringify(u)).not.toMatch(/Inicial-2026|password_hash|password_salt/)
     const fila = db.find('usuarios', 'U-008')
     expect(fila.password_hash).toMatch(/^[0-9a-f]{64}$/)
@@ -341,14 +341,14 @@ describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
   it('la misma clave produce hashes distintos por usuario (sal)', async () => {
     login(GERENCIA)
     await usuariosService.create(nuevo())
-    await usuariosService.create(nuevo({ nombre: 'Pedro Rojas', rut: '12.345.678-5', email: 'projas@fyag.cl' }))
+    await usuariosService.create(nuevo({ nombre: 'Usuario Demo 07', rut: '12.345.678-5', email: 'usuario.demo07@apex.demo' }))
     expect(db.find('usuarios', 'U-008').password_hash).not.toBe(db.find('usuarios', 'U-009').password_hash)
   })
 
   it('rechaza datos inválidos con un error por campo, RUT y correo repetidos', async () => {
     login(GERENCIA)
     await expect(usuariosService.create(nuevo({ rut: '12.345.678-9', password: 'corta' }))).rejects.toMatchObject({ status: 422, detail: { rut: expect.any(String), password: expect.any(String) } })
-    await expect(usuariosService.create(nuevo({ email: 'cfuentealba@fyag.cl' }))).rejects.toMatchObject({ status: 422, detail: { email: expect.stringMatching(/Ya existe/) } })
+    await expect(usuariosService.create(nuevo({ email: 'usuario.demo04@apex.demo' }))).rejects.toMatchObject({ status: 422, detail: { email: expect.stringMatching(/Ya existe/) } })
     await expect(usuariosService.create(nuevo({ rut: db.find('usuarios', 'U-001').rut }))).rejects.toMatchObject({ status: 422, detail: { rut: expect.stringMatching(/Ya existe/) } })
   })
 
@@ -361,7 +361,7 @@ describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
     expect(log).toEqual(expect.arrayContaining(['CREAR', 'RESTABLECER_CLAVE', 'CAMBIAR_ROL']))
     expect(JSON.stringify(await auditoriaService.list())).not.toMatch(/Inicial-2026|Otra-Clave|password_hash/)
     const cambio = (await auditoriaService.list({ accion: 'CAMBIAR_ROL' }))[0]
-    expect(cambio).toMatchObject({ anterior: { rol: 'ADMINISTRACION' }, nuevo: { rol: 'BODEGA' }, usuario_nombre: 'Carolina Fuentealba' })
+    expect(cambio).toMatchObject({ anterior: { rol: 'ADMINISTRACION' }, nuevo: { rol: 'BODEGA' }, usuario_nombre: 'Usuario Demo 04' })
   })
 
   it('no permite que la Gerencia se quede sin acceso', async () => {
@@ -385,14 +385,14 @@ describe.skip('gestión de accesos y usuarios (se rehace sobre Django)', () => {
 
   it('un acceso nuevo puede iniciar sesión como perfil y su nombre aparece en la auditoría', async () => {
     login(GERENCIA)
-    const u = await usuariosService.create(nuevo({ rol: 'BODEGA', nombre: 'Sofía Reyes', rut: '12.345.678-5', email: 'sreyes@fyag.cl' }))
+    const u = await usuariosService.create(nuevo({ rol: 'BODEGA', nombre: 'Usuario Demo 08', rut: '12.345.678-5', email: 'usuario.demo08@apex.demo' }))
     const perfil = (await usuariosService.perfiles()).find((p) => p.id === u.id)
-    expect(perfil).toMatchObject({ nombre: 'Sofía Reyes', rol: 'BODEGA' })
+    expect(perfil).toMatchObject({ nombre: 'Usuario Demo 08', rol: 'BODEGA' })
     expect(perfil.password_hash).toBeUndefined()
     useAuthStore.getState().login(perfil.id, perfil)
     const [a] = await articulosService.list()
     await cardexService.create({ tipo: 'SALIDA_OBRA', articulo_id: a.id, cantidad: 1, obra_id: 'OB-0001' })
-    expect((await cardexService.list())[0].usuario_nombre).toBe('Sofía Reyes')
+    expect((await cardexService.list())[0].usuario_nombre).toBe('Usuario Demo 08')
   })
 })
 
@@ -404,7 +404,7 @@ describe('búsqueda global: el índice respeta los permisos', () => {
     const idx = await busquedaService.indice()
     expect(grupos(idx)).toEqual(['Artículos', 'Clientes', 'Hojas de servicio', 'Obras', 'Personal', 'Presupuestos', 'Proveedores', 'Usuarios', 'Vehículos'])
     expect(idx.find((i) => i.codigo === 'OB-0005')).toMatchObject({ grupo: 'Obras', ruta: '/erp/obras/OB-0005' })
-    expect(idx.find((i) => i.titulo === 'Jorge Quezada' && i.grupo === 'Personal')).toBeTruthy()
+    expect(idx.find((i) => i.titulo === 'Técnico Demo 01' && i.grupo === 'Personal')).toBeTruthy()
     expect(idx.find((i) => i.codigo === 'RTJK-45')).toMatchObject({ grupo: 'Vehículos' })
   })
   it('RRHH solo ve personal y flota; Bodega no ve personas ni usuarios', async () => {

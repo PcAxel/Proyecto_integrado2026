@@ -16,7 +16,7 @@ describe('rbac', () => {
   })
   it('RRHH tiene exactamente dashboard, personal, asistencia, contratos y finiquitos', () => {
     const suyas = Object.keys(PERMISOS).filter((a) => PERMISOS[a].includes('RRHH')).sort()
-    expect(suyas).toEqual(['asistencia.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver'])
+    expect(suyas).toEqual(['asistencia.ver', 'cumplimiento.ver', 'dashboard.ver', 'personal.editar', 'personal.ver', 'rrhh.gestionar', 'rrhh.ver'])
     expect(can('RRHH', 'costos.ver')).toBe(false)
     expect(can('RRHH', 'obras.ver')).toBe(false)
   })

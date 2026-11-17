@@ -5,9 +5,9 @@ const items = [
   { id: 'r1', grupo: 'Navegación', titulo: 'Dashboard', keywords: ['inicio'], ruta: '/erp' },
   { id: 'r2', grupo: 'Navegación', titulo: 'Personal y Flota', keywords: ['empleados', 'vehiculos'], ruta: '/erp/personal' },
   { id: 'r3', grupo: 'Navegación', titulo: 'Obras', ruta: '/erp/obras' },
-  { id: 'o5', grupo: 'Obras', codigo: 'OB-0005', titulo: 'Garantía: evaporador con ruido anormal', subtitulo: 'Carnes Selectas Chillán SpA · En curso', ruta: '/erp/obras/OB-0005' },
-  { id: 'o4', grupo: 'Obras', codigo: 'OB-0004', titulo: 'Emergencia: falla de compresor', subtitulo: 'Frutícola Río Ñuble SpA', ruta: '/erp/obras/OB-0004' },
-  { id: 'p1', grupo: 'Personal', codigo: 'T-01', titulo: 'Jorge Quezada', subtitulo: 'Técnico Frigorista Senior', keywords: ['15.387.421-2'], ruta: '/erp/personal' },
+  { id: 'o5', grupo: 'Obras', codigo: 'OB-0005', titulo: 'Garantía: evaporador con ruido anormal', subtitulo: 'Cliente Demo 05 SpA · En curso', ruta: '/erp/obras/OB-0005' },
+  { id: 'o4', grupo: 'Obras', codigo: 'OB-0004', titulo: 'Emergencia: falla de compresor', subtitulo: 'Cliente Demo 02 SpA', ruta: '/erp/obras/OB-0004' },
+  { id: 'p1', grupo: 'Personal', codigo: 'T-01', titulo: 'Técnico Demo 01', subtitulo: 'Técnico Frigorista Senior', keywords: ['31.000.001-9'], ruta: '/erp/personal' },
   { id: 'v7', grupo: 'Vehículos', codigo: 'RTJK-45', titulo: 'RTJK-45 · Mitsubishi L200 Katana', subtitulo: 'En taller', ruta: '/erp/personal?tab=flota' },
 ]
 
@@ -27,13 +27,13 @@ describe('puntuar', () => {
   })
   it('ignora tildes: "garantia" encuentra "Garantía"', () => expect(puntuar(items[3], 'garantia')).toBeGreaterThan(0))
   it('no une el final de una palabra con el comienzo de la siguiente', () => {
-    const proveedor = { id: 'p', grupo: 'Proveedores', titulo: 'Distribuidora Frigotec Ltda.', subtitulo: 'Concepción · Sergio Bravo', ruta: '/' }
+    const proveedor = { id: 'p', grupo: 'Proveedores', titulo: 'Proveedor Demo 01 Ltda.', subtitulo: 'Concepción · Contacto Proveedor Demo 01', ruta: '/' }
     expect(puntuar(proveedor, 'obra')).toBe(0)
-    expect(puntuar(proveedor, 'sergio bravo')).toBeGreaterThan(0)
+    expect(puntuar(proveedor, 'contacto proveedor')).toBeGreaterThan(0)
   })
   it('busca también en subtítulo y palabras clave (cliente, RUT, sinónimos)', () => {
-    expect(puntuar(items[3], 'carnes selectas')).toBeGreaterThan(0)
-    expect(puntuar(items[5], '15387421')).toBeGreaterThan(0)
+    expect(puntuar(items[3], 'cliente demo 05')).toBeGreaterThan(0)
+    expect(puntuar(items[5], '31000001')).toBeGreaterThan(0)
     expect(puntuar(items[1], 'empleados')).toBeGreaterThan(0)
   })
   it('pondera: comienzo del título > palabra interna > subtítulo', () => {
@@ -50,7 +50,7 @@ describe('buscar', () => {
   })
   it('encuentra una obra por su código y una persona por su nombre', () => {
     expect(aplanar(buscar(items, 'OB-0005'))[0].id).toBe('o5')
-    expect(aplanar(buscar(items, 'quezada'))[0].id).toBe('p1')
+    expect(aplanar(buscar(items, 'tecnico demo'))[0].id).toBe('p1')
     expect(aplanar(buscar(items, 'rtjk45'))[0].id).toBe('v7')
   })
   it('pone primero el grupo con la mejor coincidencia', () => {

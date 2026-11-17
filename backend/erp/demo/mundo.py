@@ -24,32 +24,37 @@ from erp.models import Registro
 
 from . import catalogo
 
+DOMINIO_DEMO = 'apex.demo'  # correos de las cuentas ficticias nuevas (técnicos): no reciben correo
 SEMILLA = 20261112
 OBJETIVO_ARTICULOS = 1000
 
 STAFF = [  # correo, rol, nombre, apellido (las mismas cuentas que `seed_fyag`)
-    ('admin@fyag.cl', Role.ADMIN, 'Alejandra', 'Soto'), ('finanzas@fyag.cl', Role.FINANZAS, 'Felipe', 'Rojas'),
-    ('operaciones@fyag.cl', Role.OPERACIONES, 'Olga', 'Muñoz'), ('rrhh@fyag.cl', Role.RRHH, 'Rosa', 'Gómez'),
+    ('admin@fyag.cl', Role.ADMIN, 'Administrador', 'Demo'), ('finanzas@fyag.cl', Role.FINANZAS, 'Finanzas', 'Demo'),
+    ('operaciones@fyag.cl', Role.OPERACIONES, 'Operaciones', 'Demo'), ('rrhh@fyag.cl', Role.RRHH, 'RRHH', 'Demo'),
+]
+CORPORATIVOS = [  # roles corporativos: se crean después de los técnicos para no mover los ids de las cuentas anteriores
+    ('superadmin@fyag.cl', Role.SUPERADMIN, 'Super Admin', 'Demo'), ('comercial@fyag.cl', Role.COMERCIAL, 'Comercial', 'Demo'),
+    ('auditor@fyag.cl', Role.AUDITOR, 'Auditor', 'Demo'), ('ti@apexsystems.cl', Role.SUPERADMIN, 'Jefatura TI', 'Demo'),
 ]
 CLIENTES = [
-    ('Frutícola Los Coihues SpA', 'Coihueco', 'Fruta de exportación'), ('Agroindustrial Ñiquén Ltda.', 'Ñiquén', 'Procesamiento de frutas'),
-    ('Cecinas San Fabián SpA', 'San Fabián', 'Elaboración de cecinas'), ('Berries del Sur S.A.', 'Los Ángeles', 'Berries congelados'),
-    ('Lácteos Pemuco Ltda.', 'Pemuco', 'Quesos y yogures'), ('Pesquera Bahía Azul SpA', 'Concepción', 'Productos del mar'),
-    ('Carnes Cabrero Ltda.', 'Cabrero', 'Faenamiento de carne'), ('Hortalizas El Carmen SpA', 'El Carmen', 'Hortalizas frescas'),
-    ('Cervecería Artesanal Chillán SpA', 'Chillán', 'Cerveza artesanal'), ('Supermercados Ñuble Ltda.', 'Chillán', 'Retail de alimentos'),
-    ('Hospital Clínico Regional (servicios)', 'Chillán', 'Salud'), ('Frigorífico Río Itata S.A.', 'Quillón', 'Almacenaje en frío'),
-    ('Panificadora Bulnes Ltda.', 'Bulnes', 'Panadería industrial'), ('Avícola Santa Clara SpA', 'San Carlos', 'Aves y huevos'),
-    ('Arándanos Pinto SpA', 'Pinto', 'Arándanos frescos'), ('Distribuidora de Helados Sur Ltda.', 'Chillán Viejo', 'Helados'),
-    ('Molinos del Centro S.A.', 'Yungay', 'Molienda'), ('Vinos de Secano Ltda.', 'Quillón', 'Viña y bodega'),
-    ('Conservas Don Alfonso SpA', 'Cabrero', 'Conservas'), ('Colegio Técnico Agrícola Ñuble', 'San Carlos', 'Educación'),
-    ('Mataderos Unidos Chillán Ltda.', 'Chillán', 'Faenamiento'), ('Pastas Nonna Rosa SpA', 'Chillán Viejo', 'Pastas frescas'),
+    ('Cliente Demo 09 SpA', 'Coihueco', 'Fruta de exportación'), ('Cliente Demo 10 SpA', 'Ñiquén', 'Procesamiento de frutas'),
+    ('Cliente Demo 11 SpA', 'San Fabián', 'Elaboración de cecinas'), ('Cliente Demo 12 SpA', 'Los Ángeles', 'Berries congelados'),
+    ('Cliente Demo 13 SpA', 'Pemuco', 'Quesos y yogures'), ('Cliente Demo 14 SpA', 'Concepción', 'Productos del mar'),
+    ('Cliente Demo 15 SpA', 'Cabrero', 'Faenamiento de carne'), ('Cliente Demo 16 SpA', 'El Carmen', 'Hortalizas frescas'),
+    ('Cliente Demo 17 SpA', 'Chillán', 'Cerveza artesanal'), ('Cliente Demo 18 SpA', 'Chillán', 'Retail de alimentos'),
+    ('Cliente Demo 19 SpA', 'Chillán', 'Salud'), ('Cliente Demo 20 SpA', 'Quillón', 'Almacenaje en frío'),
+    ('Cliente Demo 21 SpA', 'Bulnes', 'Panadería industrial'), ('Cliente Demo 22 SpA', 'San Carlos', 'Aves y huevos'),
+    ('Cliente Demo 23 SpA', 'Pinto', 'Arándanos frescos'), ('Cliente Demo 24 SpA', 'Chillán Viejo', 'Helados'),
+    ('Cliente Demo 25 SpA', 'Yungay', 'Molienda'), ('Cliente Demo 26 SpA', 'Quillón', 'Viña y bodega'),
+    ('Cliente Demo 27 SpA', 'Cabrero', 'Conservas'), ('Cliente Demo 28 SpA', 'San Carlos', 'Educación'),
+    ('Cliente Demo 29 SpA', 'Chillán', 'Faenamiento'), ('Cliente Demo 30 SpA', 'Chillán Viejo', 'Pastas frescas'),
 ]
 PROVEEDORES = [
-    ('Frío Industrial Concepción S.A.', 'Concepción', 'Marcela Arriagada', '30 días', [8, 4, 0]), ('Compresores y Partes del Sur Ltda.', 'Talcahuano', 'Iván Contreras', '45 días', [12, 5, 0]),
-    ('Eléctrica y Control Biobío SpA', 'Los Ángeles', 'Paola Henríquez', '30 días', [10, 0, 0]), ('Importadora Termo Andes SpA', 'Santiago', 'Raúl Echeverría', '60 días', [15, 5, 2]),
-    ('Paneles Frigoríficos del Sur Ltda.', 'Temuco', 'Constanza Vega', '45 días', [7, 3, 0]), ('Válvulas y Controles Chile S.A.', 'Santiago', 'Tomás Olivares', '30 días', [10, 5, 0]),
-    ('Lubricantes Técnicos Ñuble SpA', 'Chillán', 'Ximena Bustos', 'Contado', [5, 0, 0]), ('Cables y Componentes Chillán Ltda.', 'Chillán', 'Gabriel Navarro', '30 días', [9, 3, 0]),
-    ('Ferretería Industrial Los Aromos SpA', 'Chillán', 'Patricio Leal', '15 días', [6, 0, 0]),
+    ('Proveedor Demo 06 Ltda.', 'Concepción', 'Contacto Proveedor Demo', '30 días', [8, 4, 0]), ('Proveedor Demo 07 Ltda.', 'Talcahuano', 'Contacto Proveedor Demo', '45 días', [12, 5, 0]),
+    ('Proveedor Demo 08 Ltda.', 'Los Ángeles', 'Contacto Proveedor Demo', '30 días', [10, 0, 0]), ('Proveedor Demo 09 Ltda.', 'Santiago', 'Contacto Proveedor Demo', '60 días', [15, 5, 2]),
+    ('Proveedor Demo 10 Ltda.', 'Temuco', 'Contacto Proveedor Demo', '45 días', [7, 3, 0]), ('Proveedor Demo 11 Ltda.', 'Santiago', 'Contacto Proveedor Demo', '30 días', [10, 5, 0]),
+    ('Proveedor Demo 12 Ltda.', 'Chillán', 'Contacto Proveedor Demo', 'Contado', [5, 0, 0]), ('Proveedor Demo 13 Ltda.', 'Chillán', 'Contacto Proveedor Demo', '30 días', [9, 3, 0]),
+    ('Proveedor Demo 14 Ltda.', 'Chillán', 'Contacto Proveedor Demo', '15 días', [6, 0, 0]),
 ]
 COORDS = {'Chillán': (-36.6066, -72.1034), 'Chillán Viejo': (-36.6285, -72.1331), 'San Carlos': (-36.4246, -71.9573), 'Quillón': (-36.7467, -72.4694), 'Yungay': (-37.1167, -72.0167),
           'Bulnes': (-36.7427, -72.2993), 'Pinto': (-36.7, -71.8964), 'Coihueco': (-36.6228, -71.8333), 'El Carmen': (-36.8977, -72.0239), 'Los Ángeles': (-37.4697, -72.3537),
@@ -122,7 +127,7 @@ class Mundo:
 
     def _clave(self, email):
         if not self.publico:
-            return 'Tecnico-FYAG-2026'
+            return 'Tecnico-Apex-2026'
         if self.unica:
             return self.unica
         return self.claves.setdefault(email, secrets.token_urlsafe(12))
@@ -132,7 +137,7 @@ class Mundo:
         if u:
             return u
         u = CustomUser.objects.create_user(email, self._clave(email), role=rol, first_name=nombre, last_name=apellido)
-        u.is_staff = u.is_superuser = rol == Role.ADMIN
+        u.is_staff = u.is_superuser = rol in (Role.ADMIN, Role.SUPERADMIN)
         u.save(update_fields=['is_staff', 'is_superuser'])
         self.resumen['usuarios'] = self.resumen.get('usuarios', 0) + 1
         return u
@@ -147,9 +152,9 @@ class Mundo:
         usados = set()
         for i, p in enumerate(base, 1):
             nombre, apellido = p['nombre'].split(' ', 1)
-            email = 'tecnico@fyag.cl' if i == 1 else f'{_sin_tildes(nombre)}.{_sin_tildes(apellido).replace(" ", "")}@fyag.cl'
+            email = 'tecnico@fyag.cl' if i == 1 else f'{_sin_tildes(nombre)}.{_sin_tildes(apellido).replace(" ", "")}@{DOMINIO_DEMO}'
             u = self._usuario(email, Role.TECNICO, nombre, apellido)
-            rut = p['rut'] if dom.validar_rut(p['rut']) and p['rut'] not in usados else _rut(14_000_000 + i * 233_447)
+            rut = p['rut'] if dom.validar_rut(p['rut']) and p['rut'] not in usados else _rut(31_100_000 + i)
             usados.add(rut)
             datos = {k: v for k, v in p.items() if k != 'id'} | {'rut': rut, 'usuario_id': uid(u)}
             if p['id'] in ya:  # la ficha del ERP ya existía (sin cuenta): se le asigna la cuenta, sin tocar el resto
@@ -161,16 +166,21 @@ class Mundo:
                 self.reg('personal', p['id'], datos)
             self.tecnicos.append({'ficha': p['id'], 'usuario': u, 'nombre': p['nombre'], 'tarifa': datos['costo_hora_hombre'], 'rut': datos['rut'],
                                   'ingreso': date.fromisoformat(datos['fecha_ingreso']), 'cargo': datos['cargo']})
+        for e, r, n, a in CORPORATIVOS:
+            self._usuario(e, r, n, a)
 
     def rrhh(self):
         """Fichas y contratos: el personal de oficina con el demo de RR. HH. existente, y los 16 técnicos aquí."""
-        from rrhh.demo import cargar_demo_rrhh
+        from rrhh.demo import cargar_demo_cumplimiento, cargar_demo_rrhh
         from rrhh.models import Contrato, FichaTrabajador
         try:
             with transaction.atomic():  # punto de guardado: en PostgreSQL un error de base dentro de la transacción la dejaría inutilizable
                 cargar_demo_rrhh()
+                cargar_demo_cumplimiento()
         except Exception as e:  # el PDF de ejemplo usa el almacenamiento privado: si no está disponible no se detiene el resto
             self.out(f'  (RR. HH. de demostración omitido: {type(e).__name__})')
+        from ai_agent.demo import cargar_demo_gobernanza
+        cargar_demo_gobernanza()  # bitácora inicial de prompts de IA (módulo de TI)
         rrhh_user = self.staff['rrhh@fyag.cl']
         tipos = ['PLAZO_FIJO' if i in (3, 8, 12) else 'OBRA_FAENA' if i in (5, 14) else 'INDEFINIDO' for i in range(16)]
         afps = list(FichaTrabajador.AFP.values)
@@ -186,8 +196,9 @@ class Mundo:
             if not Contrato.objects.filter(empleado=u).exists():
                 inicio, termino = t['ingreso'], None
                 if tipos[i] == 'PLAZO_FIJO':
-                    inicio = self.hoy - timedelta(days=300)
-                    termino = self.hoy + timedelta(days={3: 20, 8: -12, 12: 110}[i])  # uno por vencer, uno vencido y uno vigente
+                    # Uno por vencer (aún admite renovación), uno vencido que sigue trabajando (paso automático a indefinido) y uno vigente sin riesgo.
+                    inicio = self.hoy - timedelta(days={3: 150, 8: 300, 12: 120}[i])
+                    termino = self.hoy + timedelta(days={3: 20, 8: -12, 12: 110}[i])
                 elif tipos[i] == 'OBRA_FAENA':
                     inicio, termino = self.hoy - timedelta(days=120), self.hoy + timedelta(days=90)
                 Contrato.objects.create(empleado=u, fecha_inicio=inicio, fecha_termino=termino, sueldo_base=int(round(t['tarifa'] * 110, -3)))
@@ -199,21 +210,21 @@ class Mundo:
         self.clientes = self.existentes('clientes')
         for k, (razon, comuna, giro) in enumerate(CLIENTES):
             rid = ids()
-            nombre_corto = _sin_tildes(razon.split()[0])
-            fila = {'rut': _rut(76_000_000 + 211_319 * (k + 3)), 'razon_social': razon, 'giro': giro, 'comuna': comuna, 'contacto': self._persona(),
-                    'telefono': f'+56 9 {self.rng.randint(5000, 9999)} {self.rng.randint(1000, 9999)}', 'email': f'contacto@{nombre_corto}.cl', 'activo': k % 11 != 10}
+            fila = {'rut': _rut(99_200_000 + k + 1), 'razon_social': razon, 'giro': giro, 'comuna': comuna, 'contacto': self._persona(),
+                    'telefono': f'+56 9 0000 {k + 9:04d}', 'email': f'contacto@cliente{k + 9:02d}.demo', 'activo': k % 11 != 10}
             self.reg('clientes', rid, fila)
             self.clientes.append({**fila, 'id': rid})
         ids = Ids('proveedores')
         self.proveedores = self.existentes('proveedores')
         for k, (razon, comuna, contacto, pago, desc) in enumerate(PROVEEDORES):
             rid = ids()
-            fila = {'rut': _rut(77_000_000 + 187_303 * (k + 5)), 'razon_social': razon, 'comuna': comuna, 'contacto': contacto, 'condicion_pago': pago, 'descuentos_habituales': desc, 'activo': True}
+            fila = {'rut': _rut(99_300_000 + k + 1), 'razon_social': razon, 'comuna': comuna, 'contacto': contacto, 'condicion_pago': pago, 'descuentos_habituales': desc, 'activo': True}
             self.reg('proveedores', rid, fila)
             self.proveedores.append({**fila, 'id': rid})
 
     def _persona(self):
-        return f"{self.rng.choice(['Andrea', 'Carlos', 'Marcela', 'Pedro', 'Valentina', 'Rodrigo', 'Camila', 'Héctor', 'Daniela', 'Sergio', 'Paula', 'Mauricio'])} {self.rng.choice(['Poblete', 'Araya', 'Fuentes', 'Montecinos', 'Riquelme', 'Sepúlveda', 'Gajardo', 'Valenzuela', 'Parada', 'Henríquez'])}"
+        self.n_contactos = getattr(self, 'n_contactos', 0) + 1
+        return f'Contacto Demo {self.n_contactos:02d}'
 
     def articulos(self):
         self.articulos_ = self.existentes('articulos')

@@ -16,7 +16,7 @@ class VehiculoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.C
     desactivan o se mandan a taller. Los vencimientos y el kilometraje se registran como historial en `documentos/` y `lecturas/`."""
     serializer_class = VehiculoSerializer
     permission_classes = [RolePermission]
-    role_access = {'read': {Role.FINANZAS, Role.RRHH}, 'write': {Role.RRHH}}
+    role_access = {'read': {Role.FINANZAS, Role.RRHH, Role.AUDITOR}, 'write': {Role.RRHH}}  # el Auditor Externo ve Personal y Flota (personal.ver), solo lectura
     http_method_names = ['get', 'post', 'patch', 'head', 'options']  # sin PUT ni DELETE
 
     def get_queryset(self):

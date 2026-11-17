@@ -49,9 +49,19 @@ export const ENFOQUES = {
     apoyo: (t) => (t.length ? `Hay ${describirTareas(t)}.` : 'No hay documentos por renovar ni vehículos detenidos.'),
     accesos: [['Ver vencimientos', '/erp/personal?tab=alertas', 'personal.ver'], ['Revisar la flota', '/erp/personal?tab=flota', 'personal.ver']],
   },
+  SUPER_ADMIN: {
+    titular: () => 'Accesos y seguridad del sistema',
+    apoyo: () => 'Administra usuarios y roles, revisa quién hizo qué en el log de auditoría y comprueba la salud de los servicios.',
+    accesos: [['Administrar accesos', '/erp/usuarios', 'usuarios.ver'], ['Estado del sistema', '/erp/sistema', 'sistema.ver']],
+  },
+  COMERCIAL: {
+    titular: () => 'Tu cartera comercial',
+    apoyo: () => 'Prepara y simula presupuestos y mantén al día a tus clientes. Bajo 20 % de margen, la aprobación es de Gerencia.',
+    accesos: [['Nuevo presupuesto', '/erp/presupuestos/nuevo', 'presupuestos.crear'], ['Ver clientes', '/erp/maestros', 'maestros.ver']],
+  },
   CONSULTA: {
     titular: () => 'Así va la empresa hoy',
-    apoyo: () => 'Vista de solo lectura: lo que ves aquí no puede modificarse desde esta cuenta.',
+    apoyo: () => 'Modo lectura: puedes consultar y exportar finanzas, presupuestos, aprobaciones e indicadores, pero no modificar ningún registro.',
     accesos: [['Ver obras', '/erp/obras', 'obras.ver'], ['Ver auditoría', '/erp/auditoria', 'auditoria.ver']],
   },
 }
@@ -86,12 +96,13 @@ export function elegirInstrumento(k) {
 
 /** Qué indicadores se muestran primero para cada rol; el resto queda tras «Más indicadores». */
 export const PRIORIDAD_INDICADORES = {
-  ADMIN_GENERAL: ['venta', 'costo', 'obras', 'cu30', 'hojas', 'pres'],
-  ADMINISTRACION: ['venta', 'pres', 'costo', 'obras', 'cu30', 'inv'],
+  ADMIN_GENERAL: ['venta', 'margen', 'costo', 'facturado', 'obras', 'pres'],
+  ADMINISTRACION: ['facturado', 'iva', 'dte', 'venta', 'pres', 'costo'],
   BODEGA: ['stock', 'retiros', 'inv', 'obras'],
   SUPERVISOR: ['obras', 'hojas', 'cu30', 'costo', 'pres', 'venta'],
   RRHH: ['tec', 'veh', 'km', 'venc', 'tarifa'],
-  CONSULTA: ['venta', 'costo', 'obras', 'cu30', 'hojas', 'inv'],
+  CONSULTA: ['venta', 'margen', 'facturado', 'iva', 'costo', 'obras'],
+  COMERCIAL: ['venta', 'margen', 'pres'],
 }
 
 export function saludoDeLaHora(fecha = new Date()) {

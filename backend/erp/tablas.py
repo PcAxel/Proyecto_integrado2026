@@ -7,9 +7,10 @@ from .permisos_generados import PERMISOS
 
 # prefijo y ancho del id autogenerado (igual que el AutoField del modelo original)
 TABLAS = {
-    'clientes': dict(prefijo='CLI-', ancho=3, leer=['clientes.ver'], crear=['maestros.gestionar'], editar=['maestros.gestionar']),
+    'clientes': dict(prefijo='CLI-', ancho=3, leer=['clientes.ver'], crear=['maestros.gestionar', 'clientes.gestionar'], editar=['maestros.gestionar', 'clientes.gestionar']),
     'proveedores': dict(prefijo='PRV-', ancho=3, leer=['proveedores.ver'], crear=['maestros.gestionar'], editar=['maestros.gestionar']),
-    'articulos': dict(prefijo='ART-', ancho=3, leer=['bodega.ver', 'pwa.usar'], crear=['articulos.gestionar'], editar=['articulos.gestionar'],
+    'articulos': dict(prefijo='ART-', ancho=3, leer=['bodega.ver', 'pwa.usar', 'presupuestos.crear'],  # quien cotiza necesita el catálogo
+                      crear=['articulos.gestionar'], editar=['articulos.gestionar'],
                       costos=['costo_unitario']),
     'conteos': dict(prefijo='CNT-', ancho=4, leer=['bodega.ver'], crear=['conteo.registrar'], editar=['conteo.aprobar']),
     'lotes': dict(prefijo='LOT-', ancho=4, leer=['bodega.ver', 'pwa.usar'], crear=['cardex.crear'], editar=[]),
@@ -23,13 +24,14 @@ TABLAS = {
     'hojas': dict(prefijo='HS-', ancho=4, leer=['terreno.ver', 'pwa.usar'], crear=['pwa.usar'], editar=['hojas.auditar']),
     'retiros': dict(prefijo='SR-', ancho=4, leer=['bodega.ver', 'pwa.usar'], crear=['pwa.usar'], editar=['cardex.crear']),
     'asistencia': dict(prefijo='ASI-', ancho=6, leer=['asistencia.ver', 'asistencia.marcar'], crear=['asistencia.marcar'], editar=[]),
-    'personal': dict(prefijo='T-', ancho=2, leer=['personal.ver', 'obras.ver', 'pwa.usar', 'terreno.ver', 'bodega.ver'], crear=[], editar=['personal.editar']),
+    'personal': dict(prefijo='T-', ancho=2, leer=['personal.ver', 'obras.ver', 'pwa.usar', 'terreno.ver', 'bodega.ver', 'presupuestos.crear'], crear=[], editar=['personal.editar']),
     'flota': dict(prefijo='VH-', ancho=2, leer=['personal.ver', 'pwa.usar'], crear=[], editar=['personal.editar']),
     'auditoria': dict(prefijo='LOG-', ancho=6, leer=['auditoria.ver'], crear=None, editar=[]),  # crear=None: cualquier usuario autenticado (el servidor sella el autor)
 }
 
 # Rol del backend → rol de la matriz de permisos del frontend (para mostrar y para el log de auditoría)
-ROL_UI = {'ADMIN': 'ADMIN_GENERAL', 'FINANZAS': 'ADMINISTRACION', 'OPERACIONES': 'SUPERVISOR', 'TECNICO': 'TECNICO', 'RRHH': 'RRHH'}
+ROL_UI = {'ADMIN': 'ADMIN_GENERAL', 'FINANZAS': 'ADMINISTRACION', 'OPERACIONES': 'SUPERVISOR', 'TECNICO': 'TECNICO', 'RRHH': 'RRHH',
+          'SUPERADMIN': 'SUPER_ADMIN', 'COMERCIAL': 'COMERCIAL', 'AUDITOR': 'CONSULTA'}
 
 # Tablas que solo admiten altas: un error se corrige con un contra-asiento, nunca se edita (P1, P2).
 INMUTABLES = {'cardex', 'facturas', 'notas_credito', 'asistencia', 'auditoria', 'lotes'}

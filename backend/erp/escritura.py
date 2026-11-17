@@ -21,6 +21,11 @@ CAMPOS_EDITABLES = {
 }
 # Campos de un presupuesto que solo fija el servidor
 PRESUPUESTO_SERVIDOR = {'id', 'estado', 'aprobado_por', 'fecha', 'motivo_rechazo'}
+# Quién puede crear cada tipo de movimiento del Cardex (segregación de funciones sobre el stock).
+PERMISO_POR_MOVIMIENTO = {
+    reglas.ENTRADA: ('compras.registrar',), reglas.SALIDA: ('cardex.crear',), reglas.REVERSA: ('cardex.reversar',),
+    reglas.REINGRESO: ('cardex.reingresar',), reglas.AJUSTE: ('conteo.aprobar',),
+}
 MAX_BYTES_FILA = 3_000_000  # una hoja con firma y fotos reducidas cabe de sobra
 
 
@@ -181,6 +186,8 @@ class Lote:
 
     def _alta_cardex(self, d):
         d['usuario_id'] = uid(self.user)
+        # Cada tipo de movimiento exige SU permiso: tener uno (p. ej. registrar compras) no habilita los demás (sacar o reversar stock).
+        self.exigir_permiso(*PERMISO_POR_MOVIMIENTO.get(d.get('tipo'), ()))
         if d.get('tipo') == reglas.AJUSTE:
             return self._ajuste_de_conteo(d)
         if d.get('tipo') == reglas.ENTRADA:
@@ -415,7 +422,7 @@ class Lote:
         return reg.fila()
 
     def _patch_clientes(self, a, c):
-        self.exigir_permiso('maestros.gestionar')
+        self.exigir_permiso('maestros.gestionar', 'clientes.gestionar')
         return {k: v for k, v in c.items() if k in CAMPOS_EDITABLES['clientes']}
 
     def _patch_proveedores(self, a, c):

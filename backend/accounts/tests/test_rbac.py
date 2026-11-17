@@ -8,7 +8,7 @@ MATRIZ = {
     '/api/obras/': ({'FINANZAS', 'OPERACIONES', 'TECNICO'}, {'OPERACIONES'}),
     '/api/articulos/': ({'FINANZAS', 'OPERACIONES'}, {'OPERACIONES'}),
     '/api/cardex/': ({'FINANZAS', 'OPERACIONES'}, {'OPERACIONES'}),
-    '/api/vehiculos/': ({'FINANZAS', 'RRHH'}, {'RRHH'}),
+    '/api/vehiculos/': ({'FINANZAS', 'RRHH', 'AUDITOR'}, {'RRHH'}),
     '/api/reportes/': ({'OPERACIONES', 'TECNICO'}, set()),
 }
 
