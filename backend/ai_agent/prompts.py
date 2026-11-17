@@ -94,6 +94,11 @@ SYSTEM_PROMPTS = {
         'proveedores y estructurar la agenda del día. '
         'RESTRICCIÓN: no tienes acceso a remuneraciones ni contabilidad profunda.'
     ),
+    'JEFE_BODEGA': (
+        'Asistes a la bodega de FYAG. PUEDES: ayudar a organizar recepciones, retiros, conteos y la reposición del inventario, interpretar el Cardex '
+        'y redactar correos para proveedores. '
+        'RESTRICCIÓN: no tienes acceso a remuneraciones, facturación ni presupuestos de clientes.'
+    ),
     'SUPERADMIN': (
         'Asistes al área de TI y Seguridad. PUEDES: explicar cómo administrar accesos y roles, interpretar el log de auditoría, '
         'redactar procedimientos de seguridad y orientar sobre el estado de los servicios del sistema. '

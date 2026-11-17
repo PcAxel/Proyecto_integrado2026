@@ -31,7 +31,7 @@ TABLAS = {
 
 # Rol del backend → rol de la matriz de permisos del frontend (para mostrar y para el log de auditoría)
 ROL_UI = {'ADMIN': 'ADMIN_GENERAL', 'FINANZAS': 'ADMINISTRACION', 'OPERACIONES': 'SUPERVISOR', 'TECNICO': 'TECNICO', 'RRHH': 'RRHH',
-          'SUPERADMIN': 'SUPER_ADMIN', 'COMERCIAL': 'COMERCIAL', 'AUDITOR': 'CONSULTA'}
+          'SUPERADMIN': 'SUPER_ADMIN', 'COMERCIAL': 'COMERCIAL', 'AUDITOR': 'CONSULTA', 'JEFE_BODEGA': 'BODEGA'}
 
 # Tablas que solo admiten altas: un error se corrige con un contra-asiento, nunca se edita (P1, P2).
 INMUTABLES = {'cardex', 'facturas', 'notas_credito', 'asistencia', 'auditoria', 'lotes'}

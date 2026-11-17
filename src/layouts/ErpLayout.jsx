@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { PanelApariencia } from '@/components/PanelApariencia'
 import { OpcionesInclusion } from '@/components/OpcionesInclusion'
+import { NotificacionesBell } from '@/components/NotificacionesBell'
 import { LecturaSeleccion } from '@/components/LecturaSeleccion'
 import { SubtitulosLectura } from '@/components/SubtitulosLectura'
 import { useApariencia } from '@/hooks/useApariencia'
@@ -12,7 +13,7 @@ import { can } from '@/domain/rbac'
 import { ROL_API_LABEL } from '@/components/domain'
 import { cn } from '@/components/ui'
 import { Avatar, BrandMark } from '@/components/domain'
-import { ERP_NAV } from './nav'
+import { ERP_NAV, itemVisible } from './nav'
 import { GlobalSearch } from './GlobalSearch'
 import { BordeIA } from '@/components/BordeIA'
 import { useAsistenteStore } from '@/stores/asistenteStore'
@@ -43,7 +44,7 @@ function BotonBuscar({ onClick }) {
  */
 function Navegacion({ collapsed, onNavigate, modo = 'riel' }) {
   const rol = useAuthStore((s) => s.user?.rol)
-  const items = ERP_NAV.filter((i) => can(rol, i.accion))
+  const items = ERP_NAV.filter((i) => itemVisible(i, rol))
   const grupos = [...new Set(items.map((i) => i.grupo))]
   const mostrarTexto = modo === 'menu' ? '' : collapsed ? 'hidden' : 'hidden xl:inline'
 
@@ -201,6 +202,7 @@ export function ErpLayout() {
                 <Eye className="h-3.5 w-3.5" aria-hidden="true" />Modo lectura
               </span>
             )}
+            <NotificacionesBell />
             <PanelApariencia nivelDefecto={100} />
             <OpcionesInclusion />
             <div className="flex items-center gap-2 sm:hidden"><Avatar nombre={user.nombre} rol={user.rol} size="sm" /></div>

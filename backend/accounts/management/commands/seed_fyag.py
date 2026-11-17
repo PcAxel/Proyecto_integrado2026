@@ -39,6 +39,7 @@ USUARIOS = [
     ('superadmin@fyag.cl', 'SuperAdmin-Apex-2026', Role.SUPERADMIN, 'Super Admin', 'Demo'),
     ('comercial@fyag.cl', 'Comercial-Apex-2026', Role.COMERCIAL, 'Comercial', 'Demo'),
     ('auditor@fyag.cl', 'Auditor-Apex-2026', Role.AUDITOR, 'Auditor', 'Demo'),
+    ('bodega@fyag.cl', 'Bodega-Apex-2026', Role.JEFE_BODEGA, 'Jefe de Bodega', 'Demo'),
     # Área de TI y Ciberseguridad: administra accesos y la gobernanza del agente de IA (rol SUPERADMIN).
     ('ti@apexsystems.cl', 'TI-Apex-2026', Role.SUPERADMIN, 'Jefatura TI', 'Demo'),
 ]

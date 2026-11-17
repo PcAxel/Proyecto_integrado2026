@@ -1,4 +1,5 @@
-import { AlertTriangle, CircleDot, CheckCircle2, CalendarClock } from 'lucide-react'
+import { AlertTriangle, CircleDot, CheckCircle2, CalendarClock, ClipboardCheck, Receipt, HardHat, Send } from 'lucide-react'
+import { ETAPA_LABEL } from '@/domain/etapasObra'
 import { Badge, StatusBadge } from '@/components/ui'
 
 const OBRA = {
@@ -6,6 +7,19 @@ const OBRA = {
   EN_CURSO: { tone: 'info', label: 'En curso', icon: CircleDot },
   FINALIZADA: { tone: 'ok', label: 'Finalizada', icon: CheckCircle2 },
 }
+const ETAPA = {
+  CREADO: { tone: 'neutral', icon: CalendarClock },
+  ASIGNADO_A_TERRENO: { tone: 'info', icon: Send },
+  EN_EJECUCION: { tone: 'info', icon: HardHat },
+  AUDITORIA_TERRENO_OK: { tone: 'ok', icon: ClipboardCheck },
+  FACTURADO: { tone: 'ok', icon: Receipt },
+}
+/** Etapa del flujo entre áreas (Operaciones → Finanzas). */
+export const EtapaObraBadge = ({ etapa }) => {
+  const e = ETAPA[etapa] ?? ETAPA.CREADO
+  return <Badge tone={e.tone} icon={e.icon}>{ETAPA_LABEL[etapa] ?? ETAPA_LABEL.CREADO}</Badge>
+}
+
 export const ObraStatusBadge = ({ estado }) => {
   const e = OBRA[estado]
   return <Badge tone={e.tone} icon={e.icon}>{e.label}</Badge>

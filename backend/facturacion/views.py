@@ -172,6 +172,11 @@ class EmitirDTEView(_Base):
                 'nuevo': {'folio': f.folio_sii, 'total': f.monto_total, 'estado': f.estado_sii}})
         except Exception:
             logger.exception('dte_auditoria_error orden=%s', f.orden_id)
+        try:  # el flujo de la obra llega a su última etapa
+            from erp.escritura import marcar_etapa
+            marcar_etapa(f.orden_id, 'FACTURADO')
+        except Exception:
+            logger.exception('dte_etapa_error orden=%s', f.orden_id)
         logger.info('dte_emitida orden=%s folio=%s user=%s', f.orden_id, f.folio_sii, request.user.pk)
         return Response(serializar(f, f.orden_id))
 

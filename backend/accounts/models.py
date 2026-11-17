@@ -7,13 +7,15 @@ from django.utils import timezone
 class Role(models.TextChoices):
     ADMIN = 'ADMIN', 'Admin'
     FINANZAS = 'FINANZAS', 'Finanzas'
-    OPERACIONES = 'OPERACIONES', 'Operaciones'
+    OPERACIONES = 'OPERACIONES', 'Jefe de Operaciones'  # el código se conserva (cuentas y datos existentes); solo cambia el nombre visible
     TECNICO = 'TECNICO', 'Técnico'
     RRHH = 'RRHH', 'Recursos Humanos'
     # Roles corporativos (segregación de funciones). Se agregan al final: los cinco anteriores conservan su código y sus permisos.
     SUPERADMIN = 'SUPERADMIN', 'Super Admin (TI y Seguridad)'
     COMERCIAL = 'COMERCIAL', 'Ejecutivo Comercial'
     AUDITOR = 'AUDITOR', 'Auditor Externo'
+    # Bodega deja de compartir rol con Operaciones: inventario, Cardex, recepciones y retiros son solo de este rol.
+    JEFE_BODEGA = 'JEFE_BODEGA', 'Jefe de Bodega'
 
 
 # Quiénes administran los accesos: TI (Super Admin) y, mientras la empresa no tenga área de TI, la Gerencia General (ADMIN).

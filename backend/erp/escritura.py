@@ -10,7 +10,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from . import dominio as dom
-from . import reglas, tablas
+from . import flujo, reglas, tablas
 from .models import Registro
 from .reglas import ReglaError
 
@@ -191,7 +191,7 @@ class Lote:
         exigir(str(d.get('nombre') or '').strip(), 'La obra debe tener un nombre.')
         u = d.get('ubicacion') or {}
         exigir(dom.es_numero(u.get('lat')) and dom.es_numero(u.get('lng')), 'Indique la ubicación de la obra.')
-        d.update(estado='PLANIFICADA', es_emergencia_sin_presupuesto=cu30, presupuesto_id=d.get('presupuesto_id') or None,
+        d.update(estado='PLANIFICADA', etapa=flujo.CREADO, es_emergencia_sin_presupuesto=cu30, presupuesto_id=d.get('presupuesto_id') or None,
                  supervisor_id=uid(self.user), fecha_inicio=d.get('fecha_inicio') or hoy(), fecha_cierre=None,
                  sobrantes_conciliados=False, pendientes_sync=0, tecnicos=[])
         d.setdefault('fecha_fin_estimada', None)
@@ -339,6 +339,7 @@ class Lote:
         # Lo que fija el servidor: autor, fecha, estado y la tarifa hora-hombre vigente (se congela al enviar).
         d.update(tecnico_id=self.ficha['id'], fecha=ahora(), estado='ENVIADA', auditoria=None,
                  costo_hora_hombre=self.ficha['costo_hora_hombre'])
+        marcar_etapa(d['obra_id'], flujo.EN_EJECUCION)  # la primera hoja enviada desde terreno pone la obra en ejecución
 
     def _alta_retiros(self, d):
         exigir(self.ficha, 'El usuario no tiene ficha de personal.', 403, 'permission_denied')
@@ -494,8 +495,33 @@ class Lote:
         exigir(motivo, 'Debe indicar el motivo.')
         return {'estado': 'RECHAZADO', 'motivo_rechazo': motivo}
 
+    def _delegar_a_terreno(self, a, c):
+        """Delegar a terreno: Jefe de Operaciones asigna técnicos; la obra queda ASIGNADA y en curso para que la vean en la app de terreno."""
+        self.exigir_permiso('obras.delegar')
+        exigir(a['estado'] != 'FINALIZADA', 'No se puede delegar una obra finalizada.', 409, 'estado_invalido')
+        ids = list(dict.fromkeys(c['tecnicos'] or []))
+        exigir(ids, 'Asigna al menos un técnico.')
+        exigir(all((fila('personal', t) or {}).get('activo') for t in ids), 'Hay un técnico inexistente o inactivo.')
+        actual = flujo.etapa_de(a)
+        etapa = flujo.ASIGNADO if actual in (flujo.CREADO, flujo.ASIGNADO) else actual  # re-delegar no retrocede una obra ya en ejecución
+        return {'tecnicos': ids, 'etapa': etapa, 'estado': 'EN_CURSO'}
+
+    def _cerrar_con_auditoria(self, a):
+        """Auditoría de terreno OK = la obra cumple los 6 requisitos de cierre: pasa a FINALIZADA y se avisa a Finanzas (en la misma transacción)."""
+        self.exigir_permiso('obras.cerrar')
+        exigir(a['estado'] == 'EN_CURSO' and flujo.etapa_de(a) in (flujo.ASIGNADO, flujo.EN_EJECUCION),
+               'Solo una obra delegada a terreno y en curso puede cerrar su auditoría.', 409, 'estado_invalido')
+        checks, ok = dom.validar_cierre(a, fila('presupuestos', a.get('presupuesto_id')), filas('hojas'), filas('cardex'))
+        exigir(ok, 'La obra no cumple los requisitos de cierre: ' + ', '.join(k for k, v in checks.items() if not v) + '.')
+        flujo.avisar_a_finanzas(a)
+        return {'estado': 'FINALIZADA', 'fecha_cierre': hoy(), 'etapa': flujo.AUDITORIA_OK}
+
     def _patch_obras(self, a, c):
         claves = set(c)
+        if claves == {'tecnicos', 'etapa'} and c['etapa'] == flujo.ASIGNADO:
+            return self._delegar_a_terreno(a, c)
+        if claves == {'etapa'} and c['etapa'] == flujo.AUDITORIA_OK:
+            return self._cerrar_con_auditoria(a)
         if claves == {'tecnicos'}:
             self.exigir_permiso('obras.crear')
             exigir(a['estado'] != 'FINALIZADA', 'No se puede reasignar una obra finalizada.', 409, 'estado_invalido')
@@ -519,13 +545,11 @@ class Lote:
             if c['estado'] == 'EN_CURSO':
                 self.exigir_permiso('obras.crear')
                 exigir(a['estado'] == 'PLANIFICADA', 'Solo una obra PLANIFICADA puede iniciarse.', 409, 'estado_invalido')
-                return {'estado': 'EN_CURSO'}
+                return {'estado': 'EN_CURSO', 'etapa': flujo.ASIGNADO if a.get('tecnicos') else flujo.etapa_de(a)}
             if c['estado'] == 'FINALIZADA':
-                self.exigir_permiso('obras.cerrar')
+                # El botón «Finalizar» del Panel de Cierre y «Auditoría Terreno OK» son la misma acción.
                 exigir(a['estado'] == 'EN_CURSO', 'Solo una obra EN_CURSO puede finalizarse.', 409, 'estado_invalido')
-                checks, ok = dom.validar_cierre(a, fila('presupuestos', a.get('presupuesto_id')), filas('hojas'), filas('cardex'))
-                exigir(ok, 'La obra no cumple los requisitos de cierre.')
-                return {'estado': 'FINALIZADA', 'fecha_cierre': hoy()}
+                return self._cerrar_con_auditoria(a)
         raise ReglaError('Cambio de obra no permitido.', 403, 'permission_denied')
 
     def _patch_conteos(self, a, c):
@@ -571,6 +595,17 @@ class Lote:
         entregado = sorted(por_articulo.items())
         exigir(esperado == entregado, 'La entrega no coincide con lo solicitado.')
         return {'estado': 'ENTREGADA', 'resuelto_por': uid(self.user), 'resuelto_en': ahora(), 'movimientos': ids}
+
+
+def marcar_etapa(obra_id, etapa):
+    """Avanza la etapa del flujo de una obra por una causa del sistema (hoja de terreno, factura aceptada). Solo hacia adelante."""
+    with transaction.atomic():
+        reg = Registro.objects.select_for_update().filter(tabla='obras', rid=obra_id).first()
+        if reg is None or flujo.ETAPAS.index(etapa) <= flujo.ETAPAS.index(flujo.etapa_de(reg.datos)):
+            return False
+        reg.datos = {**reg.datos, 'etapa': etapa}
+        reg.save(update_fields=['datos', 'actualizado'])
+        return True
 
 
 def aplicar(user, ip, ops):

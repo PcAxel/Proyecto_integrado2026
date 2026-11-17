@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Play, Receipt, AlertTriangle, MapPin, CalendarDays, Users, UserPlus } from 'lucide-react'
+import { ArrowLeft, Play, Receipt, AlertTriangle, MapPin, CalendarDays, Users, UserPlus, Send, ClipboardCheck } from 'lucide-react'
 import { PageHeader, Tabs, Card, Button, Skeleton, Mono, ConfirmDialog, Modal } from '@/components/ui'
-import { ObraStatusBadge, EmergencyBadge, TIPO_OBRA_LABEL, MoneyCell } from '@/components/domain'
+import { ObraStatusBadge, EtapaObraBadge, EmergencyBadge, TIPO_OBRA_LABEL, MoneyCell } from '@/components/domain'
 import { obrasService, clientesService } from '@/services'
 import { formatFecha } from '@/domain/format'
+import { puedeDelegar, puedeAuditar } from '@/domain/etapasObra'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
@@ -24,11 +25,14 @@ export function ObraDetalle() {
   const [iniciando, setIniciando] = useState(false)
   const [trabajando, setTrabajando] = useState(false)
   const [asignando, setAsignando] = useState(null) // ids elegidos mientras el modal está abierto
+  const [delegando, setDelegando] = useState(null) // ídem para «Delegar a terreno»
+  const [auditando, setAuditando] = useState(false)
   const obraRes = useResource(() => obrasService.retrieve(id), [id])
   const cliente = useResource(() => clientesService.retrieve(obraRes.data?.cliente_id ?? 'CLI-001').catch(() => null), [obraRes.data?.cliente_id])
   const obra = obraRes.data
   const puedeAsignar = Boolean(obra) && can(rol, 'obras.crear') && obra.estado !== 'FINALIZADA'
-  const tecnicos = useResource(() => (puedeAsignar ? obrasService.tecnicosDisponibles() : Promise.resolve(null)), [puedeAsignar])
+  const puedeFlujo = Boolean(obra) && can(rol, 'obras.delegar') // Jefe de Operaciones: delega a terreno y da la auditoría
+  const tecnicos = useResource(() => (puedeAsignar || puedeFlujo ? obrasService.tecnicosDisponibles() : Promise.resolve(null)), [puedeAsignar, puedeFlujo])
 
   // `?facturar=1` (lo pone el asistente de IA): baja hasta la tarjeta de facturación y la resalta unos segundos. NO emite nada: la persona revisa y pulsa.
   useEffect(() => {
@@ -69,15 +73,31 @@ export function ObraDetalle() {
     if (r) { setAsignando(null); obraRes.reload() }
   }
 
+  const delegar = async () => {
+    setTrabajando(true)
+    const r = await runAction(obrasService.delegarATerreno(obra.id, delegando), 'Obra delegada a terreno: los técnicos ya la ven en su app')
+    setTrabajando(false)
+    if (r) { setDelegando(null); obraRes.reload() }
+  }
+
+  const auditar = async () => {
+    setTrabajando(true)
+    const r = await runAction(obrasService.auditoriaTerrenoOk(obra.id), 'Auditoría de terreno OK: se avisó a Finanzas que la obra está lista para facturar')
+    setTrabajando(false)
+    if (r) { setAuditando(false); obraRes.reload() }
+  }
+
   return (
     <div className="space-y-5">
       <Link to="/erp/obras" className="inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink"><ArrowLeft className="h-4 w-4" />Obras</Link>
       <PageHeader
         title={obra.nombre}
-        subtitle={<span className="flex flex-wrap items-center gap-2"><Mono>{obra.id}</Mono><ObraStatusBadge estado={obra.estado} />{obra.es_emergencia_sin_presupuesto && <EmergencyBadge />}</span>}
+        subtitle={<span className="flex flex-wrap items-center gap-2"><Mono>{obra.id}</Mono><ObraStatusBadge estado={obra.estado} /><EtapaObraBadge etapa={obra.etapa} />{obra.es_emergencia_sin_presupuesto && <EmergencyBadge />}</span>}
         actions={(
           <>
-            {obra.estado === 'PLANIFICADA' && can(rol, 'obras.crear') && <Button icon={Play} onClick={() => setIniciando(true)}>Iniciar obra</Button>}
+            {puedeFlujo && puedeDelegar(obra) && <Button icon={Send} onClick={() => setDelegando(obra.tecnicos)}>Delegar a Terreno</Button>}
+            {puedeFlujo && puedeAuditar(obra) && <Button variant="success" icon={ClipboardCheck} onClick={() => setAuditando(true)}>Auditoría Terreno OK</Button>}
+            {obra.estado === 'PLANIFICADA' && can(rol, 'obras.crear') && !puedeFlujo && <Button icon={Play} onClick={() => setIniciando(true)}>Iniciar obra</Button>}
             {obra.estado === 'FINALIZADA' && can(rol, 'facturacion.emitir') && (
               // Atajo a la tarjeta de facturación electrónica (está en el Resumen, abajo a la derecha): cambia a ese tab y baja hasta ella.
               <Button variant="secondary" icon={Receipt} onClick={() => { setTab('resumen'); setTimeout(() => document.getElementById('facturacion')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60) }}>Facturar</Button>
@@ -131,6 +151,17 @@ export function ObraDetalle() {
         footer={<><Button variant="secondary" onClick={() => setAsignando(null)}>Cancelar</Button><Button loading={trabajando} onClick={guardarAsignacion}>Guardar asignación</Button></>}>
         {asignando && <SelectorTecnicos tecnicos={tecnicos.data ?? undefined} value={asignando} onChange={setAsignando} compacto />}
       </Modal>
+      <Modal open={Boolean(delegando)} onClose={() => setDelegando(null)} title="Delegar a terreno"
+        footer={<><Button variant="secondary" onClick={() => setDelegando(null)}>Cancelar</Button><Button icon={Send} loading={trabajando} disabled={!delegando?.length} onClick={delegar}>Delegar</Button></>}>
+        {delegando && (
+          <div className="space-y-3">
+            <p className="text-sm text-ink-soft">Elige quién trabajará en <b>{obra.nombre}</b>. La obra quedará «En curso» y solo los técnicos elegidos la verán en su app de terreno.</p>
+            <SelectorTecnicos tecnicos={tecnicos.data ?? undefined} value={delegando} onChange={setDelegando} compacto />
+          </div>
+        )}
+      </Modal>
+      <ConfirmDialog open={auditando} onClose={() => setAuditando(false)} onConfirm={auditar} loading={trabajando} confirmLabel="Auditoría OK"
+        title="Auditoría Terreno OK" message="Confirmas que el trabajo de terreno está conforme. La obra pasará a «Finalizada» (si cumple los 6 requisitos de cierre) y se avisará a Finanzas que está lista para facturar." />
       <ConfirmDialog open={iniciando} onClose={() => setIniciando(false)} onConfirm={iniciar} loading={trabajando} confirmLabel="Iniciar obra"
         title="Iniciar obra" message="La obra pasará a «En curso»: los técnicos asignados podrán registrar hojas de servicio y solicitar materiales." />
     </div>

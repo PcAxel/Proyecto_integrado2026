@@ -149,37 +149,37 @@ class RetiroYComprasTests(Negocio):
 
     def test_entregar_genera_salidas_exactas(self):
         self.insertar('TECNICO', 'retiros', {'id': 'SR-0001', 'obra_id': 'OB-0001', 'items': [{'articulo_id': 'ART-001', 'cantidad': 3}]})
-        self.lote('OPERACIONES', *self.compra(1, 10))
-        self.assertEqual(self.parchar('OPERACIONES', 'retiros', 'SR-0001', {'estado': 'ENTREGADA', 'movimientos': []}).status_code, 422)
+        self.lote('JEFE_BODEGA', *self.compra(1, 10))
+        self.assertEqual(self.parchar('JEFE_BODEGA', 'retiros', 'SR-0001', {'estado': 'ENTREGADA', 'movimientos': []}).status_code, 422)
         salida = self.mov('MOV-000002', 'SALIDA_RETIRO', 3, referencia='Retiro SR-0001')
-        r = self.lote('OPERACIONES', salida, {'op': 'patch', 'tabla': 'retiros', 'id': 'SR-0001',
+        r = self.lote('JEFE_BODEGA', salida, {'op': 'patch', 'tabla': 'retiros', 'id': 'SR-0001',
                                               'cambios': {'estado': 'ENTREGADA', 'movimientos': ['MOV-000002']}})
         self.assertEqual(r.status_code, 200, r.content)
-        self.assertEqual(self.parchar('OPERACIONES', 'retiros', 'SR-0001', {'estado': 'RECHAZADA', 'motivo_rechazo': 'x'}).status_code, 409)
+        self.assertEqual(self.parchar('JEFE_BODEGA', 'retiros', 'SR-0001', {'estado': 'RECHAZADA', 'motivo_rechazo': 'x'}).status_code, 409)
 
     def test_factura_totales_los_calcula_el_servidor(self):
         fac = {'id': 'FC-0001', 'numero': '1', 'proveedor_id': 'PRV-001', 'fecha': '2026-11-05', 'descuentos': [10, 0, 0],
                'items': [{'articulo_id': 'ART-001', 'cantidad': 10, 'precio_lista': 1000}], 'neto': 1, 'iva': 1, 'total': 1}
         entrada = self.mov('MOV-000001', cantidad=10, costo_unitario=900, referencia='FC-0001')
-        r = self.lote('OPERACIONES', {'op': 'insert', 'tabla': 'facturas', 'fila': fac}, entrada)
+        r = self.lote('JEFE_BODEGA', {'op': 'insert', 'tabla': 'facturas', 'fila': fac}, entrada)
         self.assertEqual(r.status_code, 200, r.content)
         d = self.datos('facturas', 'FC-0001')
         self.assertEqual((d['neto'], d['iva'], d['total']), (9000, 1710, 10710))
 
     def test_factura_duplicada_y_descuentos_invalidos(self):
-        self.lote('OPERACIONES', *self.compra(1))
+        self.lote('JEFE_BODEGA', *self.compra(1))
         dup = {'op': 'insert', 'tabla': 'facturas', 'fila': {'id': 'FC-0002', 'numero': 'N1', 'proveedor_id': 'PRV-001',
                                                               'items': [{'articulo_id': 'ART-001', 'cantidad': 1, 'precio_lista': 5}]}}
-        self.assertEqual(self.lote('OPERACIONES', dup).status_code, 409)
+        self.assertEqual(self.lote('JEFE_BODEGA', dup).status_code, 409)
         mucho = {**dup, 'fila': {**dup['fila'], 'numero': 'N2', 'descuentos': [5, 5, 5, 5]}}
-        self.assertEqual(self.lote('OPERACIONES', mucho).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', mucho).status_code, 422)
 
     def test_nota_de_credito_no_excede_la_factura(self):
-        self.lote('OPERACIONES', *self.compra(1, 10, 1000))  # neto 10.000
+        self.lote('JEFE_BODEGA', *self.compra(1, 10, 1000))  # neto 10.000
         nc = lambda n, neto: {'op': 'insert', 'tabla': 'notas_credito', 'fila': {
             'id': f'NC-{n:04d}', 'factura_id': 'FC-0001', 'numero': str(n), 'neto': neto, 'motivo': 'bonificación', 'total': 1}}
-        self.assertEqual(self.lote('OPERACIONES', nc(1, 6000)).status_code, 200)
-        self.assertEqual(self.lote('OPERACIONES', nc(2, 6000)).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', nc(1, 6000)).status_code, 200)
+        self.assertEqual(self.lote('JEFE_BODEGA', nc(2, 6000)).status_code, 422)
         self.assertEqual(self.datos('notas_credito', 'NC-0001')['total'], 7140)
 
 
@@ -194,46 +194,47 @@ class BodegaFlujoTests(Negocio):
         ok = self.mov('MOV-000001', 'ENTRADA_RECEPCION', 6, referencia='Guía 4521')
         self.assertEqual(self.lote('TECNICO', ok).status_code, 403)
         self.assertEqual(self.lote('AUDITOR', ok).status_code, 403)
+        self.assertEqual(self.lote('OPERACIONES', ok).status_code, 403)  # el Jefe de Operaciones no opera la bodega
         sin_doc = self.mov('MOV-000001', 'ENTRADA_RECEPCION', 6, referencia=' ')
-        self.assertEqual(self.lote('OPERACIONES', sin_doc).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', sin_doc).status_code, 422)
         otro_costo = self.mov('MOV-000001', 'ENTRADA_RECEPCION', 6, referencia='Guía 4521', costo_unitario=1)
-        self.assertEqual(self.lote('OPERACIONES', otro_costo).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', otro_costo).status_code, 422)
         con_obra = self.mov('MOV-000001', 'ENTRADA_RECEPCION', 6, referencia='Guía 4521', obra_id='OB-0001')
-        self.assertEqual(self.lote('OPERACIONES', con_obra).status_code, 422)
-        self.assertEqual(self.lote('OPERACIONES', ok).status_code, 200)
+        self.assertEqual(self.lote('JEFE_BODEGA', con_obra).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', ok).status_code, 200)
         self.assertEqual(self.stock(), 6)
 
     def test_entrega_con_escaner_genera_salida_retiro_y_se_reversa_con_entrada_reversa(self):
         self.insertar('TECNICO', 'retiros', {'id': 'SR-0001', 'obra_id': 'OB-0001', 'items': [{'articulo_id': 'ART-001', 'cantidad': 4}]})
-        self.lote('OPERACIONES', self.mov('MOV-000001', 'ENTRADA_RECEPCION', 10, referencia='Guía 1'))
+        self.lote('JEFE_BODEGA', self.mov('MOV-000001', 'ENTRADA_RECEPCION', 10, referencia='Guía 1'))
         # lo escaneado se reparte en dos movimientos (p. ej. dos lotes) y suma lo pedido
         a = self.mov('MOV-000002', 'SALIDA_RETIRO', 3, referencia='Retiro SR-0001')
         b = self.mov('MOV-000003', 'SALIDA_RETIRO', 1, referencia='Retiro SR-0001')
         patch = {'op': 'patch', 'tabla': 'retiros', 'id': 'SR-0001', 'cambios': {'estado': 'ENTREGADA', 'movimientos': ['MOV-000002', 'MOV-000003']}}
-        self.assertEqual(self.lote('OPERACIONES', a, patch).status_code, 422)  # falta una unidad
-        self.assertEqual(self.lote('OPERACIONES', a, b, patch).status_code, 200)
+        self.assertEqual(self.lote('JEFE_BODEGA', a, patch).status_code, 422)  # falta una unidad
+        self.assertEqual(self.lote('JEFE_BODEGA', a, b, patch).status_code, 200)
         self.assertEqual(self.stock(), 6)
         # reversa: una salida solo se reversa con ENTRADA_REVERSA, con nota y referenciando el original
         mala = self.mov('MOV-000004', 'REVERSA', 3, signo=1, reversa_de='MOV-000002', referencia='entregado por error')
-        self.assertEqual(self.lote('OPERACIONES', mala).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', mala).status_code, 422)
         sin_nota = self.mov('MOV-000004', 'ENTRADA_REVERSA', 3, reversa_de='MOV-000002', referencia='no')
-        self.assertEqual(self.lote('OPERACIONES', sin_nota).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', sin_nota).status_code, 422)
         buena = self.mov('MOV-000004', 'ENTRADA_REVERSA', 3, reversa_de='MOV-000002', referencia='entregado por error', obra_id='OB-0001')
         self.assertEqual(self.lote('TECNICO', buena).status_code, 403)
-        self.assertEqual(self.lote('OPERACIONES', buena).status_code, 200)
+        self.assertEqual(self.lote('JEFE_BODEGA', buena).status_code, 200)
         self.assertEqual(self.stock(), 9)
         d = self.datos('cardex', 'MOV-000004')
         self.assertEqual((d['tipo'], d['reversa_de'], d['referencia']), ('ENTRADA_REVERSA', 'MOV-000002', 'entregado por error'))
         otra = self.mov('MOV-000005', 'ENTRADA_REVERSA', 3, reversa_de='MOV-000002', referencia='segunda vez', obra_id='OB-0001')
-        self.assertEqual(self.lote('OPERACIONES', otra).status_code, 422)  # una salida solo se reversa una vez
+        self.assertEqual(self.lote('JEFE_BODEGA', otra).status_code, 422)  # una salida solo se reversa una vez
 
     def test_una_entrada_reversa_no_puede_reversar_una_entrada(self):
-        self.lote('OPERACIONES', self.mov('MOV-000001', 'ENTRADA_RECEPCION', 5, referencia='Guía 1'))
+        self.lote('JEFE_BODEGA', self.mov('MOV-000001', 'ENTRADA_RECEPCION', 5, referencia='Guía 1'))
         mala = self.mov('MOV-000002', 'ENTRADA_REVERSA', 5, reversa_de='MOV-000001', referencia='error de digitación')
-        self.assertEqual(self.lote('OPERACIONES', mala).status_code, 422)
+        self.assertEqual(self.lote('JEFE_BODEGA', mala).status_code, 422)
 
     def test_reglas_de_stock_del_articulo(self):
-        cambiar = lambda **c: self.parchar('OPERACIONES', 'articulos', 'ART-001', c)
+        cambiar = lambda **c: self.parchar('JEFE_BODEGA', 'articulos', 'ART-001', c)
         self.assertEqual(cambiar(stock_minimo=10, stock_minimo_critico=4, stock_maximo=50).status_code, 200)
         d = self.datos('articulos', 'ART-001')
         self.assertEqual((d['stock_minimo'], d['stock_minimo_critico'], d['stock_maximo']), (10, 4, 50))
@@ -243,3 +244,12 @@ class BodegaFlujoTests(Negocio):
         self.assertEqual(cambiar(stock_maximo=None).status_code, 200)  # vacío = sin tope
         self.assertEqual(self.datos('articulos', 'ART-001')['stock_maximo'], 0)
         self.assertEqual(self.parchar('TECNICO', 'articulos', 'ART-001', {'stock_maximo': 9}).status_code, 403)
+
+    def test_el_jefe_de_operaciones_no_opera_el_inventario(self):
+        self.lote('JEFE_BODEGA', self.mov('MOV-000001', 'ENTRADA_RECEPCION', 10, referencia='Guía 1'))
+        for op in (self.mov('MOV-000002', 'SALIDA_OBRA', 1), self.mov('MOV-000002', 'SALIDA_RETIRO', 1, referencia='Retiro SR-0001')):
+            self.assertEqual(self.lote('OPERACIONES', op).status_code, 403)
+        self.assertEqual(self.parchar('OPERACIONES', 'articulos', 'ART-001', {'stock_maximo': 9}).status_code, 403)
+        # pero sí puede consultar el inventario (lo necesita para armar presupuestos y revisar obras)
+        self.assertGreater(len(self.snap('OPERACIONES')['articulos']), 0)
+        self.assertGreater(len(self.snap('JEFE_BODEGA')['articulos']), 0)

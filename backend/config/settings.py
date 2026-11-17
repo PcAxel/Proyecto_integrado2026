@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'evidencias',
     'asistencia',
     'erp',
+    'notificaciones',
     'ai_agent',
     'rrhh',
     'facturacion',

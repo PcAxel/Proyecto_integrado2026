@@ -37,8 +37,12 @@ export function verificarSegregacion() {
       'Solo accesos, auditoría técnica y estado del sistema', `Tiene acciones de negocio: ${negocioSuper.join(', ')}`),
     r('comercial-no-aprueba', 'El Ejecutivo Comercial prepara presupuestos y clientes, pero no aprueba', permisosDe(ROLES.COMERCIAL, 'aprobacion').length === 0 && iguales(permisosDe(ROLES.COMERCIAL, 'operativa'), ['clientes.gestionar', 'presupuestos.crear']),
       'Operativas: presupuestos.crear y clientes.gestionar; 0 aprobaciones', `Operativas: ${permisosDe(ROLES.COMERCIAL, 'operativa').join(', ')} · aprobaciones: ${permisosDe(ROLES.COMERCIAL, 'aprobacion').join(', ')}`),
-    r('operaciones-sin-finanzas', 'Operaciones y Bodega no emite facturas ni paga', ['facturacion.emitir', 'finiquitos.pagar', 'presupuestos.aprobar'].every((a) => !PERMISOS[a].includes(ROLES.SUPERVISOR) && !PERMISOS[a].includes(ROLES.BODEGA)),
+    r('operaciones-sin-finanzas', 'Jefe de Operaciones y Jefe de Bodega no emiten facturas ni pagan', ['facturacion.emitir', 'finiquitos.pagar', 'presupuestos.aprobar'].every((a) => !PERMISOS[a].includes(ROLES.SUPERVISOR) && !PERMISOS[a].includes(ROLES.BODEGA)),
       'Sin facturacion.emitir, finiquitos.pagar ni presupuestos.aprobar', 'Operaciones tiene una acción financiera'),
+    r('operaciones-y-bodega-separadas', 'Operaciones no opera el inventario y Bodega no delega ni audita obras',
+      ['articulos.gestionar', 'cardex.crear', 'bodega.recepcionar', 'cardex.reversar', 'cardex.reingresar', 'conteo.registrar', 'compras.registrar'].every((a) => !PERMISOS[a].includes(ROLES.SUPERVISOR))
+        && ['obras.delegar', 'obras.cerrar', 'hojas.auditar'].every((a) => !PERMISOS[a].includes(ROLES.BODEGA)),
+      'El inventario es solo de Bodega; delegar y auditar terreno es solo de Operaciones', 'Un rol invade las funciones del otro'),
     r('admin-no-ejecuta', 'El Gerente General no ejecuta tareas operativas', opAdmin.length === 0,
       'Tiene 0 acciones operativas: solo lectura, aprobación y sistema', `Conserva acciones operativas: ${opAdmin.join(', ')}`),
     r('admin-autoriza', 'El Gerente General conserva la autorización (margen < 20 % y cierre de obras)',

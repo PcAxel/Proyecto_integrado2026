@@ -79,7 +79,7 @@ export const BIENVENIDA_IA = '¡Hola! Soy tu asistente de FYAG. ¿En qué te pue
 export const PLACEHOLDER_CHAT = '¿Qué hacemos hoy? (Ej: Ayúdame a redactar un reporte, o ¿cómo reparo un compresor?)'
 export const CHAT = { maxCharsMensaje: 4_000, maxMensajes: 20 }
 
-const ROLES_CON_CHAT = ['ADMIN', 'FINANZAS', 'OPERACIONES', 'TECNICO', 'RRHH', 'SUPERADMIN', 'COMERCIAL']
+const ROLES_CON_CHAT = ['ADMIN', 'FINANZAS', 'OPERACIONES', 'JEFE_BODEGA', 'TECNICO', 'RRHH', 'SUPERADMIN', 'COMERCIAL']
 /** Todos los roles tienen conversación, salvo el Auditor Externo (su cuenta solo hace lecturas y el chat es un POST); el servidor decide el perfil según el rol de la sesión. */
 export const tieneAsistente = (rolApi) => ROLES_CON_CHAT.includes(rolApi)
 

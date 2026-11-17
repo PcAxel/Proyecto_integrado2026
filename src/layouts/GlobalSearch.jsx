@@ -6,7 +6,7 @@ import { busquedaService } from '@/services'
 import { buscar, aplanar, moverSeleccion } from '@/domain/busqueda'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
-import { ERP_NAV } from './nav'
+import { ERP_NAV, itemVisible } from './nav'
 
 const ICONOS = { obra: HardHat, presupuesto: FileText, persona: User, vehiculo: Truck, articulo: Package, hoja: ClipboardCheck, empresa: Building2, usuario: Shield, accion: Plus }
 /** Los datos del índice se consideran frescos este tiempo; después se vuelven a pedir al abrir. */
@@ -14,7 +14,7 @@ const VIGENCIA_MS = 30_000
 
 /** Rutas y acciones disponibles para el rol: se calculan al instante, sin esperar al servicio. */
 function itemsDeNavegacion(rol) {
-  const rutas = ERP_NAV.filter((n) => can(rol, n.accion)).map((n) => ({
+  const rutas = ERP_NAV.filter((n) => itemVisible(n, rol)).map((n) => ({
     id: `ruta-${n.to}`, grupo: 'Navegación', icono: n.icon, titulo: `Ir a ${n.label}`, keywords: n.palabras, ruta: n.to,
   }))
   const acciones = [

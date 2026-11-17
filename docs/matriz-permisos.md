@@ -9,8 +9,8 @@
 | --- | --- | --- | :-: | :-: | :-: | :-: |
 | **Gerente General** | `ADMIN_GENERAL` | Dirección ejecutiva: aprueba presupuestos con margen bajo, cierra obras y ve toda la gestión. Administra accesos mientras no exista un área de TI. No ejecuta tareas operativas. | 20 | 4 | 0 | 3 |
 | **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 16 | 3 | 5 | 0 |
-| **Bodega** | `BODEGA` | Artículos, Cardex, compras y solicitudes de retiro. (Hoy lo cubre Operaciones y Bodega.) | 8 | 0 | 7 | 0 |
-| **Operaciones y Bodega** | `SUPERVISOR` | Obras, CU30, inventario y Cardex, recepción de compras y auditoría de hojas de terreno. No emite facturas ni toca estados financieros. | 11 | 1 | 11 | 0 |
+| **Jefe de Bodega** | `BODEGA` | Inventario y Cardex: artículos, reglas de stock, recepciones, retiros con escáner, conteos y reversas. No ve ni gestiona obras, presupuestos ni facturación. | 8 | 0 | 7 | 0 |
+| **Jefe de Operaciones** | `SUPERVISOR` | Obras: delegar a terreno, auditar el trabajo de terreno (avisa a Finanzas) y CU30. Ve el inventario solo para consultar; no lo opera. No emite facturas ni toca estados financieros. | 11 | 1 | 5 | 0 |
 | **Técnico en Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio, horas, reloj control y retiro de materiales. | 0 | 0 | 2 | 0 |
 | **Auditor Externo** | `CONSULTA` | Revisión externa de solo lectura: finanzas, presupuestos, aprobaciones e indicadores. No puede modificar nada. | 17 | 0 | 0 | 0 |
 | **Recursos Humanos** | `RRHH` | Único rol que modifica personal y flota: fichas, tarifas, contratos, vehículos y vencimientos. | 5 | 0 | 2 | 0 |
@@ -32,17 +32,18 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Obras | `obras.ver` | Lectura | Ver obras y su panel de cierre | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | — | — |
 | Obras | `obras.crear` | Operativa | Crear, iniciar y regularizar obras | — | ✅ | — | ✅ | — | — | — | — | — |
 | Obras | `obras.emergencia` | Operativa | Abrir obras de emergencia o garantía sin presupuesto previo (CU30) | — | — | — | ✅ | — | — | — | — | — |
-| Obras | `obras.cerrar` | Aprobación | Finalizar una obra que cumple los 6 requisitos de cierre | ✅ | — | — | ✅ | — | — | — | — | — |
+| Obras | `obras.cerrar` | Aprobación | Dar la Auditoría de terreno OK: finalizar una obra que cumple los 6 requisitos de cierre y avisar a Finanzas | ✅ | — | — | ✅ | — | — | — | — | — |
+| Obras | `obras.delegar` | Operativa | Delegar una obra a terreno: asignar técnicos y dejarla lista para que trabajen | — | — | — | ✅ | — | — | — | — | — |
 | Bodega | `bodega.ver` | Lectura | Ver artículos, stock, Cardex y solicitudes de retiro | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | — | — |
-| Bodega | `articulos.gestionar` | Operativa | Crear, editar y desactivar artículos | — | — | ✅ | ✅ | — | — | — | — | — |
-| Bodega | `cardex.crear` | Operativa | Registrar salidas a obra y entregar solicitudes de retiro | — | — | ✅ | ✅ | — | — | — | — | — |
-| Bodega | `bodega.recepcionar` | Operativa | Ingresar mercadería recibida (recepción directa con guía de despacho) | — | — | ✅ | ✅ | — | — | — | — | — |
-| Bodega | `cardex.reversar` | Operativa | Reversar un movimiento del Cardex (contra-asiento auditado) | — | — | ✅ | ✅ | — | — | — | — | — |
-| Bodega | `cardex.reingresar` | Operativa | Reingresar sobrantes y conciliarlos | — | — | ✅ | ✅ | — | — | — | — | — |
-| Bodega | `conteo.registrar` | Operativa | Registrar conteos físicos de inventario (conteo ciego) | — | — | ✅ | ✅ | — | — | — | — | — |
+| Bodega | `articulos.gestionar` | Operativa | Crear, editar y desactivar artículos | — | — | ✅ | — | — | — | — | — | — |
+| Bodega | `cardex.crear` | Operativa | Registrar salidas a obra y entregar solicitudes de retiro | — | — | ✅ | — | — | — | — | — | — |
+| Bodega | `bodega.recepcionar` | Operativa | Ingresar mercadería recibida (recepción directa con guía de despacho) | — | — | ✅ | — | — | — | — | — | — |
+| Bodega | `cardex.reversar` | Operativa | Reversar un movimiento del Cardex (contra-asiento auditado) | — | — | ✅ | — | — | — | — | — | — |
+| Bodega | `cardex.reingresar` | Operativa | Reingresar sobrantes y conciliarlos | — | — | ✅ | — | — | — | — | — | — |
+| Bodega | `conteo.registrar` | Operativa | Registrar conteos físicos de inventario (conteo ciego) | — | — | ✅ | — | — | — | — | — | — |
 | Bodega | `conteo.aprobar` | Aprobación | Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó) | ✅ | ✅ | — | — | — | — | — | — | — |
 | Compras | `compras.ver` | Lectura | Ver facturas de compra y notas de crédito | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | — | — |
-| Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | ✅ | — | — | — | — | — |
+| Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | — | — | — | — | — | — |
 | Facturación | `facturacion.ver` | Lectura | Ver el estado de la factura electrónica de una obra y descargar su PDF | ✅ | ✅ | — | — | — | ✅ | — | — | — |
 | Facturación | `facturacion.emitir` | Aprobación | Emitir la factura electrónica (DTE, SII) de una obra finalizada y descargar su PDF | ✅ | ✅ | — | — | — | — | — | — | — |
 | Auditoría de terreno | `terreno.ver` | Lectura | Ver las hojas de servicio enviadas desde la app móvil | ✅ | ✅ | — | ✅ | — | ✅ | — | — | — |
@@ -81,7 +82,8 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | Toda acción de administración del sistema es de TI (Super Admin) o de la Gerencia General | 5 acciones de clase «sistema» |
 | ✅ | El Super Admin no opera ni aprueba nada del negocio, ni ve costos | Solo accesos, auditoría técnica y estado del sistema |
 | ✅ | El Ejecutivo Comercial prepara presupuestos y clientes, pero no aprueba | Operativas: presupuestos.crear y clientes.gestionar; 0 aprobaciones |
-| ✅ | Operaciones y Bodega no emite facturas ni paga | Sin facturacion.emitir, finiquitos.pagar ni presupuestos.aprobar |
+| ✅ | Jefe de Operaciones y Jefe de Bodega no emiten facturas ni pagan | Sin facturacion.emitir, finiquitos.pagar ni presupuestos.aprobar |
+| ✅ | Operaciones no opera el inventario y Bodega no delega ni audita obras | El inventario es solo de Bodega; delegar y auditar terreno es solo de Operaciones |
 | ✅ | El Gerente General no ejecuta tareas operativas | Tiene 0 acciones operativas: solo lectura, aprobación y sistema |
 | ✅ | El Gerente General conserva la autorización (margen < 20 % y cierre de obras) | Puede aprobar presupuestos y finalizar obras |
 | ✅ | El Auditor Externo es estrictamente solo lectura | 17 permisos y todos son de lectura |
@@ -89,7 +91,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Finanzas y el Gerente General ya no lo modifican |
 | ✅ | Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera | rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración |
 | ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 47 acciones catalogadas |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 48 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)

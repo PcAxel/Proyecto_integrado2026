@@ -5,7 +5,7 @@ Es de **solo lectura**: no crea, edita ni elimina nada. Cada rol ve únicamente 
 
 Qué hace cada herramienta y quién la tiene:
 
-| Función | Admin | Finanzas | Operaciones | RR. HH. | Técnico |
+| Función | Admin | Finanzas | Jefe de Operaciones | RR. HH. | Técnico |
 |---|:-:|:-:|:-:|:-:|:-:|
 | Conversar, navegar y buscar | ✅ | ✅ | ✅ | ✅ | ✅ (solo su app) |
 | Reportes de **presupuestos** | ✅ | ✅ | ✅ | — | — |
@@ -68,7 +68,7 @@ La IA **no emite facturas**: te lleva hasta la obra, la deja resaltada y tú rev
 - «Lee esta factura:» *(pestaña «Leer factura»)*
 - «Ayúdame a redactar un correo de cobranza.»
 
-## Operaciones
+## Jefe de Operaciones
 - «Dame un Excel de las obras de este mes.»
 - «Reporte de presupuestos de noviembre en Word.»
 - «¿Cuánto durará el stock de cañería de cobre 5/8"?»
@@ -76,6 +76,12 @@ La IA **no emite facturas**: te lleva hasta la obra, la deja resaltada y tú rev
 - «Reporte de personal en PowerPoint.» *(sin RUT ni fecha de ingreso)*
 - «Ayúdame a organizar el uso del inventario de esta semana.»
 - «Convierte estas notas en un informe técnico:» *(pestaña «Redactar informe»)*
+
+## Jefe de Bodega
+El Jefe de Bodega conversa, navega y busca (Bodega y Cardex, Compras) y pide la proyección de stock y el borrador de compras crítico, porque son de su área. Los reportes que pida se limitan a lo que su rol puede leer (no incluyen costos ni datos laborales sensibles).
+- «¿Cuánto durará el stock de REF-404A?»
+- «Prepara las compras.»
+- «Ayúdame a organizar el conteo físico de esta semana.»
 
 ## Recursos Humanos
 - «Reporte en Excel del personal.» → con RUT, fecha de ingreso y vencimiento de licencia.

@@ -1,4 +1,4 @@
-import { ERP_NAV } from '@/layouts/nav'
+import { ERP_NAV, itemVisible } from '@/layouts/nav'
 import { can } from '@/domain/rbac'
 
 /**
@@ -20,7 +20,7 @@ const RUTAS_TECNICO = [
 export function catalogoDeRutas(user) {
   if (!user) return []
   if (user.rolApi === 'TECNICO') return RUTAS_TECNICO.map((r) => ({ ...r, buscable: false }))
-  return ERP_NAV.filter((n) => can(user.rol, n.accion)).map((n) => ({ ruta: n.to, label: n.label, buscable: Boolean(n.buscable) }))
+  return ERP_NAV.filter((n) => itemVisible(n, user.rol)).map((n) => ({ ruta: n.to, label: n.label, buscable: Boolean(n.buscable) }))
 }
 
 const OBRA_A_FACTURAR = /^\/erp\/obras\/(OB-\d{1,6})$/
