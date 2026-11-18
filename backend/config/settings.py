@@ -248,6 +248,8 @@ PROXIES_DE_CONFIANZA = int(os.getenv('PROXIES_DE_CONFIANZA', '0'))
 # Facturación electrónica (DTE). Hoy solo existe el proveedor simulado; ver facturacion/servicios_dte.py.
 DTE_PROVEEDOR = os.getenv('DTE_PROVEEDOR', 'simulado')
 DTE_SIMULADO_RETRASO = float(os.getenv('DTE_SIMULADO_RETRASO', '2'))  # segundos que «tarda la red» en el simulador
+# Con True (por defecto) la emisión usa siempre el simulador, aunque más adelante exista un proveedor real; para emitir de verdad hay que poner SII_MODO_SIMULACION=false.
+SII_MODO_SIMULACION = os.environ.get('SII_MODO_SIMULACION', 'True').lower() == 'true'
 DTE_EMISOR = {
     'rut': os.getenv('DTE_EMISOR_RUT', '76.000.000-0'),
     'razon_social': os.getenv('DTE_EMISOR_RAZON_SOCIAL', 'Frío y Agroindustria SpA'),

@@ -250,3 +250,39 @@ class AdaptadorTests(DTEBase):
         self.assertIsInstance(obtener_proveedor(), ProveedorSimulado)
         with override_settings(DTE_PROVEEDOR='inexistente'), self.assertRaises(RuntimeError):
             obtener_proveedor()
+
+
+class ModoSimulacionTests(DTEBase):
+    """SII_MODO_SIMULACION: con True la emisión usa el simulador aunque el proveedor configurado sea otro; con False, el configurado, como siempre."""
+
+    class Real(ProveedorDTEBase):
+        llamadas = 0
+
+        def emitir(self, datos):
+            type(self).llamadas += 1
+            return {'exito': False, 'error': 'proveedor real invocado'}
+
+    def test_por_defecto_la_simulacion_esta_activa(self):
+        from django.conf import settings
+        self.assertTrue(settings.SII_MODO_SIMULACION)
+
+    def test_con_simulacion_no_se_llama_al_proveedor_configurado_y_la_factura_se_guarda_igual(self):
+        self.Real.llamadas = 0
+        with override_settings(SII_MODO_SIMULACION=True, DTE_PROVEEDOR='real'), patch.dict(servicios_dte._PROVEEDORES, {'real': self.Real}):
+            r = self.emitir()
+        self.assertEqual((r.status_code, r.data['folio_sii'], self.Real.llamadas), (200, 9999, 0))
+        f = FacturaDTE.objects.get()
+        self.assertEqual((f.estado_sii, f.folio_sii, f.monto_neto, f.receptor_razon_social), ('ACEPTADO', 9999, 1_000_000, 'Cliente Demo 01 SpA'))
+        self.assertTrue(f.pdf_archivo.endswith('.pdf'))
+
+    def test_sin_simulacion_se_usa_el_proveedor_configurado(self):
+        self.Real.llamadas = 0
+        with override_settings(SII_MODO_SIMULACION=False, DTE_PROVEEDOR='real'), patch.dict(servicios_dte._PROVEEDORES, {'real': self.Real}):
+            r = self.emitir()
+        self.assertEqual((r.status_code, self.Real.llamadas), (502, 1))
+        self.assertEqual(FacturaDTE.objects.get().estado_sii, 'RECHAZADO')
+
+    def test_el_track_id_ficticio_queda_en_el_registro(self):
+        with override_settings(SII_MODO_SIMULACION=True), self.assertLogs('facturacion', level='INFO') as log:
+            self.emitir()
+        self.assertTrue(any('track_id=SIM-' in linea and 'folio=9999' in linea for linea in log.output))

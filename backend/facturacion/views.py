@@ -19,7 +19,7 @@ from erp.escritura import Lote, siguiente_id
 
 from . import ordenes
 from .models import FacturaDTE
-from .servicios_dte import DatosFactura, almacen_dte, generar_pdf_dte, guardar_pdf, obtener_proveedor
+from .servicios_dte import DatosFactura, ProveedorSimulado, almacen_dte, generar_pdf_dte, guardar_pdf, obtener_proveedor
 
 logger = logging.getLogger(__name__)
 ACCION = 'facturacion.emitir'
@@ -125,7 +125,12 @@ class EmitirDTEView(_Base):
         folio = (FacturaDTE.objects.filter(folio_sii__isnull=False).order_by('-folio_sii').values_list('folio_sii', flat=True).first() or 9998) + 1
         datos = DatosFactura(id_orden, orden.receptor_rut, orden.receptor_razon_social, orden.glosa, orden.neto, orden.iva, orden.total, url, folio, timezone.localdate())
         try:
-            resp = obtener_proveedor().emitir(datos)
+            if settings.SII_MODO_SIMULACION:
+                # Simulación: mismos datos del formulario, sin llamada externa al SII. El track_id ficticio solo queda en el registro (el modelo no tiene dónde guardarlo).
+                logger.info('dte_simulado orden=%s folio=%s track_id=SIM-%s-%04d', id_orden, folio, timezone.localdate().year, folio % 10000)
+                resp = ProveedorSimulado().emitir(datos)
+            else:
+                resp = obtener_proveedor().emitir(datos)
         except Exception:  # un fallo del proveedor no debe dejar la orden «Procesando» para siempre
             logger.exception('dte_proveedor_error orden=%s', id_orden)
             resp = {'exito': False, 'error': 'El proveedor de facturación no respondió.'}
