@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ClipboardCheck, Plus, Check, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button, Card, DataTable, Badge, Modal, Select, NumberField, Input, Mono } from '@/components/ui'
+import { Button, Card, DataTable, Badge, Modal, NumberField, Input, Mono } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { MoneyCell } from '@/components/domain'
 import { ErrorEstado } from '@/components/ErrorEstado'
 import { conteosService, articulosService } from '@/services'
@@ -38,9 +39,8 @@ export function NuevoConteoModal({ open, onClose, articuloInicial = '', onSaved 
     <Modal open={open} onClose={onClose} title="Nuevo conteo físico"
       footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button loading={guardando} disabled={!art || form.contado === null || form.contado === undefined} onClick={guardar}>Registrar conteo</Button></>}>
       <div className="space-y-4">
-        <Select label="Artículo" placeholder="Elige el artículo" value={form.articulo_id} onChange={(e) => { setForm({ ...form, articulo_id: e.target.value }); setPideMotivo(null) }}
-          options={(articulos ?? []).filter((a) => a.activo).map((a) => ({ value: a.id, label: `${a.sku} · ${a.nombre}` }))} />
-        <NumberField label="Cantidad contada" min={0} suffix={art?.unidad} value={form.contado} onChange={(v) => { setForm({ ...form, contado: v }); setPideMotivo(null) }}
+        <BuscadorRelacion tabla="articulos" label="Artículo" obligatorio placeholder="Escribe el SKU o el nombre…" value={form.articulo_id} onChange={(id) => { setForm({ ...form, articulo_id: id }); setPideMotivo(null) }} />
+        <NumberField label="Cantidad contada" obligatorio min={0} suffix={art?.unidad} value={form.contado} onChange={(v) => { setForm({ ...form, contado: v }); setPideMotivo(null) }}
           hint="Cuenta lo que hay físicamente. El stock del sistema no se muestra para que el conteo sea imparcial." />
         {pideMotivo !== null && (
           <div className="space-y-2 rounded-lg bg-warn-bg p-3">

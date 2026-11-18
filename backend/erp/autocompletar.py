@@ -21,12 +21,20 @@ MAX_RESULTADOS = 20
 POR_DEFECTO = 10
 
 # tabla → campos del JSON donde se busca, y cómo se muestra cada resultado
+def _proveedor(f):
+    from .escritura import fila
+    return (fila('proveedores', f.get('proveedor_id')) or {}).get('razon_social', f.get('proveedor_id', ''))
+
+
+# `filtros`: parámetros de la URL que se admiten (nombre → campo del JSON). Solo los de esta lista: ninguno sale del cliente a una consulta libre.
+# `activos`: la tabla tiene el campo `activo`; los inactivos no se ofrecen para operaciones nuevas.
 CONFIG = {
-    'proveedores': {'campos': ['datos__razon_social', 'datos__rut'], 'label': lambda f: f.get('razon_social') or f['id'], 'detalle': lambda f: f.get('rut', '')},
-    'clientes': {'campos': ['datos__razon_social', 'datos__rut'], 'label': lambda f: f.get('razon_social') or f['id'], 'detalle': lambda f: f.get('rut', '')},
+    'proveedores': {'campos': ['datos__razon_social', 'datos__rut'], 'label': lambda f: f.get('razon_social') or f['id'], 'detalle': lambda f: f.get('rut', ''), 'activos': True},
+    'clientes': {'campos': ['datos__razon_social', 'datos__rut'], 'label': lambda f: f.get('razon_social') or f['id'], 'detalle': lambda f: f.get('rut', ''), 'activos': True},
     'articulos': {'campos': ['datos__sku', 'datos__nombre', 'datos__categoria'], 'label': lambda f: f"{f.get('sku', '')} · {f.get('nombre', '')}",
-                  'detalle': lambda f: f.get('categoria', '')},
-    'obras': {'campos': ['datos__nombre'], 'label': lambda f: f"{f['id']} · {f.get('nombre', '')}", 'detalle': lambda f: f.get('estado', '')},
+                  'detalle': lambda f: f.get('categoria', ''), 'activos': True, 'filtros': {'proveedor': 'datos__proveedor_id'}},
+    'obras': {'campos': ['datos__nombre'], 'label': lambda f: f"{f['id']} · {f.get('nombre', '')}", 'detalle': lambda f: f.get('estado', ''), 'filtros': {'estado': 'datos__estado'}},
+    'facturas': {'campos': ['datos__numero', 'datos__proveedor_id'], 'label': lambda f: f"N° {f.get('numero', '')} · {_proveedor(f)}", 'detalle': lambda f: f.get('fecha', '')},
 }
 
 
@@ -68,7 +76,11 @@ class BuscarRelacionView(ListAPIView):
         else:
             limite = _entero(request.query_params.get('limit'), POR_DEFECTO, 1, MAX_RESULTADOS)
             consulta = self.filter_queryset(self.get_queryset())
-            if 'activo' in {k for r in Registro.objects.filter(tabla=tabla)[:1] for k in r.datos}:
+            for parametro, campo in cfg.get('filtros', {}).items():
+                valor = str(request.query_params.get(parametro, '')).strip()[:60]
+                if valor:
+                    consulta = consulta.filter(**{campo: valor})
+            if cfg.get('activos'):
                 consulta = consulta.exclude(datos__activo=False)  # un inactivo no se ofrece para operaciones nuevas
             registros = list(consulta[:limite])
         filas = [r.fila() for r in registros]

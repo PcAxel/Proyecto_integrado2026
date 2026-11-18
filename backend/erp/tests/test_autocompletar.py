@@ -56,3 +56,37 @@ class AutocompletarTests(ErpBase):
         self.assertGreater(total, 30)
         for texto in ('', 'a', 'distribuidora', '9'):
             self.assertLessEqual(len(self.buscar('FINANZAS', 'proveedores', search=texto, limit=20).json()), 20)
+
+
+class FiltrosYFacturasTests(ErpBase):
+    def setUp(self):
+        super().setUp()
+        crear('proveedores', 'PRV-002', rut='99.100.002-9', razon_social='Otro Proveedor', activo=True)
+        crear('articulos', 'ART-002', sku='VAL-2', nombre='Válvula', categoria='Val', unidad='un', costo_unitario=5, stock_minimo=1, activo=True, proveedor_id='PRV-002')
+        crear('articulos', 'ART-003', sku='VAL-3', nombre='Válvula grande', categoria='Val', unidad='un', costo_unitario=5, stock_minimo=1, activo=True, proveedor_id='PRV-001')
+        crear('facturas', 'FC-0001', numero='8841', proveedor_id='PRV-001', fecha='2026-11-05', items=[])
+        crear('facturas', 'FC-0002', numero='9900', proveedor_id='PRV-002', fecha='2026-11-06', items=[])
+
+    def buscar(self, rol, tabla, **p):
+        self.as_role(rol)
+        return self.client.get(f'/api/erp/buscar/{tabla}/', p)
+
+    def test_articulos_de_un_proveedor(self):
+        r = self.buscar('FINANZAS', 'articulos', search='válvula', proveedor='PRV-002')
+        self.assertEqual([x['id'] for x in r.json()], ['ART-002'])
+        self.assertEqual(sorted(x['id'] for x in self.buscar('FINANZAS', 'articulos', search='válvula').json()), ['ART-002', 'ART-003'])
+
+    def test_obras_en_curso(self):
+        ids = [x['id'] for x in self.buscar('JEFE_BODEGA', 'obras', estado='EN_CURSO').json()]
+        self.assertEqual(sorted(ids), ['OB-0001', 'OB-0002'])
+        self.assertEqual(self.buscar('JEFE_BODEGA', 'obras', estado='FINALIZADA').json(), [])
+
+    def test_solo_los_filtros_permitidos_y_sin_inyeccion(self):
+        # un parámetro que no está en la lista se ignora; un valor raro es un valor literal, no una consulta
+        self.assertEqual(len(self.buscar('FINANZAS', 'articulos', search='válvula', secreto='x').json()), 2)
+        self.assertEqual(self.buscar('FINANZAS', 'articulos', proveedor="' OR 1=1 --").json(), [])
+
+    def test_facturas_por_numero_con_el_nombre_del_proveedor(self):
+        d = self.buscar('FINANZAS', 'facturas', search='8841').json()
+        self.assertEqual(d, [{'id': 'FC-0001', 'label': 'N° 8841 · Proveedor Demo 01', 'detalle': '2026-11-05'}])
+        self.assertEqual(self.buscar('RRHH', 'facturas', search='8841').status_code, 403)

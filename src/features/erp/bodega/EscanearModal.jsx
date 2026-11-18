@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScanLine, ArrowUpFromLine, ShoppingCart, History, Package, ClipboardCheck, Boxes } from 'lucide-react'
 import { toast } from 'sonner'
-import { Modal, Button, Select, NumberField, Badge } from '@/components/ui'
+import { Modal, Button, NumberField, Badge } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { StockBadge } from '@/components/domain'
 import { articulosService, cardexService, obrasService, lotesService } from '@/services'
 import { resolverCodigo } from '@/domain/etiquetas'
@@ -90,8 +91,7 @@ export function EscanearModal({ open, onClose }) {
           {puedeMover && (
             <div className="space-y-3 rounded-xl border border-line p-4">
               <p className="flex items-center gap-2 text-sm font-semibold"><ArrowUpFromLine className="h-4 w-4 text-brand" />Descontar a una obra</p>
-              <Select label="Obra de destino" placeholder="Elige la obra" value={form.obra_id} onChange={(e) => setForm({ ...form, obra_id: e.target.value })}
-                options={obras.map((o) => ({ value: o.id, label: `${o.id} · ${o.nombre}` }))} />
+              <BuscadorRelacion tabla="obras" filtros={{ estado: 'EN_CURSO' }} label="Obra de destino" obligatorio placeholder="Escribe el código o el nombre de la obra…" value={form.obra_id} onChange={(id) => setForm({ ...form, obra_id: id })} />
               {unidadUnica ? (
                 <p className="text-sm text-ink-soft">Sale 1 unidad (este QR identifica una sola).</p>
               ) : (

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PackageCheck, Plus, X, AlertTriangle } from 'lucide-react'
-import { Modal, Button, Combobox, NumberField, Input, IconButton } from '@/components/ui'
+import { Modal, Button, NumberField, Input, IconButton } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { articulosService, cardexService } from '@/services'
 import { superaMaximo } from '@/domain/cardex'
 import { useResource } from '@/hooks/useResource'
@@ -18,7 +19,6 @@ export function RecepcionModal({ open, onClose, onSaved }) {
   const [lineas, setLineas] = useState([LINEA()])
   const [guardando, setGuardando] = useState(false)
   const activos = useMemo(() => (articulos ?? []).filter((a) => a.activo), [articulos])
-  const opciones = useMemo(() => activos.map((x) => ({ value: x.id, label: `${x.sku} · ${x.nombre}` })), [activos])
   const cambiar = (clave, campo) => (v) => setLineas((ls) => ls.map((l) => (l.clave === clave ? { ...l, [campo]: v } : l)))
   const repetidos = new Set(lineas.map((l) => l.articulo_id).filter((id, i, arr) => id && arr.indexOf(id) !== i))
   const valido = referencia.trim().length >= 3 && lineas.length > 0 && repetidos.size === 0
@@ -41,7 +41,7 @@ export function RecepcionModal({ open, onClose, onSaved }) {
         <Button icon={PackageCheck} onClick={guardar} loading={guardando} disabled={!valido}>Registrar ingreso</Button>
       </>}>
       <div className="space-y-4">
-        <Input label="Documento de respaldo" placeholder="N° de guía de despacho u orden de compra" value={referencia} onChange={(e) => setReferencia(e.target.value)}
+        <Input label="Documento de respaldo" obligatorio placeholder="N° de guía de despacho u orden de compra" value={referencia} onChange={(e) => setReferencia(e.target.value)}
           hint="Obligatorio: queda como referencia de cada entrada en el Cardex." />
         <div className="space-y-3">
           {lineas.map((l, i) => {
@@ -50,10 +50,9 @@ export function RecepcionModal({ open, onClose, onSaved }) {
             return (
               <div key={l.clave} className="rounded-xl border border-line p-3">
                 <div className="grid grid-cols-[1fr_7rem_auto] items-end gap-2">
-                  <Combobox label={i === 0 ? 'Artículo' : undefined} aria-label={`Artículo ${i + 1}`} placeholder="Escribe el SKU o el nombre…" value={l.articulo_id} onChange={cambiar(l.clave, 'articulo_id')}
-                    options={opciones}
+                  <BuscadorRelacion tabla="articulos" label={i === 0 ? 'Artículo' : undefined} obligatorio={i === 0} aria-label={`Artículo ${i + 1}`} placeholder="Escribe el SKU o el nombre…" value={l.articulo_id} onChange={(id) => cambiar(l.clave, 'articulo_id')(id)}
                     error={repetidos.has(l.articulo_id) ? 'Artículo repetido: súmalo en una sola línea' : undefined} />
-                  <NumberField label={i === 0 ? 'Cantidad' : undefined} aria-label={`Cantidad ${i + 1}`} min={1} suffix={a?.unidad} value={l.cantidad} onChange={cambiar(l.clave, 'cantidad')} />
+                  <NumberField label={i === 0 ? 'Cantidad' : undefined} obligatorio={i === 0} aria-label={`Cantidad ${i + 1}`} min={1} suffix={a?.unidad} value={l.cantidad} onChange={cambiar(l.clave, 'cantidad')} />
                   <IconButton icon={X} label="Quitar línea" size="sm" disabled={lineas.length === 1} onClick={() => setLineas((ls) => ls.filter((x) => x.clave !== l.clave))} />
                 </div>
                 {a && (

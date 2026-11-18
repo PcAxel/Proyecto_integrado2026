@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Lock, Undo2, PackagePlus, ArrowUpFromLine } from 'lucide-react'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { Button, Select, DataTable, Card, StatusBadge, Mono, Pagination, ExportMenu } from '@/components/ui'
 import { CardexTypeBadge, MoneyCell, TIPO_MOV_LABEL } from '@/components/domain'
 import { cardexService, articulosService, obrasService } from '@/services'
@@ -79,12 +80,10 @@ export function CardexTab({ articuloId, onArticuloChange }) {
 
       <Card padded={false}>
         <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
-          <Select label="Artículo" value={articuloId} onChange={(e) => { onArticuloChange(e.target.value); setPage(0) }} placeholder="Todos" className="w-full sm:w-72"
-            options={articulos.map((a) => ({ value: a.id, label: `${a.sku} · ${a.nombre}` }))} />
+          <BuscadorRelacion tabla="articulos" label="Artículo" opcional value={articuloId} onChange={(id) => { onArticuloChange(id); setPage(0) }} placeholder="Todos: escribe para filtrar" className="w-full sm:w-72" />
           <Select label="Tipo" value={tipo} onChange={(e) => { setTipo(e.target.value); setPage(0) }} placeholder="Todos" className="w-full sm:w-48"
             options={Object.entries(TIPO_MOV_LABEL).map(([value, label]) => ({ value, label }))} />
-          <Select label="Obra" value={obraId} onChange={(e) => { setObraId(e.target.value); setPage(0) }} placeholder="Todas" className="w-full sm:w-56"
-            options={obras.map((o) => ({ value: o.id, label: o.id }))} />
+          <BuscadorRelacion tabla="obras" label="Obra" opcional value={obraId} onChange={(id) => { setObraId(id); setPage(0) }} placeholder="Todas: escribe para filtrar" className="w-full sm:w-56" />
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
           <ExportMenu nombre="cardex" titulo="Cardex" subtitulo="Libro de movimientos (inmutable)" filas={movs} columnas={[
             { titulo: 'Código', clave: 'id' }, { titulo: 'Fecha', clave: 'fecha', tipo: 'fechaHora', ancho: 18 }, { titulo: 'Tipo', clave: (m) => TIPO_MOV_LABEL[m.tipo], ancho: 20 },

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Plus, ScanLine, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { Drawer, Button, IconButton, Input, Select, NumberField, Mono, cn } from '@/components/ui'
+import { Drawer, Button, IconButton, Input, NumberField, Mono, cn } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { MoneyCell } from '@/components/domain'
-import { comprasService, articulosService, proveedoresService } from '@/services'
+import { comprasService, articulosService } from '@/services'
 import { fechaLocal } from '@/domain/format'
 import { calcularFactura, calcularNeto, formatCLP } from '@/domain/money'
 import { resolverCodigo } from '@/domain/etiquetas'
@@ -22,10 +23,8 @@ export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
   const [items, setItems] = useState([{ ...ITEM_VACIO }])
   const [guardando, setGuardando] = useState(false)
   const [escaneando, setEscaneando] = useState(false)
-  const { data: proveedores } = useResource(() => proveedoresService.list(), [])
   const { data: articulos } = useResource(() => articulosService.list(), [])
 
-  const opciones = (articulos ?? []).filter((a) => !form.proveedor_id || a.proveedor_id === form.proveedor_id)
   const dscs = descuentos.map((d) => d ?? 0)
   const completos = items.filter((it) => it.articulo_id && it.cantidad > 0 && it.precio_lista > 0)
   const calc = calcularFactura(completos, dscs)
@@ -63,18 +62,17 @@ export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
     <Drawer open={open} onClose={onClose} title="Registrar factura de compra" width="max-w-3xl">
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Select label="Proveedor" placeholder="Seleccione…" value={form.proveedor_id}
-            onChange={(e) => { setForm({ ...form, proveedor_id: e.target.value }); setItems([{ ...ITEM_VACIO }]) }}
-            options={(proveedores ?? []).map((p) => ({ value: p.id, label: p.razon_social }))} className="sm:col-span-2" />
-          <Input label="N° factura" mono value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} />
-          <Input label="Fecha" type="date" mono value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
+          <BuscadorRelacion className="sm:col-span-2" tabla="proveedores" label="Proveedor" obligatorio placeholder="Escribe la razón social o el RUT…" value={form.proveedor_id}
+            onChange={(id) => { if (id !== form.proveedor_id) { setForm({ ...form, proveedor_id: id }); setItems([{ ...ITEM_VACIO }]) } }} />
+          <Input label="N° factura" obligatorio mono value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+          <Input label="Fecha" obligatorio type="date" mono value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
         </div>
 
         <div>
           <p className="mb-2 text-sm font-semibold">Descuentos en cascada <span className="font-normal text-ink-soft">(cada uno se aplica sobre el resultado del anterior)</span></p>
           <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-3">
             {descuentos.map((d, i) => (
-              <NumberField key={i} label={`Descuento ${i + 1}`} suffix="%" min={0} max={100} step={0.5} value={d}
+              <NumberField key={i} label={`Descuento ${i + 1}`} opcional suffix="%" min={0} max={100} step={0.5} value={d}
                 onChange={(v) => setDescuentos((xs) => xs.map((x, j) => (j === i ? v : x)))} />
             ))}
           </div>
@@ -92,11 +90,10 @@ export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className={cn('grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_9rem_7rem_2rem]', i > 0 && 'sm:[&_label>span.mb-1]:sr-only')}>
-                <Select className="col-span-2 sm:col-span-1" label="Artículo" placeholder="Seleccione…" value={it.articulo_id}
-                  onChange={(e) => setItem(i, 'articulo_id', e.target.value)}
-                  options={opciones.map((a) => ({ value: a.id, label: `${a.sku} · ${a.nombre}` }))} />
-                <NumberField label="Cantidad" min={1} value={it.cantidad} onChange={(v) => setItem(i, 'cantidad', v)} />
-                <NumberField label="Precio lista" prefix="$" min={0} value={it.precio_lista} onChange={(v) => setItem(i, 'precio_lista', v)} />
+                <BuscadorRelacion className="col-span-2 sm:col-span-1" tabla="articulos" filtros={{ proveedor: form.proveedor_id }} label={i === 0 ? 'Artículo' : undefined}
+                  aria-label={`Artículo ${i + 1}`} obligatorio={i === 0} placeholder="Escribe el SKU o el nombre…" value={it.articulo_id} onChange={(id) => setItem(i, 'articulo_id', id)} />
+                <NumberField label="Cantidad" obligatorio min={1} value={it.cantidad} onChange={(v) => setItem(i, 'cantidad', v)} />
+                <NumberField label="Precio lista" obligatorio prefix="$" min={0} value={it.precio_lista} onChange={(v) => setItem(i, 'precio_lista', v)} />
                 <div className="pb-2 text-left sm:text-right">
                   <p className={cn('mb-1 text-xs font-medium text-ink-soft', i > 0 && 'sm:hidden')}>Costo neto</p>
                   <Mono className="text-sm">{it.precio_lista > 0 ? formatCLP(calcularNeto(it.precio_lista, dscs)) : '—'}</Mono>

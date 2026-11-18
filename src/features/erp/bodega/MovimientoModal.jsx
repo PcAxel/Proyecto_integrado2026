@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Modal, Button, Select, NumberField, Input } from '@/components/ui'
+import { Modal, Button, NumberField, Input } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { MoneyCell } from '@/components/domain'
 import { cardexService } from '@/services'
 import { runAction } from '@/hooks/runAction'
@@ -27,14 +28,12 @@ export function MovimientoModal({ open, onClose, articulos, obras, articuloInici
         <Button onClick={guardar} loading={guardando} disabled={!valido}>Registrar salida</Button>
       </>}>
       <div className="space-y-4">
-        <Select label="Artículo" placeholder="Seleccione…" value={form.articulo_id} onChange={(e) => set('articulo_id')(e.target.value)}
-          options={articulos.filter((a) => a.activo && a.stock > 0).map((a) => ({ value: a.id, label: `${a.sku} · ${a.nombre} (${a.stock} ${a.unidad})` }))} />
-        <Select label="Obra de destino" placeholder="Seleccione…" value={form.obra_id} onChange={(e) => set('obra_id')(e.target.value)}
-          options={obras.filter((o) => o.estado === 'EN_CURSO').map((o) => ({ value: o.id, label: `${o.id} · ${o.nombre}` }))} />
-        <NumberField label="Cantidad" min={1} suffix={art?.unidad} value={form.cantidad} onChange={set('cantidad')}
+        <BuscadorRelacion tabla="articulos" label="Artículo" obligatorio placeholder="Escribe el SKU o el nombre…" value={form.articulo_id} onChange={(id) => set('articulo_id')(id)} />
+        <BuscadorRelacion tabla="obras" filtros={{ estado: 'EN_CURSO' }} label="Obra de destino" obligatorio placeholder="Escribe el código o el nombre de la obra…" value={form.obra_id} onChange={(id) => set('obra_id')(id)} />
+        <NumberField label="Cantidad" obligatorio min={1} suffix={art?.unidad} value={form.cantidad} onChange={set('cantidad')}
           error={excede ? `Stock insuficiente: disponible ${art.stock} ${art.unidad}` : undefined}
           hint={art && !excede ? `Disponible: ${art.stock} ${art.unidad}` : undefined} />
-        <Input label="Referencia (opcional)" value={form.referencia} onChange={(e) => set('referencia')(e.target.value)} />
+        <Input label="Referencia" opcional value={form.referencia} onChange={(e) => set('referencia')(e.target.value)} />
         {art && (
           <p className="text-xs text-ink-soft">
             Valorización al último costo: <MoneyCell value={art.costo_unitario} /> por {art.unidad}

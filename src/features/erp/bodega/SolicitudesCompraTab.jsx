@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Plus, X, Sparkles, ScanLine } from 'lucide-react'
 import { toast } from 'sonner'
-import { Card, DataTable, Drawer, Button, Modal, Combobox, NumberField, Textarea, IconButton, Mono } from '@/components/ui'
+import { Card, DataTable, Drawer, Button, Modal, NumberField, Textarea, IconButton, Mono } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { EstadoSolicitudBadge } from '@/components/domain'
 import { solicitudesCompraService, ordenesCompraService, articulosService, lotesService } from '@/services'
 import { resolverCodigo } from '@/domain/etiquetas'
@@ -25,7 +26,6 @@ function NuevaSolicitud({ open, onClose, onSaved }) {
   const [motivo, setMotivo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const activos = useMemo(() => (articulos ?? []).filter((a) => a.activo), [articulos])
-  const opciones = useMemo(() => activos.map((x) => ({ value: x.id, label: `${x.sku} · ${x.nombre}` })), [activos])
   const repetidos = new Set(lineas.map((l) => l.articulo_id).filter((id, i, arr) => id && arr.indexOf(id) !== i))
   const valido = motivo.trim() && lineas.length > 0 && repetidos.size === 0 && lineas.every((l) => l.articulo_id && l.cantidad > 0)
   const cambiar = (clave, campo) => (v) => setLineas((ls) => ls.map((l) => (l.clave === clave ? { ...l, [campo]: v } : l)))
@@ -63,16 +63,15 @@ function NuevaSolicitud({ open, onClose, onSaved }) {
     <Modal open={open} onClose={onClose} title="Nueva solicitud de compra" size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button loading={guardando} disabled={!valido} onClick={guardar}>Enviar a Finanzas</Button></>}>
       <div className="space-y-4">
-        <Textarea label="¿Por qué se necesita?" placeholder="Ej.: stock bajo el mínimo para las obras de la próxima semana" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        <Textarea label="¿Por qué se necesita?" obligatorio placeholder="Ej.: stock bajo el mínimo para las obras de la próxima semana" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
         <div className="space-y-3">
           {lineas.map((l, i) => {
             const a = activos.find((x) => x.id === l.articulo_id)
             return (
               <div key={l.clave} className="rounded-xl border border-line p-3">
                 <div className="grid grid-cols-[1fr_7rem_auto] items-end gap-2">
-                  <Combobox label={i === 0 ? 'Artículo' : undefined} aria-label={`Artículo ${i + 1}`} placeholder="Escribe el SKU o el nombre…" value={l.articulo_id} onChange={cambiar(l.clave, 'articulo_id')}
-                    options={opciones} error={repetidos.has(l.articulo_id) ? 'Artículo repetido' : undefined} />
-                  <NumberField label={i === 0 ? 'Cantidad' : undefined} aria-label={`Cantidad ${i + 1}`} min={1} suffix={a?.unidad} value={l.cantidad} onChange={cambiar(l.clave, 'cantidad')} />
+                  <BuscadorRelacion tabla="articulos" label={i === 0 ? 'Artículo' : undefined} obligatorio={i === 0} aria-label={`Artículo ${i + 1}`} placeholder="Escribe el SKU o el nombre…" value={l.articulo_id} onChange={(id) => cambiar(l.clave, 'articulo_id')(id)} error={repetidos.has(l.articulo_id) ? 'Artículo repetido' : undefined} />
+                  <NumberField label={i === 0 ? 'Cantidad' : undefined} obligatorio={i === 0} aria-label={`Cantidad ${i + 1}`} min={1} suffix={a?.unidad} value={l.cantidad} onChange={cambiar(l.clave, 'cantidad')} />
                   <IconButton icon={X} label="Quitar línea" size="sm" disabled={lineas.length === 1} onClick={() => setLineas((ls) => ls.filter((x) => x.clave !== l.clave))} />
                 </div>
                 {a && <p className="mt-2 text-xs text-ink-soft">Stock actual: <b>{a.stock} {a.unidad}</b> · mínimo {a.stock_minimo}{a.stock_maximo > 0 ? ` · máximo ${a.stock_maximo}` : ''}</p>}
