@@ -537,16 +537,6 @@ def generar(formato, conjunto, usuario):
     return {'token': token, 'formato': formato, 'nombre': f'reporte_{base}{periodo}_{date.today():%Y%m%d}.{formato}', 'filas': len(conjunto.filas)}
 
 
-def guardar_bytes(usuario, contenido, formato, nombre):
-    """Guarda un archivo ya armado por el servidor en la carpeta privada del usuario y devuelve {token, formato, nombre, filas}, igual que `generar`."""
-    if formato not in FORMATOS:
-        raise ValueError('Formato no soportado.')
-    limpiar_vencidos()
-    token = secrets.token_hex(16)
-    (_carpeta(usuario) / f'{token}.{formato}').write_bytes(contenido)
-    return {'token': token, 'formato': formato, 'nombre': nombre, 'filas': 0}
-
-
 def ruta_de(usuario, token, formato):
     """Ruta del archivo SOLO si es de este usuario y existe; None en otro caso. Ni el token ni el formato llegan al sistema de archivos sin validar."""
     if not TOKEN_RE.match(token or '') or formato not in FORMATOS:

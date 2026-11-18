@@ -215,28 +215,66 @@ class ImpuestosView(ResumenTributarioView):
             raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
 
 
-def informe_finanzas_pptx(usuario, mes):
-    """Bytes del .pptx de finanzas del mes (`YYYY-MM`, el mes en curso si es None). Comparte permisos con el resumen tributario; ValueError si el mes no sirve."""
+FORMATOS_REPORTE_FINANZAS = {
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
+
+def _exigir_reporte_finanzas(usuario):
     from rest_framework.exceptions import PermissionDenied
-    from . import finanzas, informe_finanzas_pptx as generador, tablas
+    from . import tablas
     if not (tablas.tiene(usuario, ['facturacion.ver']) and tablas.puede_leer(usuario, 'facturas')):
         raise PermissionDenied('Tu rol no puede generar el reporte de finanzas.')
+
+
+def informe_finanzas_pptx(usuario, mes):
+    """Bytes del .pptx de finanzas del mes (`YYYY-MM`, el mes en curso si es None). ValueError si el mes no sirve."""
+    from . import finanzas, informe_finanzas_pptx as generador
+    _exigir_reporte_finanzas(usuario)
     return generador.generar_pptx_finanzas(finanzas.impuestos_del_mes(mes), generado_por=usuario.full_name or usuario.email)
 
 
-class ReportePptFinanzasView(APIView):
-    """`GET /api/finanzas/reporte-ppt/?mes=YYYY-MM`: PowerPoint de Ingresos, Gastos e Impuestos del mes con gráficos nativos, compilado al vuelo."""
+def reporte_finanzas(usuario, mes, formato):
+    """Bytes del reporte financiero del mes en pptx (gráficos nativos), xlsx o docx. ValueError si el mes o el formato no sirven."""
+    if formato not in FORMATOS_REPORTE_FINANZAS:
+        raise ValueError('formato')
+    if formato == 'pptx':
+        return informe_finanzas_pptx(usuario, mes)
+    import tempfile
+    from pathlib import Path
+
+    from ai_agent.reportes import finanzas as conjunto, generadores
+    _exigir_reporte_finanzas(usuario)
+    with tempfile.TemporaryDirectory() as tmp:
+        ruta = Path(tmp) / f'reporte.{formato}'
+        generadores._GENERADORES[formato](ruta, conjunto.conjunto_finanzas(mes), usuario)
+        return ruta.read_bytes()
+
+
+class ReporteFinanzasView(APIView):
+    """`GET /api/finanzas/reporte/?formato=pptx|xlsx|docx&mes=YYYY-MM` (y `/api/finanzas/reporte-ppt/` para el PowerPoint): reporte financiero del mes con
+    Ingresos, Gastos e Impuestos, armado al vuelo. Exige JWT válido, términos aceptados y un rol con acceso a la facturación y a las compras (RBAC)."""
     permission_classes = [TermsAccepted]
+    formato_fijo = None
 
     def get(self, request):
         from django.http import HttpResponse
         from rest_framework.exceptions import ValidationError
+        formato = self.formato_fijo or request.query_params.get('formato') or 'pptx'
         mes = request.query_params.get('mes') or None
+        if formato not in FORMATOS_REPORTE_FINANZAS:
+            raise ValidationError({'formato': 'Usa pptx, xlsx o docx.'})
         try:
-            contenido = informe_finanzas_pptx(request.user, mes)
+            contenido = reporte_finanzas(request.user, mes, formato)
         except (ValueError, TypeError):
             raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
-        respuesta = HttpResponse(contenido, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
-        respuesta['Content-Disposition'] = f'attachment; filename="reporte-finanzas-{mes or "mes-en-curso"}.pptx"'
+        respuesta = HttpResponse(contenido, content_type=FORMATOS_REPORTE_FINANZAS[formato])
+        respuesta['Content-Disposition'] = f'attachment; filename="reporte-finanzas-{mes or "mes-en-curso"}.{formato}"'
         respuesta['Cache-Control'] = 'no-store'
         return respuesta
+
+
+class ReportePptFinanzasView(ReporteFinanzasView):
+    formato_fijo = 'pptx'

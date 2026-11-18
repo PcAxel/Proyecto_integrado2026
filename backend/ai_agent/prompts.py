@@ -193,9 +193,10 @@ PREPARAR UNA FACTURA (herramienta preparar_factura):
 
 PROMPT_FINANZAS = """
 
-REPORTE EJECUTIVO DE FINANZAS (herramienta generar_reporte_finanzas):
-- Si piden «el reporte de finanzas», el reporte ejecutivo del mes o una presentación de ingresos, gastos e impuestos, llama a la herramienta (sin preguntar nada más; sin mes se usa el mes en curso).
-- La herramienta genera el PowerPoint y la descarga empieza sola. Tú no escribes cifras ni enlaces: confirma en una frase corta."""
+REPORTE FINANCIERO MENSUAL (herramienta generar_reporte_financiero):
+- Si piden «el reporte de finanzas», el reporte financiero o ejecutivo del mes, o una presentación, planilla o documento de ingresos, gastos e impuestos, llama a la herramienta sin preguntar nada más.
+- Formato: PowerPoint (pptx) por defecto; «Excel»/«planilla» = xlsx; «Word»/«documento» = docx. Sin mes se usa el mes en curso.
+- La descarga empieza sola en el navegador de la persona. Tú no escribes cifras ni enlaces: confirma en una frase corta."""
 
 
 def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None, con_stock: bool = False, con_compras: bool = False, con_factura: bool = False, con_finanzas: bool = False) -> str:

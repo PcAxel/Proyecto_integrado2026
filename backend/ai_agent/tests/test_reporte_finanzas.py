@@ -2,6 +2,7 @@
 un archivo que el chat descarga solo, con el aviso fijado por el servidor."""
 import io
 import json
+import zipfile
 from datetime import datetime, timezone
 from unittest.mock import patch
 
@@ -15,8 +16,8 @@ from ai_agent.tests.test_reportes import ReportesBase, mensaje
 from erp.models import Registro
 from facturacion.models import FacturaDTE
 
-NOMBRE = 'generar_reporte_finanzas'
-AVISO = 'Aquí tienes el reporte ejecutivo del mes con los gráficos actualizados.'
+NOMBRE = 'generar_reporte_financiero'
+AVISO = 'Reporte generado y descargado exitosamente.'
 
 
 class FinanzasIABase(ReportesBase):
@@ -43,6 +44,26 @@ class ReportePptEndpointTests(FinanzasIABase):
         textos = ' '.join(sh.text_frame.text for sl in prs.slides for sh in sl.shapes if sh.has_text_frame)
         self.assertIn('noviembre de 2026', textos)
 
+    def test_excel_y_word_con_las_mismas_cifras(self):
+        self.as_role('FINANZAS')
+        for formato, marca in (('xlsx', 'xl/charts/chart1.xml'), ('docx', 'word/document.xml')):
+            r = self.client.get('/api/finanzas/reporte/', {'formato': formato, 'mes': '2026-11'})
+            self.assertEqual(r.status_code, 200, formato)
+            self.assertIn('spreadsheetml' if formato == 'xlsx' else 'wordprocessingml', r['Content-Type'])
+            self.assertIn(marca, zipfile.ZipFile(io.BytesIO(r.content)).namelist(), formato)
+        texto = zipfile.ZipFile(io.BytesIO(self.client.get('/api/finanzas/reporte/', {'formato': 'docx', 'mes': '2026-11'}).content)).read('word/document.xml').decode()
+        self.assertIn('noviembre de 2026', texto)
+        self.assertIn('3.000.000', texto)  # ingresos netos del mes
+        self.assertEqual(self.client.get('/api/finanzas/reporte/', {'formato': 'pdf'}).status_code, 400)
+
+    def test_sin_token_o_sin_rol_no_entra(self):
+        self.client.credentials()
+        self.assertIn(self.client.get('/api/finanzas/reporte/', {'formato': 'xlsx'}).status_code, (401, 403))
+        for rol in ('JEFE_BODEGA', 'RRHH', 'OPERACIONES', 'COMERCIAL'):
+            self.as_role(rol)
+            for formato in ('pptx', 'xlsx', 'docx'):
+                self.assertEqual(self.client.get('/api/finanzas/reporte/', {'formato': formato}).status_code, 403, f'{rol} {formato}')
+
     def test_permisos_y_validacion(self):
         for rol, esperado in (('ADMIN', 200), ('AUDITOR', 200), ('JEFE_BODEGA', 403), ('RRHH', 403), ('OPERACIONES', 403)):
             self.as_role(rol)
@@ -59,29 +80,29 @@ class HerramientaIATests(FinanzasIABase):
         for rol in ('JEFE_BODEGA', 'OPERACIONES', 'RRHH', 'TECNICO', 'COMERCIAL'):
             self.assertNotIn(NOMBRE, nombres(rol), rol)
 
-    def test_el_modelo_pide_la_herramienta_y_el_servidor_fija_el_aviso_y_la_descarga(self):
-        fake = self.ia(mensaje(tool_calls=[llamada({'mes': '2026-11'}, NOMBRE)]), mensaje('Listo, ahí va tu reporte con cifras inventadas: $999'))
-        r = self.pedir('FINANZAS', 'IA, prepárame el reporte de finanzas')
+    def test_el_modelo_pide_la_herramienta_y_el_navegador_recibe_la_ruta_del_endpoint(self):
+        fake = self.ia(mensaje(tool_calls=[llamada({'mes': '2026-11', 'formato': 'xlsx'}, NOMBRE)]), mensaje('Listo, con cifras inventadas: $999 y http://malo'))
+        r = self.pedir('FINANZAS', 'IA, prepárame el reporte de finanzas en Excel')
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data['respuesta'], AVISO)  # el texto lo fija el servidor, no el modelo
         a = r.data['archivo']
-        self.assertEqual((a['formato'], a['autodescarga']), ('pptx', True))
+        self.assertEqual((a['formato'], a['autodescarga'], a['url']), ('xlsx', True, '/finanzas/reporte/?formato=xlsx&mes=2026-11'))
         tool = json.loads(next(m for m in fake.llamadas[1]['messages'] if m['role'] == 'tool')['content'])
-        self.assertNotIn('url', json.dumps(tool))  # el modelo nunca ve el enlace
-        d = self.client.get('/api' + a['url'])  # y el archivo se baja con la sesión de quien lo pidió
+        self.assertNotIn('finanzas/reporte', json.dumps(tool))  # el modelo nunca ve la ruta ni ningún token
+        d = self.client.get('/api' + a['url'])  # el navegador la pide con la sesión de la persona
         self.assertEqual(d.status_code, 200)
-        self.assertEqual(len(Presentation(io.BytesIO(b''.join(d.streaming_content))).slides), 4)
+        self.assertIn('xl/charts/chart1.xml', zipfile.ZipFile(io.BytesIO(d.content)).namelist())
 
-    def test_otro_usuario_no_puede_bajar_el_archivo(self):
+    def test_formato_por_defecto_es_powerpoint(self):
         self.ia(mensaje(tool_calls=[llamada({}, NOMBRE)]), mensaje('ok'))
-        url = self.pedir('FINANZAS', 'prepárame el reporte de finanzas').data['archivo']['url']
-        self.as_role('ADMIN')
-        self.assertEqual(self.client.get('/api' + url).status_code, 404)
+        a = self.pedir('FINANZAS', 'prepárame el reporte de finanzas').data['archivo']
+        self.assertEqual(a['formato'], 'pptx')
+        self.assertEqual(len(Presentation(io.BytesIO(self.client.get('/api' + a['url']).content)).slides), 4)
 
-    def test_mes_invalido_no_genera_archivo(self):
-        self.ia(mensaje(tool_calls=[llamada({'mes': '2026-13'}, NOMBRE)]), mensaje('El mes no es válido.'))
-        r = self.pedir('FINANZAS', 'reporte de finanzas')
-        self.assertNotIn('archivo', r.data)
+    def test_argumentos_invalidos_no_generan_descarga(self):
+        for args in ({'mes': '2026-13'}, {'formato': 'pdf'}, {'mes': "2026-11&formato=../x"}):
+            self.ia(mensaje(tool_calls=[llamada(args, NOMBRE)]), mensaje('No se pudo.'))
+            self.assertNotIn('archivo', self.pedir('FINANZAS', 'reporte de finanzas').data, args)
 
     def test_un_rol_sin_permiso_no_puede_invocarla_aunque_el_modelo_la_pida(self):
         self.ia(mensaje(tool_calls=[llamada({}, NOMBRE)]), mensaje('No puedo.'))
@@ -89,10 +110,9 @@ class HerramientaIATests(FinanzasIABase):
         self.assertNotIn('archivo', r.data)
 
     @override_settings(DEEPSEEK_API_KEY='')
-    def test_sin_modelo_el_respaldo_local_tambien_lo_entrega(self):
-        r = self.pedir('FINANZAS', 'IA, prepárame el reporte de finanzas')
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual((r.data['motor'], r.data['respuesta']), ('local', AVISO))
-        self.assertTrue(r.data['archivo']['autodescarga'])
-        self.as_role('OPERACIONES')
-        self.assertNotIn('archivo', self.client.post('/api/ai/chat/', {'mensajes': [{'role': 'user', 'content': 'reporte de finanzas'}]}, format='json').data)
+    def test_sin_modelo_el_respaldo_local_tambien_lo_entrega_en_el_formato_pedido(self):
+        casos = (('IA, prepárame el reporte de finanzas', 'pptx'), ('reporte de finanzas en excel', 'xlsx'), ('prepárame el informe financiero en word', 'docx'))
+        for texto, formato in casos:
+            r = self.pedir('FINANZAS', texto)
+            self.assertEqual((r.data['motor'], r.data['respuesta'], r.data['archivo']['formato']), ('local', AVISO, formato), texto)
+        self.assertNotIn('archivo', self.pedir('OPERACIONES', 'reporte de finanzas').data)

@@ -39,7 +39,7 @@ function BotonReporte({ archivo }) {
     <button type="button" onClick={descargar} disabled={bajando}
       className="mt-2 flex w-full items-center gap-2 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-left text-sm font-semibold text-brand hover:bg-brand/10 disabled:opacity-60">
       <FileSpreadsheet className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate">{archivo.nombre}<span className="block text-[11px] font-normal text-ink-soft">{FORMATO_REPORTE[archivo.formato] ?? archivo.formato} · {archivo.filas} filas</span></span>
+      <span className="min-w-0 flex-1 truncate">{archivo.nombre}<span className="block text-[11px] font-normal text-ink-soft">{FORMATO_REPORTE[archivo.formato] ?? archivo.formato}{archivo.filas ? ` · ${archivo.filas} filas` : ''}</span></span>
       <Download className="h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="sr-only">{bajando ? 'Descargando…' : 'Descargar reporte'}</span>
     </button>

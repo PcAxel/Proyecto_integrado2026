@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MoreHorizontal, Presentation } from 'lucide-react'
+import { FileSpreadsheet, FileText, MoreHorizontal, Presentation } from 'lucide-react'
 import { toast } from 'sonner'
 import { IconButton } from '@/components/ui'
 import { InformeEjecutivoModal, puedeInformeEjecutivo } from '@/components/InformeEjecutivo'
@@ -32,10 +32,10 @@ export function MenuAvanzado() {
 
   if (!verFinanzas && !verInforme) return null
 
-  const reporteFinanzas = async () => {
+  const reporteFinanzas = (formato) => async () => {
     setAbierto(false)
     setBajando(true)
-    try { await finanzasService.descargarReportePpt(fechaLocal().slice(0, 7)) } catch (e) { toast.error(e.message) } finally { setBajando(false) }
+    try { await finanzasService.descargarReporte(fechaLocal().slice(0, 7), formato) } catch (e) { toast.error(e.message) } finally { setBajando(false) }
   }
   const item = 'flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink hover:bg-brand-tint disabled:opacity-60'
 
@@ -45,7 +45,9 @@ export function MenuAvanzado() {
       {abierto && (
         <div role="menu" className="absolute right-0 z-30 mt-1 w-72 rounded-lg border border-line bg-surface p-1 shadow-lg">
           <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Reportes avanzados</p>
-          {verFinanzas && <button type="button" role="menuitem" className={item} onClick={reporteFinanzas}><Presentation className="h-4 w-4 shrink-0" aria-hidden="true" />Reporte de finanzas del mes (PowerPoint)</button>}
+          {verFinanzas && [['pptx', Presentation, 'PowerPoint'], ['xlsx', FileSpreadsheet, 'Excel'], ['docx', FileText, 'Word']].map(([formato, Icono, nombre]) => (
+            <button key={formato} type="button" role="menuitem" className={item} onClick={reporteFinanzas(formato)}><Icono className="h-4 w-4 shrink-0" aria-hidden="true" />Reporte de finanzas del mes ({nombre})</button>
+          ))}
           {verInforme && <button type="button" role="menuitem" className={item} onClick={() => { setAbierto(false); setInforme(true) }}><Presentation className="h-4 w-4 shrink-0" aria-hidden="true" />Informe ejecutivo por periodo…</button>}
           <p className="px-3 pb-2 pt-1 text-[11px] text-ink-faint">También puedes pedírselo al asistente de IA.</p>
         </div>

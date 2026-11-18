@@ -4,8 +4,8 @@ import { api, descargarArchivo } from './api'
 export const finanzasService = {
   /** Gastos, ganancia neta y proyección de IVA de un mes (`YYYY-MM`; el mes en curso si se omite). */
   resumenTributario: (mes) => api.get(`/erp/finanzas/resumen/${mes ? `?mes=${encodeURIComponent(mes)}` : ''}`),
-  /** Descarga el PowerPoint de Ingresos, Gastos e Impuestos del mes (`YYYY-MM`). */
-  descargarReportePpt: (mes) => descargarArchivo(`/finanzas/reporte-ppt/${mes ? `?mes=${encodeURIComponent(mes)}` : ''}`, `reporte-finanzas-${mes || 'mes-en-curso'}.pptx`),
+  /** Descarga el reporte de Ingresos, Gastos e Impuestos del mes (`YYYY-MM`) en pptx (por defecto), xlsx o docx, con la sesión de la persona. */
+  descargarReporte: (mes, formato = 'pptx') => descargarArchivo(`/finanzas/reporte/?formato=${formato}${mes ? `&mes=${encodeURIComponent(mes)}` : ''}`, `reporte-finanzas-${mes || 'mes-en-curso'}.${formato}`),
   /** Libro de IVA del mes: documentos de venta y de compra, notas de crédito, remanente que se arrastra e historial. */
   impuestos: (mes) => api.get(`/erp/finanzas/impuestos/${mes ? `?mes=${encodeURIComponent(mes)}` : ''}`),
 }

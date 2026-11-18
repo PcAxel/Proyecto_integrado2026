@@ -22,8 +22,9 @@ NOMBRE_REPORTE = 'generar_reporte'
 NOMBRE_PROYECCION = 'analizar_proyeccion_stock'
 NOMBRE_COMPRA = 'generar_borrador_compra_critico'
 NOMBRE_FACTURA = 'preparar_factura'
-NOMBRE_FINANZAS = 'generar_reporte_finanzas'
-MENSAJE_FINANZAS = 'Aquí tienes el reporte ejecutivo del mes con los gráficos actualizados.'
+NOMBRE_FINANZAS = 'generar_reporte_financiero'
+FORMATOS_FINANZAS = ('pptx', 'xlsx', 'docx')
+MENSAJE_FINANZAS = 'Reporte generado y descargado exitosamente.'
 FORMATOS_COMPRA = ('xlsx', 'docx')
 MAX_LARGO_PRODUCTO = 80
 MAX_LARGO_TRABAJO = 120
@@ -58,26 +59,27 @@ def _tool_finanzas(usuario):
         return []
     return [{'type': 'function', 'function': {
         'name': NOMBRE_FINANZAS,
-        'description': ('Genera y descarga el reporte ejecutivo de finanzas en PowerPoint (con gráficos) que compara Ingresos, Gastos e Impuestos (IVA) del mes. '
-                        'Úsala cuando pidan «el reporte de finanzas», el reporte ejecutivo del mes o una presentación de ingresos, gastos e impuestos. '
-                        'El sistema calcula todo y la descarga empieza sola; tú solo confirma en una frase.'),
+        'description': ('Genera y descarga el reporte financiero mensual (Ingresos, Gastos e Impuestos/IVA del mes) en PowerPoint con gráficos, Excel o Word. '
+                        'Úsala cuando pidan «el reporte de finanzas», el reporte financiero o ejecutivo del mes, o una presentación/planilla/documento de ingresos, gastos e impuestos. '
+                        'El navegador hace la petición con la sesión de la persona y la descarga empieza sola; tú solo confirma en una frase.'),
         'parameters': {'type': 'object', 'properties': {
+            'formato': {'type': 'string', 'enum': list(FORMATOS_FINANZAS), 'description': 'pptx = PowerPoint (por defecto), xlsx = Excel, docx = Word.'},
             'mes': {'type': 'string', 'pattern': r'^\d{4}-(0[1-9]|1[0-2])$', 'description': 'Opcional. Mes del reporte en formato AAAA-MM. Sin él se usa el mes en curso.'},
         }, 'required': [], 'additionalProperties': False}}}]
 
 
 def _finanzas(usuario, args):
-    mes = args.get('mes')
+    """No genera el archivo aquí: valida la petición y le entrega al navegador la dirección EXACTA del endpoint de Django, armada por el servidor.
+    El navegador la pide con el JWT de la persona (el endpoint vuelve a validar sesión y rol), así que la IA nunca recibe ni el archivo ni un token."""
+    mes, formato = args.get('mes'), args.get('formato') or 'pptx'
     if mes not in (None, '') and not (isinstance(mes, str) and len(mes) == 7 and mes[4] == '-' and mes[:4].isdigit() and mes[5:].isdigit() and 1 <= int(mes[5:]) <= 12):
         return {'ok': False, 'error': 'El mes debe venir como AAAA-MM (por ejemplo 2026-11).'}, None
-    from erp.views import informe_finanzas_pptx
-    contenido = informe_finanzas_pptx(usuario, mes or None)  # con el usuario autenticado: sus permisos mandan, no lo que diga el modelo
-    nombre = f'reporte_finanzas_{mes or timezone.localdate().strftime("%Y-%m")}.pptx'
-    info = generadores.guardar_bytes(usuario, contenido, 'pptx', nombre)
-    logger.info('ai_reporte_finanzas user=%s rol=%s mes=%s', usuario.pk, usuario.role, mes or 'en_curso')
-    # `autodescarga`: el chat baja el archivo solo; `_mensaje`: el aviso que se muestra lo fija el servidor.
-    return ({'ok': True, 'nota': 'El reporte se generó y la descarga empieza sola. No escribas enlaces ni cifras: confirma brevemente.', '_mensaje': MENSAJE_FINANZAS},
-            {**_archivo(info), 'autodescarga': True})
+    if formato not in FORMATOS_FINANZAS:
+        return {'ok': False, 'error': 'Formato no permitido: usa pptx, xlsx o docx.'}, None
+    mes = mes or timezone.localdate().strftime('%Y-%m')
+    logger.info('ai_reporte_finanzas user=%s rol=%s mes=%s formato=%s', usuario.pk, usuario.role, mes, formato)
+    return ({'ok': True, 'nota': 'La descarga empieza sola en el navegador de la persona. No escribas enlaces ni cifras: confirma brevemente.', '_mensaje': MENSAJE_FINANZAS},
+            {'nombre': f'reporte_finanzas_{mes}.{formato}', 'formato': formato, 'url': f'/finanzas/reporte/?formato={formato}&mes={mes}', 'autodescarga': True})
 
 
 def _tool_factura(usuario):

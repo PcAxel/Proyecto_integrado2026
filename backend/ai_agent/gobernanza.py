@@ -11,6 +11,7 @@ Tres controles que NO dependen del modelo (un modelo se puede equivocar o dejar 
 
 El agente nunca escribe datos: lo más que hace es rellenar un formulario en pantalla; el botón final lo pulsa la persona.
 """
+import json
 import re
 import unicodedata
 
@@ -298,10 +299,11 @@ def responder_local(usuario, texto, rutas, origen=''):
     salida = {'respuesta_texto': '', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
 
     # Reporte ejecutivo de finanzas: sin modelo se resuelve igual, con la misma herramienta del servidor y los permisos del usuario.
-    if re.search(r'(reporte|informe|presentacion|powerpoint|ppt)', t) and re.search(r'finanza|ingresos|gastos|impuesto|iva', t):
+    if re.search(r'(reporte|informe|presentacion|powerpoint|ppt|excel|planilla|word|documento)', t) and re.search(r'finanza|financier|ingresos|gastos|impuesto|iva', t):
         from . import herramientas
         if herramientas.puede_reporte_finanzas(usuario):
-            resultado, archivo = herramientas.ejecutar(usuario, herramientas.NOMBRE_FINANZAS, '{}')
+            formato = 'xlsx' if re.search(r'excel|planilla|xlsx', t) else 'docx' if re.search(r'\bword\b|docx|documento', t) else 'pptx'
+            resultado, archivo = herramientas.ejecutar(usuario, herramientas.NOMBRE_FINANZAS, json.dumps({'formato': formato}))
             if archivo:
                 return {**salida, 'respuesta_texto': resultado.get('_mensaje') or herramientas.MENSAJE_FINANZAS, 'archivo': archivo}
 
