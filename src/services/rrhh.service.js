@@ -6,6 +6,9 @@ import { api, descargarArchivo, bytesProtegidos } from './api'
  */
 export const rrhhService = {
   personal: () => api.get('/rrhh/personal/'),
+  /** Buscador de personas para elegir (servidor, hasta 20) y rehidratación por ids: [{id, label, detalle}]. */
+  buscarPersonal: (texto = '', limite = 15) => api.get(`/rrhh/personal/buscar/?search=${encodeURIComponent(texto.trim())}&limit=${limite}`),
+  personalPorIds: (ids) => api.get(`/rrhh/personal/buscar/?ids=${ids.map(encodeURIComponent).join(',')}`),
   // ── Ficha del trabajador (RUT, AFP, salud, tipo de contrato, ingreso): solo RR. HH. y Administrador ──
   fichas: () => api.get('/rrhh/fichas/'),
   /** Listas cerradas del servidor para los selectores: { afp, sistema_salud, isapre, tipo_contrato } (cada una [{value,label}]). */

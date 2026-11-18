@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { PageHeader, Button, Card, DataTable, Modal, Input, Select, Badge, Mono, Tabs } from '@/components/ui'
 import { botonClases } from '@/components/ui/Button'
 import { ErrorEstado } from '@/components/ErrorEstado'
+import { BuscadorPersona } from '@/components/BuscadorPersona'
 import { useResource } from '@/hooks/useResource'
 import { useAuthStore } from '@/stores/authStore'
 import { can } from '@/domain/rbac'
@@ -127,8 +128,8 @@ function ContratoModal({ persona, onClose, onSaved }) {
   )
 }
 
-function DocumentoModal({ personal, onClose, onSaved }) {
-  const [f, setF] = useState({ empleado: personal[0]?.id ?? '', tipo_documento: 'AMONESTACION', fecha_emision: fechaLocal() })
+function DocumentoModal({ onClose, onSaved }) {
+  const [f, setF] = useState({ empleado: '', tipo_documento: 'AMONESTACION', fecha_emision: fechaLocal() })
   const [archivo, setArchivo] = useState(null)
   const [errores, setErrores] = useState({})
   const [guardando, setGuardando] = useState(false)
@@ -148,10 +149,10 @@ function DocumentoModal({ personal, onClose, onSaved }) {
   }
   return (
     <Modal open onClose={onClose} title="Subir documento"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-documento" loading={guardando}>Subir PDF</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-documento" loading={guardando} disabled={!f.empleado}>Subir PDF</Button></>}>
       <form id="form-documento" onSubmit={guardar} className="space-y-4">
-        <Select label="Empleado" value={f.empleado} onChange={set('empleado')} options={personal.map((p) => ({ value: p.id, label: p.nombre }))} error={errores.empleado} />
-        <Select label="Tipo de documento" value={f.tipo_documento} onChange={set('tipo_documento')} options={TIPOS_DOCUMENTO} error={errores.tipo_documento} />
+        <BuscadorPersona label="Empleado" obligatorio placeholder="Escribe el nombre o el correo…" value={f.empleado} onChange={(id) => setF((x) => ({ ...x, empleado: id }))} error={errores.empleado} />
+        <Select label="Tipo de documento" obligatorio value={f.tipo_documento} onChange={set('tipo_documento')} options={TIPOS_DOCUMENTO} error={errores.tipo_documento} />
         <Input label="Fecha de emisión" type="date" required max={fechaLocal()} value={f.fecha_emision} onChange={set('fecha_emision')} error={errores.fecha_emision} />
         <Input label="Archivo PDF (máx. 10 MB)" type="file" accept=".pdf,application/pdf" required onChange={(ev) => setArchivo(ev.target.files?.[0] ?? null)} error={errores.archivo_pdf} />
         {errores._ && <p role="alert" className="text-sm font-medium text-crit">{errores._}</p>}
@@ -220,7 +221,7 @@ export function ModuloRRHH() {
       </Card>
       {modal?.tipo === 'contrato' && <ContratoModal persona={modal.persona} onClose={() => setModal(null)} onSaved={recargar} />}
       {modal?.tipo === 'finiquito' && <FiniquitoModal persona={modal.persona} onClose={() => setModal(null)} onSaved={recargar} />}
-      {modal?.tipo === 'documento' && <DocumentoModal personal={personal.data ?? []} onClose={() => setModal(null)} onSaved={recargar} />}
+      {modal?.tipo === 'documento' && <DocumentoModal onClose={() => setModal(null)} onSaved={recargar} />}
     </div>
   )
 }

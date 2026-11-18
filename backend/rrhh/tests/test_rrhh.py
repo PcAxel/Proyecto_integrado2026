@@ -242,6 +242,18 @@ class RRHHApiTest(RoleTestCase):
         url = f'/api/rrhh/finiquitos/{f["id"]}/'
         self.assertEqual(self.client.patch(url, {'estado_pago': 'PAGADO', 'comprobante_pago': pdf()}, format='multipart').status_code, 200)
 
+    def test_personal_buscador(self):
+        self.as_role(Role.RRHH)
+        correo = self.emp.email
+        r = self.client.get('/api/rrhh/personal/buscar/', {'search': correo[:6]})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(self.emp.id, [x['id'] for x in r.data])
+        self.assertLessEqual(len(self.client.get('/api/rrhh/personal/buscar/', {'search': '', 'limit': 500}).data), 20)
+        self.assertEqual([x['id'] for x in self.client.get('/api/rrhh/personal/buscar/', {'ids': str(self.emp.id)}).data], [self.emp.id])
+        self.assertEqual(self.client.get('/api/rrhh/personal/buscar/', {'search': "' OR 1=1 --"}).data, [])
+        self.as_role(Role.FINANZAS)
+        self.assertEqual(self.client.get('/api/rrhh/personal/buscar/').status_code, 403)
+
     def test_personal_lista_estado_contractual(self):
         self.as_role(Role.RRHH)
         filas = {p['email']: p for p in self.client.get('/api/rrhh/personal/').data}

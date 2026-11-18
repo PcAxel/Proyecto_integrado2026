@@ -3,7 +3,7 @@ from datetime import date
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import hashlib
@@ -30,7 +30,7 @@ from . import cumplimiento as cu
 from .permissions import PuedeVerCumplimiento
 from .permissions import AccionesPorRol, acciones
 from .serializers import (CalculoSerializer, ContratoSerializer, FichaTrabajadorSerializer, DocumentoLaboralSerializer, DocumentoSerializer, FirmaSerializer, MiDocumentoSerializer, FiniquitoSerializer, PersonalSerializer,
-                          serializer_de_edicion)
+                          nombre_de, serializer_de_edicion)
 
 CRUD = acciones('list', 'retrieve', 'create', 'partial_update', 'destroy')
 LECTURA = acciones('list', 'retrieve')
@@ -199,7 +199,21 @@ class PersonalViewSet(viewsets.GenericViewSet, mixins.ListModelMixin):
     """Tabla de personal con su estado contractual."""
     serializer_class = PersonalSerializer
     permission_classes = [AccionesPorRol]
-    acciones_por_rol = {Role.ADMIN: acciones('list'), Role.RRHH: acciones('list')}
+    acciones_por_rol = {Role.ADMIN: acciones('list', 'buscar'), Role.RRHH: acciones('list', 'buscar')}
+
+    @action(detail=False, methods=['get'])
+    def buscar(self, request):
+        """Buscador para elegir una persona: `?search=` (nombre, apellido o correo; hasta 20) o `?ids=1,2` para rehidratar la selección."""
+        qs = CustomUser.objects.filter(is_active=True).order_by('first_name', 'last_name', 'email')
+        ids = [int(i) for i in str(request.query_params.get('ids', '')).split(',')[:50] if i.strip().isdigit()]
+        if ids:
+            qs = qs.filter(pk__in=ids)
+        else:
+            texto = str(request.query_params.get('search', '')).strip()[:60]
+            for palabra in texto.split():
+                qs = qs.filter(Q(first_name__icontains=palabra) | Q(last_name__icontains=palabra) | Q(email__icontains=palabra))
+            qs = qs[:min(int(request.query_params.get('limit', 10) or 10), 20)]
+        return Response([{'id': u.id, 'label': nombre_de(u), 'detalle': u.email} for u in qs])
 
     def get_queryset(self):
         contratos = Prefetch('contratos', queryset=Contrato.objects.select_related('finiquito').order_by('-fecha_inicio', '-id'))
