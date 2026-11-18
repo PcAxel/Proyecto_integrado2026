@@ -571,7 +571,7 @@ class ToolsStockEnElChatTests(StockBase):
 
     def test_cada_rol_recibe_solo_las_tools_que_puede_usar(self):
         nombres = lambda rol: [t['function']['name'] for t in herramientas.herramientas_para(self.users[rol])]
-        consultas = ['consultar_finanzas', 'consultar_kardex', 'consultar_operaciones']  # se ofrecen a todos menos al Técnico: sin permiso, el servidor responde 403
+        consultas = ['consultar_finanzas', 'consultar_kardex', 'consultar_operaciones', 'consultar_presupuestos']  # se ofrecen a todos menos al Técnico: sin permiso, el servidor responde 403
         self.assertEqual(nombres('FINANZAS'), ['generar_reporte', 'analizar_proyeccion_stock', 'generar_borrador_compra_critico', 'preparar_factura', 'generar_reporte_financiero', *consultas])
         self.assertEqual(nombres('RRHH'), ['generar_reporte', *consultas])
         self.assertEqual(nombres('TECNICO'), [])

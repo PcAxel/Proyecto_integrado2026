@@ -24,16 +24,18 @@ logger = logging.getLogger('ai_agent')
 LIMITE = 50
 MAX_TEXTO = 60
 ESTADOS_OBRA = ('PLANIFICADA', 'EN_CURSO', 'FINALIZADA')
+ESTADOS_PRESUPUESTO = ('BORRADOR', 'ENVIADO', 'APROBADO', 'RECHAZADO')  # ENVIADO = enviado a aprobación (pendiente)
 ESTADOS_COBRO = tuple(v for v, _ in FacturaDTE.EstadoCobro.choices)
 ORDENES_KARDEX = ('antiguedad', 'valor_total')
 
-F_FINANZAS, F_KARDEX, F_OPERACIONES = 'consultar_finanzas', 'consultar_kardex', 'consultar_operaciones'
+F_FINANZAS, F_KARDEX, F_OPERACIONES, F_PRESUPUESTOS = 'consultar_finanzas', 'consultar_kardex', 'consultar_operaciones', 'consultar_presupuestos'
 
 # Filtros permitidos por herramienta: cualquier otro parámetro se ignora.
 FILTROS = {
     'consultar_finanzas': ('tipo', 'fecha_desde', 'fecha_hasta', 'proveedor', 'cliente', 'estado_cobro'),
     'consultar_kardex': ('categoria', 'proveedor', 'sin_movimiento_dias', 'ordenar_por'),
     'consultar_operaciones': ('estado', 'margen_menor_a', 'obra'),
+    'consultar_presupuestos': ('estado', 'cliente', 'margen_menor_a'),
 }
 
 
@@ -245,7 +247,42 @@ def consultar_operaciones(user, args):
     return _respuesta(filas[:LIMITE], len(filas), resumen, **({} if ve_margen else {'nota': 'Tu rol no ve márgenes: no se muestran.'}))
 
 
-CONSULTAS = {'consultar_finanzas': consultar_finanzas, 'consultar_kardex': consultar_kardex, 'consultar_operaciones': consultar_operaciones}
+# ───────── consultar_presupuestos ─────────
+def consultar_presupuestos(user, args):
+    """Presupuestos/cotizaciones con su margen proyectado. Sin `estado` devuelve los pendientes de aprobación (ENVIADO). Los márgenes exigen `costos.ver`."""
+    f = _permitidos('consultar_presupuestos', args)
+    estado = _enum(f.get('estado'), ESTADOS_PRESUPUESTO, 'estado') or 'ENVIADO'
+    margen = _numero(f.get('margen_menor_a'), 'margen_menor_a', -1000, 100)
+    cliente = _texto(f.get('cliente'))
+    _exigir(user, tablas.puede_leer(user, 'presupuestos'), 'los presupuestos')
+    ve_margen = tablas.tiene(user, ['costos.ver'])
+    if margen is not None:
+        _exigir(user, ve_margen, 'los márgenes de los presupuestos')
+    qs = _tabla('presupuestos').filter(datos__estado=estado)
+    if cliente:
+        ids = _ids_de('clientes', cliente, ('razon_social', 'rut'))
+        qs = qs.filter(datos__cliente_id__in=ids) if ids else qs.none()
+    nombres = {c['rid']: c['datos'].get('razon_social', c['rid']) for c in _tabla('clientes').values('rid', 'datos')} if tablas.puede_leer(user, 'clientes') else {}
+    filas = []
+    for p in qs.order_by('rid').values('rid', 'datos')[:500]:
+        d = p['datos']
+        fila = {'id': p['rid'], 'titulo': d.get('titulo'), 'cliente': nombres.get(d.get('cliente_id'), d.get('cliente_id')), 'estado': d.get('estado'), 'fecha': d.get('fecha')}
+        if ve_margen:
+            r = dominio.simular_rentabilidad(d)
+            fila.update(venta_neta=r['venta_neto'], costo_total=r['costo_total'], margen_pct=r['margen_pct'], bajo_margen_minimo=r['bajo_minimo'])
+            if margen is not None and r['margen_pct'] >= margen:
+                continue
+        filas.append(fila)
+    if ve_margen:
+        filas.sort(key=lambda x: x['margen_pct'])
+    totales = {'estado': estado, 'venta_neta': sum(x.get('venta_neta', 0) for x in filas)} if ve_margen else {'estado': estado}
+    if ve_margen:
+        totales['bajo_margen_minimo'] = sum(1 for x in filas if x['bajo_margen_minimo'])
+    nota = f'Margen mínimo del negocio: {dominio.MARGEN_MINIMO} %; bajo ese valor solo el Administrador General puede aprobar.' if ve_margen else 'Tu rol no ve márgenes: no se muestran.'
+    return _respuesta(filas[:LIMITE], len(filas), totales, nota=nota)
+
+
+CONSULTAS = {'consultar_finanzas': consultar_finanzas, 'consultar_kardex': consultar_kardex, 'consultar_operaciones': consultar_operaciones, 'consultar_presupuestos': consultar_presupuestos}
 
 
 def ejecutar(user, nombre, args):

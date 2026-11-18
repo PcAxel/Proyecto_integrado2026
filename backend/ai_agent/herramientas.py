@@ -76,6 +76,10 @@ def _tools_consultas(usuario):
             'estado': {'type': 'string', 'enum': list(consultas.ESTADOS_OBRA)},
             'margen_menor_a': {'type': 'number', 'minimum': -1000, 'maximum': 100, 'description': 'Solo obras con margen de ganancia (%) menor que este número.'},
             'obra': {**texto, 'description': 'Código (OB-0001) o parte del nombre de la obra.'}}),
+        tool(consultas.F_PRESUPUESTOS, 'Consulta presupuestos/cotizaciones con su margen de ganancia proyectado. SIN filtros devuelve los PENDIENTES DE APROBACIÓN (estado ENVIADO). Úsala para «presupuestos pendientes», cotizaciones por aprobar o de bajo margen.', {
+            'estado': {'type': 'string', 'enum': list(consultas.ESTADOS_PRESUPUESTO), 'description': 'ENVIADO = pendiente de aprobación (por defecto); BORRADOR = aún no enviado; APROBADO; RECHAZADO.'},
+            'cliente': {**texto, 'description': 'Razón social o RUT del cliente (basta una parte).'},
+            'margen_menor_a': {'type': 'number', 'minimum': -1000, 'maximum': 100, 'description': 'Solo presupuestos con margen de ganancia (%) menor que este número (ej. 20).'}}),
     ]
 
 
@@ -252,7 +256,8 @@ def _preparar_factura(usuario, args):
 
 
 _MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra, NOMBRE_FACTURA: _preparar_factura, NOMBRE_FINANZAS: _finanzas,
-                consultas.F_FINANZAS: _consulta(consultas.F_FINANZAS), consultas.F_KARDEX: _consulta(consultas.F_KARDEX), consultas.F_OPERACIONES: _consulta(consultas.F_OPERACIONES)}
+                consultas.F_FINANZAS: _consulta(consultas.F_FINANZAS), consultas.F_KARDEX: _consulta(consultas.F_KARDEX), consultas.F_OPERACIONES: _consulta(consultas.F_OPERACIONES),
+                consultas.F_PRESUPUESTOS: _consulta(consultas.F_PRESUPUESTOS)}
 
 
 def ejecutar(usuario, nombre, argumentos_json):

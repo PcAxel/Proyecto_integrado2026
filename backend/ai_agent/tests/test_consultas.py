@@ -153,6 +153,34 @@ class OperacionesTests(ConsultasBase):
             self.assertEqual(self.q('FINANZAS', 'consultar_operaciones', **args)['status'], 400, args)
 
 
+class PresupuestosTests(ConsultasBase):
+    def setUp(self):
+        super().setUp()
+        reg('presupuestos', 'PRE-0010', titulo='Cámara nueva', cliente_id='CLI-001', estado='ENVIADO', precio_venta_neto=1_000_000, materiales=[{'cantidad': 1, 'costo_unitario': 850_000}], mano_obra=[], adicionales=[])
+        reg('presupuestos', 'PRE-0011', titulo='Mantención', cliente_id='CLI-001', estado='ENVIADO', precio_venta_neto=1_000_000, materiales=[{'cantidad': 1, 'costo_unitario': 500_000}], mano_obra=[], adicionales=[])
+        reg('presupuestos', 'PRE-0012', titulo='Todavía borrador', cliente_id='CLI-001', estado='BORRADOR', precio_venta_neto=1_000_000, materiales=[{'cantidad': 1, 'costo_unitario': 900_000}], mano_obra=[], adicionales=[])
+
+    def test_sin_filtros_devuelve_los_pendientes_de_aprobacion_con_su_margen(self):
+        r = self.q('FINANZAS', 'consultar_presupuestos')
+        self.assertEqual([(f['id'], f['margen_pct']) for f in r['filas']], [('PRE-0010', 15.0), ('PRE-0011', 50.0)])  # menor margen primero
+        self.assertEqual((r['totales']['estado'], r['totales']['bajo_margen_minimo'], r['totales']['venta_neta']), ('ENVIADO', 1, 2_000_000))
+        self.assertTrue(r['filas'][0]['bajo_margen_minimo'])
+
+    def test_margen_menor_a_estado_y_cliente(self):
+        self.assertEqual([f['id'] for f in self.q('FINANZAS', 'consultar_presupuestos', margen_menor_a=20)['filas']], ['PRE-0010'])
+        self.assertEqual([f['id'] for f in self.q('FINANZAS', 'consultar_presupuestos', estado='BORRADOR')['filas']], ['PRE-0012'])
+        self.assertEqual(self.q('FINANZAS', 'consultar_presupuestos', cliente='cecinas')['total_coincidencias'], 2)
+        self.assertEqual(self.q('FINANZAS', 'consultar_presupuestos', cliente='no existe')['total_coincidencias'], 0)
+        for args in ({'estado': 'PENDIENTE'}, {'margen_menor_a': 'poco'}):
+            self.assertEqual(self.q('FINANZAS', 'consultar_presupuestos', **args)['status'], 400, args)
+
+    def test_permisos(self):
+        for rol in ('ADMIN', 'AUDITOR', 'OPERACIONES', 'COMERCIAL'):
+            self.assertTrue(self.q(rol, 'consultar_presupuestos')['ok'], rol)
+        for rol in ('RRHH', 'JEFE_BODEGA', 'TECNICO'):
+            self.assertEqual(self.q(rol, 'consultar_presupuestos')['status'], 403, rol)
+
+
 class ChatConConsultasTests(ConsultasBase):
     def test_el_modelo_pide_la_consulta_y_recibe_json_limpio(self):
         fake = self.ia(mensaje(tool_calls=[llamada({'tipo': 'compra', 'proveedor': 'Frío'}, 'consultar_finanzas')]), mensaje('Hay 2 facturas de compra de Frío Sur.'))
@@ -175,7 +203,7 @@ class ChatConConsultasTests(ConsultasBase):
     def test_las_tres_herramientas_se_ofrecen_menos_al_tecnico(self):
         nombres = lambda rol: {t['function']['name'] for t in herramientas.herramientas_para(self.users[rol])}
         for rol in ('FINANZAS', 'RRHH', 'JEFE_BODEGA', 'OPERACIONES'):
-            self.assertTrue({'consultar_finanzas', 'consultar_kardex', 'consultar_operaciones'} <= nombres(rol), rol)
+            self.assertTrue({'consultar_finanzas', 'consultar_kardex', 'consultar_operaciones', 'consultar_presupuestos'} <= nombres(rol), rol)
         self.assertFalse(nombres('TECNICO'))
 
     def test_el_esquema_solo_declara_los_filtros_de_la_lista_blanca(self):
