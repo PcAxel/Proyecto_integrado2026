@@ -111,7 +111,7 @@ class EstadoSistemaView(APIView):
             'servicios': servicios,
             'integraciones': {
                 'ia': bool(settings.DEEPSEEK_API_KEY),
-                'correo': bool(settings.BREVO_API_KEY),
+                'correo': bool(settings.RESEND_API_KEY or settings.BREVO_API_KEY),
                 'dte_proveedor': settings.DTE_PROVEEDOR,
             },
             'accesos': {

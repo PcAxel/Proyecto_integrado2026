@@ -3,6 +3,7 @@ anyio==4.16.0
 asgiref==3.13.0
 charset-normalizer==3.5.2
 dj-database-url==3.1.2
+django-anymail[resend]==15.2
 django-cors-headers==4.9.0
 django-redis==7.0.0
 Django==6.1.3

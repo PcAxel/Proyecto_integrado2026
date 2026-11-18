@@ -1,0 +1,12 @@
+{% extends "accounts/reset/base.html" %}
+{% block titulo %}Recuperar contraseña · FYAG ERP{% endblock %}
+{% block contenido %}
+<h1>Recuperar contraseña</h1>
+<p>Escribe el correo de tu cuenta. Si existe, te enviaremos un enlace para crear una contraseña nueva.</p>
+<form method="post">{% csrf_token %}
+  <label for="id_email">Correo</label>
+  <input type="email" name="email" id="id_email" autocomplete="email" required autofocus>
+  {{ form.email.errors }}
+  <button type="submit">Enviar enlace</button>
+</form>
+{% endblock %}

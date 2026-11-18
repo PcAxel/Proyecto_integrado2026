@@ -1,0 +1,21 @@
+{% extends "accounts/reset/base.html" %}
+{% block titulo %}Nueva contraseña · FYAG ERP{% endblock %}
+{% block contenido %}
+{% if validlink %}
+<h1>Nueva contraseña</h1>
+<form method="post">{% csrf_token %}
+  <label for="id_new_password1">Contraseña nueva</label>
+  <input type="password" name="new_password1" id="id_new_password1" autocomplete="new-password" required autofocus>
+  {{ form.new_password1.errors }}
+  <label for="id_new_password2">Repítela</label>
+  <input type="password" name="new_password2" id="id_new_password2" autocomplete="new-password" required>
+  {{ form.new_password2.errors }}
+  <ul class="ayuda"><li>Mínimo 10 caracteres.</li><li>No puede ser solo números ni una clave común.</li><li>No debe parecerse a tu correo.</li></ul>
+  <button type="submit">Guardar contraseña</button>
+</form>
+{% else %}
+<h1>Enlace no válido</h1>
+<p>Este enlace ya se usó o venció. Pide uno nuevo.</p>
+<a class="boton" href="{% url 'password_reset' %}">Pedir un enlace nuevo</a>
+{% endif %}
+{% endblock %}

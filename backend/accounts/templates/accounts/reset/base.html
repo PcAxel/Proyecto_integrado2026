@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block titulo %}FYAG ERP{% endblock %}</title>
+  <style>
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1620;color:#e8f1f5;font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif;padding:1rem}
+    main{width:100%;max-width:26rem;background:#13222e;border:1px solid #234052;border-radius:14px;padding:1.75rem}
+    h1{font-size:1.35rem;margin:0 0 .75rem}
+    p{margin:.5rem 0;color:#b9ccd6}
+    label{display:block;margin:1rem 0 .35rem;font-weight:600;font-size:.9rem}
+    input[type=email],input[type=password]{width:100%;box-sizing:border-box;padding:.65rem .75rem;border-radius:8px;border:1px solid #2f536a;background:#0b1620;color:#fff;font-size:1rem}
+    button,.boton{display:inline-block;margin-top:1.25rem;width:100%;box-sizing:border-box;text-align:center;padding:.7rem;border:0;border-radius:8px;background:#e07a2f;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;text-decoration:none}
+    .error,.errorlist{color:#ff9a90;font-size:.85rem;margin:.35rem 0 0;padding:0;list-style:none}
+    .ayuda{font-size:.8rem;color:#8fa9b8}
+    ul.ayuda{margin:.5rem 0 0;padding-left:1.1rem}
+  </style>
+</head>
+<body><main>{% block contenido %}{% endblock %}</main></body>
+</html>

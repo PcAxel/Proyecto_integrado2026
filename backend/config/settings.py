@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'anymail',  # envío de correo por API (Resend)
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
     'accounts',
@@ -206,14 +207,20 @@ OTP_ISSUER = 'FYAG ERP'
 TWO_FA_CHALLENGE_MAX_AGE = 300
 
 # --- Correo / onboarding ---
-BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')  # correo por HTTP: Render gratis bloquea SMTP (ver accounts/email_backend.py)
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'accounts.email_backend.BrevoEmailBackend' if BREVO_API_KEY else 'django.core.mail.backends.console.EmailBackend')
+# Render (plan gratis) bloquea SMTP: el correo sale por la API HTTP de un proveedor transaccional. Prioridad: Resend (django-anymail) → Brevo → consola.
+RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
+BREVO_API_KEY = os.getenv('BREVO_API_KEY', '')  # alternativa (ver accounts/email_backend.py)
+ANYMAIL = {'RESEND_API_KEY': RESEND_API_KEY}
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or (
+    'anymail.backends.resend.EmailBackend' if RESEND_API_KEY else
+    'accounts.email_backend.BrevoEmailBackend' if BREVO_API_KEY else 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'FYAG ERP <no-reply@fyag.cl>')
+# Con Resend, el remitente debe ser de un dominio verificado en Resend; sin dominio solo sirve `onboarding@resend.dev` y únicamente para escribirle a la cuenta dueña.
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'FYAG ERP <onboarding@resend.dev>' if RESEND_API_KEY else 'FYAG ERP <no-reply@fyag.cl>')
 PWA_INSTALL_URL = os.getenv('PWA_INSTALL_URL', 'http://localhost:5173/instalar')
 
 if not DEBUG:

@@ -66,7 +66,7 @@ class ProbarCorreoVistaTests(RoleTestCase):
     def test_sin_servicio_de_correo_lo_dice(self):
         d = self.probar().json()
         self.assertFalse(d['ok'])
-        self.assertIn('BREVO_API_KEY', d['motivo'])
+        self.assertIn('RESEND_API_KEY', d['motivo'])
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_con_servicio_envia_al_destinatario(self):

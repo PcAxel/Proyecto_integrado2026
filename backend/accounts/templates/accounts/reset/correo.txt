@@ -1,0 +1,9 @@
+{% autoescape off %}Hola{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+Pediste crear una contraseña nueva para tu cuenta del ERP de Frío y Agroindustria SpA (FYAG).
+
+Usa este enlace (vence en 3 días y sirve una sola vez):
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+
+Si no lo pediste tú, ignora este correo: tu contraseña sigue igual.
+{% endautoescape %}
