@@ -54,3 +54,23 @@ class InformeEjecutivoTests(ErpBase):
         self.assertEqual(sum(v for _, v in d['inventario']['por_categoria']), d['inventario']['total'])
         self.assertEqual(d['obras'][0], {'obra': 'OB-0001', 'nombre': Registro.objects.get(tabla='obras', rid='OB-0001').datos['nombre'], 'presupuesto': 1000000, 'real': 400000})
         self.assertEqual(d['ejecucion_materiales']['ejecucion_pct'], 40.0)
+
+    def test_periodo_acota_las_cifras_y_valida_fechas(self):
+        d = informes.informe_ejecutivo('2026-11-01', '2026-11-30')
+        self.assertEqual((d['compras']['total'], d['compras']['facturas']), (3000000, 1))  # solo la factura de noviembre
+        self.assertEqual(informes.informe_ejecutivo('2026-10-01', '2026-10-31')['compras']['total'], 1000000)
+        self.assertEqual(informes.informe_ejecutivo()['compras']['total'], 4000000)
+        # el inventario es un saldo: al cierre del 5-oct solo cuenta la entrada, no la salida del 6-oct
+        self.assertEqual(informes.stock_por_articulo('2026-10-05')['ART-001'], 10)
+        self.assertEqual(informes.stock_por_articulo()['ART-001'], 6)
+        self.assertEqual(informes.informe_ejecutivo('2026-11-01', '2026-11-30')['obras'], [])  # sin consumo de material en noviembre
+
+    def test_endpoint_con_fechas_y_mes(self):
+        self.as_role('FINANZAS')
+        ok = self.client.get('/api/erp/informe-ejecutivo/', {'mes': '2026-10'})
+        self.assertEqual(ok.status_code, 200)
+        self.assertIn('2026-10-01_2026-10-31', ok['Content-Disposition'])
+        textos = ' '.join(sh.text_frame.text for sl in Presentation(io.BytesIO(ok.content)).slides for sh in sl.shapes if sh.has_text_frame)
+        self.assertIn('Periodo del 01-10-2026 al 31-10-2026', textos)
+        for malo in ({'desde': '2026/10/01'}, {'desde': '2026-11-02', 'hasta': '2026-11-01'}, {'mes': '2026-13'}):
+            self.assertEqual(self.client.get('/api/erp/informe-ejecutivo/', malo).status_code, 400, malo)

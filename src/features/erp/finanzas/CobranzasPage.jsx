@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Landmark, Wallet, Clock, CheckCircle2, BadgeDollarSign, Presentation } from 'lucide-react'
-import { toast } from 'sonner'
+import { Landmark, Wallet, Clock, CheckCircle2, BadgeDollarSign } from 'lucide-react'
+import { BotonInformeEjecutivo } from '@/components/InformeEjecutivo'
 import { PageHeader, Card, DataTable, Badge, Button, Modal, Input, Select, NumberField, KpiTile, Mono } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
-import { cobranzasService, informesService } from '@/services'
+import { cobranzasService } from '@/services'
 import { formatFecha, isoLocal } from '@/domain/format'
 import { formatCLP } from '@/domain/money'
 import { can } from '@/domain/rbac'
@@ -59,12 +59,6 @@ function PagoModal({ factura, onClose, onSaved }) {
 export function CobranzasPage() {
   const rol = useAuthStore((s) => s.user.rol)
   const puede = can(rol, 'cobranzas.gestionar')
-  const puedeInforme = ['compras.ver', 'bodega.ver', 'presupuestos.ver', 'obras.ver'].every((p) => can(rol, p))
-  const [generando, setGenerando] = useState(false)
-  const descargarInforme = async () => {
-    setGenerando(true)
-    try { await informesService.descargarEjecutivo() } catch (e) { toast.error(e.message) } finally { setGenerando(false) }
-  }
   const { data, loading, reload } = useResource(() => cobranzasService.resumen(), [])
   const [pagando, setPagando] = useState(null)
   const [soloPendientes, setSoloPendientes] = useState(true)
@@ -84,7 +78,7 @@ export function CobranzasPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Cobranzas" subtitle="Pagos de clientes contra las facturas electrónicas emitidas"
-        actions={puedeInforme && <Button variant="secondary" icon={Presentation} loading={generando} onClick={descargarInforme}>Informe ejecutivo (PowerPoint)</Button>} />
+        actions={<BotonInformeEjecutivo />} />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <KpiTile label="Por cobrar" value={data ? formatCLP(data.por_cobrar) : '—'} icon={Wallet} tone={data?.por_cobrar ? 'warn' : undefined} hint={data ? `${data.pendientes} factura(s) pendiente(s)` : undefined} />
         <KpiTile label="Cobrado" value={data ? formatCLP(data.cobrado) : '—'} icon={Landmark} tone="ok" />

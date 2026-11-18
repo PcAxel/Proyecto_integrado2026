@@ -140,15 +140,45 @@ class InformeEjecutivoPptxView(APIView):
     compras, bodega, presupuestos y obras (Administrador, Finanzas y Auditoría)."""
     permission_classes = [TermsAccepted]
 
+    @staticmethod
+    def _periodo(p):
+        """`?desde=YYYY-MM-DD&hasta=YYYY-MM-DD` (ambos opcionales) o `?mes=YYYY-MM`. Una fecha inválida o un rango al revés es un error 400."""
+        from datetime import date
+
+        from rest_framework.exceptions import ValidationError
+
+        def dia(clave):
+            v = str(p.get(clave, '')).strip()
+            if not v:
+                return None
+            try:
+                return date.fromisoformat(v).isoformat()
+            except ValueError:
+                raise ValidationError({clave: 'Usa el formato AAAA-MM-DD.'})
+        if mes := str(p.get('mes', '')).strip():
+            try:
+                y, m = (int(x) for x in mes.split('-'))
+                inicio = date(y, m, 1)
+            except (ValueError, TypeError):
+                raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
+            fin = date(y + (m == 12), m % 12 + 1, 1)
+            return inicio.isoformat(), date.fromordinal(fin.toordinal() - 1).isoformat()
+        desde, hasta = dia('desde'), dia('hasta')
+        if desde and hasta and desde > hasta:
+            raise ValidationError({'hasta': 'La fecha final no puede ser anterior a la inicial.'})
+        return desde, hasta
+
     def get(self, request):
         from django.http import HttpResponse
         from rest_framework.exceptions import PermissionDenied
         from . import informe_pptx, informes, tablas
         if not all(tablas.puede_leer(request.user, t) for t in ('facturas', 'cardex', 'presupuestos', 'obras')):
             raise PermissionDenied('Tu rol no puede descargar el informe ejecutivo.')
+        desde, hasta = self._periodo(request.query_params)
         persona = request.user.full_name or request.user.email
-        contenido = informe_pptx.generar_pptx(informes.informe_ejecutivo(), generado_por=persona)
+        contenido = informe_pptx.generar_pptx(informes.informe_ejecutivo(desde, hasta), generado_por=persona)
         respuesta = HttpResponse(contenido, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
-        respuesta['Content-Disposition'] = 'attachment; filename="informe-ejecutivo-fyag.pptx"'
+        sufijo = f'-{desde or "inicio"}_{hasta or "hoy"}' if (desde or hasta) else ''
+        respuesta['Content-Disposition'] = f'attachment; filename="informe-ejecutivo-fyag{sufijo}.pptx"'
         respuesta['Cache-Control'] = 'no-store'
         return respuesta

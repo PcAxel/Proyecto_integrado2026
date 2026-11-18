@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { PageHeader, Tabs, Card, DataTable, Button, Badge, Mono, ExportMenu } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
+import { BotonInformeEjecutivo } from '@/components/InformeEjecutivo'
 import { comprasService, proveedoresService, articulosService } from '@/services'
 import { formatFecha } from '@/domain/format'
 import { can } from '@/domain/rbac'
@@ -58,6 +59,7 @@ export function ComprasPage() {
     <div className="space-y-5">
       <PageHeader title="Compras" subtitle="Facturas con descuentos en cascada y notas de crédito"
         actions={<>
+          <BotonInformeEjecutivo />
           {tab === 'facturas'
             ? <ExportMenu nombre="facturas-compra" titulo="Facturas de compra" filas={facturas.data ?? []} columnas={[
               { titulo: 'N°', clave: 'numero' }, { titulo: 'Proveedor', clave: (f) => prov(f.proveedor_id)?.razon_social, ancho: 36 }, { titulo: 'Fecha', clave: 'fecha', tipo: 'fecha' },
