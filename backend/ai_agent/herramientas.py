@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from facturacion import busqueda as busqueda_obras
 from erp import tablas
+from . import consultas
 from .reportes import datos, generadores, stock
 from .reportes.generadores import _clp
 
@@ -34,7 +35,7 @@ URL_DESCARGA = '/ai/reportes/{token}/?formato={formato}'
 
 def herramientas_para(usuario):
     """Definición de tools (formato OpenAI/DeepSeek) para este usuario: solo las que su rol puede usar (lista vacía si ninguna)."""
-    return [*_tool_reporte(usuario), *_tool_proyeccion(usuario), *_tool_compra(usuario), *_tool_factura(usuario), *_tool_finanzas(usuario)]
+    return [*_tool_reporte(usuario), *_tool_proyeccion(usuario), *_tool_compra(usuario), *_tool_factura(usuario), *_tool_finanzas(usuario), *_tools_consultas(usuario)]
 
 
 def _tool_proyeccion(usuario):
@@ -48,6 +49,40 @@ def _tool_proyeccion(usuario):
             'producto': {'type': 'string', 'maxLength': MAX_LARGO_PRODUCTO, 'description': 'SKU, id o nombre del producto (basta una parte del nombre).'},
             'formato': {'type': 'string', 'enum': list(generadores.FORMATOS), 'description': 'Opcional. Solo si piden un reporte visual o con gráfico: xlsx (Excel), docx (Word), pptx (PowerPoint).'},
         }, 'required': ['producto'], 'additionalProperties': False}}}]
+
+
+def _tools_consultas(usuario):
+    """Consultas de datos reales. Se ofrecen a todos los roles con asistente: quien no tenga acceso recibe un 403 del servidor y el agente se lo explica
+    (la autorización NUNCA depende de que el modelo «sepa» qué puede ver cada persona). Excepto el Técnico, que no recibe herramientas."""
+    if usuario.role == 'TECNICO':  # el técnico conversa en modo restringido: sin herramientas de datos
+        return []
+    texto = {'type': 'string', 'maxLength': consultas.MAX_TEXTO}
+    fecha = {'type': 'string', 'pattern': r'^\d{4}-\d{2}-\d{2}$', 'description': 'Formato AAAA-MM-DD.'}
+    def tool(nombre, descripcion, propiedades):
+        return {'type': 'function', 'function': {'name': nombre, 'description': descripcion + f' Devuelve como máximo {consultas.LIMITE} filas más los totales de TODAS las coincidencias. '
+                'Todos los filtros son opcionales; no inventes ninguno que la persona no haya pedido.', 'parameters': {'type': 'object', 'properties': propiedades, 'required': [], 'additionalProperties': False}}}
+    return [
+        tool(consultas.F_FINANZAS, 'Consulta facturas de compra (gastos) y de venta (ingresos) reales del ERP. Úsala para preguntas sobre gastos, ingresos, proveedores, clientes o cobros.', {
+            'tipo': {'type': 'string', 'enum': ['compra', 'venta'], 'description': 'compra = facturas de proveedores; venta = facturas electrónicas emitidas. Sin él se consultan ambas.'},
+            'fecha_desde': fecha, 'fecha_hasta': fecha,
+            'proveedor': {**texto, 'description': 'Solo compras: razón social, RUT o código del proveedor (basta una parte).'},
+            'cliente': {**texto, 'description': 'Solo ventas: razón social o RUT del cliente.'},
+            'estado_cobro': {'type': 'string', 'enum': list(consultas.ESTADOS_COBRO), 'description': 'Solo ventas: PENDIENTE_PAGO (por cobrar) o PAGADA.'}}),
+        tool(consultas.F_KARDEX, 'Consulta el stock valorizado de la bodega según el Cardex: artículos con stock, su último movimiento y su valor. Úsala para inventario inmovilizado, stock sin rotación o valor en bodega.', {
+            'categoria': {**texto, 'description': 'Categoría del artículo (basta una parte).'}, 'proveedor': {**texto, 'description': 'Proveedor habitual del artículo.'},
+            'sin_movimiento_dias': {'type': 'integer', 'minimum': 0, 'maximum': 3650, 'description': 'Solo artículos sin movimiento hace al menos estos días.'},
+            'ordenar_por': {'type': 'string', 'enum': list(consultas.ORDENES_KARDEX), 'description': 'antiguedad = más días sin moverse primero; valor_total = más dinero inmovilizado primero (por defecto).'}}),
+        tool(consultas.F_OPERACIONES, 'Consulta las obras reales: estado, cliente, fechas y margen del presupuesto. Úsala para preguntas sobre obras en curso, finalizadas, planificadas o de bajo margen.', {
+            'estado': {'type': 'string', 'enum': list(consultas.ESTADOS_OBRA)},
+            'margen_menor_a': {'type': 'number', 'minimum': -1000, 'maximum': 100, 'description': 'Solo obras con margen de ganancia (%) menor que este número.'},
+            'obra': {**texto, 'description': 'Código (OB-0001) o parte del nombre de la obra.'}}),
+    ]
+
+
+def _consulta(nombre):
+    def manejador(usuario, args):
+        return consultas.ejecutar(usuario, nombre, args), None
+    return manejador
 
 
 def puede_reporte_finanzas(usuario):
@@ -216,7 +251,8 @@ def _preparar_factura(usuario, args):
     return {'ok': True, 'texto': texto, '_calculo': texto, 'nota': nota, '_navegacion': {'ruta': f'/erp/obras/{c.id}', 'ancla': 'facturacion', 'etiqueta': f'la obra {c.id}'}}, None
 
 
-_MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra, NOMBRE_FACTURA: _preparar_factura, NOMBRE_FINANZAS: _finanzas}
+_MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra, NOMBRE_FACTURA: _preparar_factura, NOMBRE_FINANZAS: _finanzas,
+                consultas.F_FINANZAS: _consulta(consultas.F_FINANZAS), consultas.F_KARDEX: _consulta(consultas.F_KARDEX), consultas.F_OPERACIONES: _consulta(consultas.F_OPERACIONES)}
 
 
 def ejecutar(usuario, nombre, argumentos_json):

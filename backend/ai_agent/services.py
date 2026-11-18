@@ -9,7 +9,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, RateLimitError
 
-from . import herramientas
+from . import consultas, herramientas
 from .prompts import SYSTEM_PROMPTS, system_prompt, system_prompt_agente, system_prompt_chat  # noqa: F401  (SYSTEM_PROMPTS se expone para pruebas y documentación)
 
 logger = logging.getLogger('ai_agent')
@@ -171,7 +171,7 @@ def conversar(usuario, rol, historial, rutas=(), prompt_extra='', con_herramient
     tools = herramientas.herramientas_para(usuario) if con_herramientas else []
     nombres = {t['function']['name'] for t in tools}
     mensajes = [{'role': 'system', 'content': system_prompt_agente(rol, rutas, con_reportes=herramientas.NOMBRE_REPORTE in nombres, con_stock=herramientas.NOMBRE_PROYECCION in nombres,
-                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres, con_factura=herramientas.NOMBRE_FACTURA in nombres, con_finanzas=herramientas.NOMBRE_FINANZAS in nombres) + prompt_extra},
+                                                                  con_compras=herramientas.NOMBRE_COMPRA in nombres, con_factura=herramientas.NOMBRE_FACTURA in nombres, con_finanzas=herramientas.NOMBRE_FINANZAS in nombres, con_consultas=consultas.F_FINANZAS in nombres) + prompt_extra},
                 *({'role': m['role'], 'content': m['content']} for m in historial)]
     if tools:
         return _conversar_con_herramientas(usuario, rol, mensajes, rutas, tools)
