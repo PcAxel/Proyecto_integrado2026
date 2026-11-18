@@ -12,6 +12,7 @@ import { formatPct } from '@/domain/format'
 import { formatKm } from '@/domain/flota'
 import { BarrasPareadas, ListaAlertas, ActividadReciente } from './Charts'
 import { PanelInstrumentos } from './Hero'
+import { ResumenTributario } from './ResumenTributario'
 import { BandejaTareas } from './BandejaTareas'
 import { ENFOQUES, PRIORIDAD_INDICADORES, elegirInstrumento } from './enfoques'
 
@@ -26,6 +27,7 @@ export function DashboardPage() {
   // Cifras tributarias: solo se piden si el rol puede ver la facturación (Finanzas, Gerencia y Auditor Externo).
   const veDte = can(user.rol, 'facturacion.ver')
   const dte = useResource(() => (veDte ? facturacionService.resumen().catch(() => null) : Promise.resolve(null)), [veDte]).data
+  const veResumenTributario = veDte && can(user.rol, 'compras.ver')
   const definido = (v) => v !== undefined && v !== null
   const docsVencidos = (data?.alertas ?? []).filter((a) => a.severidad === 'CRITICA' && ['LICENCIA', 'REVISION_TECNICA', 'PERMISO_CIRCULACION', 'SEGURO'].includes(a.tipo)).length
   const enfoque = ENFOQUES[user.rol] ?? ENFOQUES.CONSULTA
@@ -71,6 +73,8 @@ export function DashboardPage() {
       ) : (
         <PanelInstrumentos usuario={user} titular={enfoque.titular(tareas)} apoyo={enfoque.apoyo(tareas)} accesos={enfoque.accesos} instrumento={elegirInstrumento(k)} />
       )}
+
+      {veResumenTributario && <ResumenTributario />}
 
       <div className={cn('grid items-start gap-6', conBandeja && 'xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]')}>
         {conBandeja && (data ? <div data-agent-target="bandeja-tareas"><BandejaTareas tareas={tareas} /></div> : <div className="rounded-xl border border-fyag-ice/15 bg-fyag-panel"><Skeleton rows={5} /></div>)}

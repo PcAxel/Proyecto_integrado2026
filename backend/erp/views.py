@@ -182,3 +182,19 @@ class InformeEjecutivoPptxView(APIView):
         respuesta['Content-Disposition'] = f'attachment; filename="informe-ejecutivo-fyag{sufijo}.pptx"'
         respuesta['Cache-Control'] = 'no-store'
         return respuesta
+
+
+class ResumenTributarioView(APIView):
+    """`GET /api/erp/finanzas/resumen/?mes=YYYY-MM`: gastos, ganancia neta y proyección de IVA del mes. Lo ven quienes pueden leer la facturación
+    electrónica y las compras (Administrador, Finanzas y Auditoría); el servidor calcula todo."""
+    permission_classes = [TermsAccepted]
+
+    def get(self, request):
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        from . import finanzas, tablas
+        if not (tablas.tiene(request.user, ['facturacion.ver']) and tablas.puede_leer(request.user, 'facturas')):
+            raise PermissionDenied('Tu rol no puede ver el resumen tributario.')
+        try:
+            return Response(finanzas.resumen_tributario(request.query_params.get('mes') or None))
+        except (ValueError, TypeError):
+            raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})

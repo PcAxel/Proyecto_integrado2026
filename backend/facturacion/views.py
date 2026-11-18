@@ -72,6 +72,8 @@ class ResumenDTEView(_Base):
         from django.db.models import Count, Sum
         aceptadas = FacturaDTE.objects.filter(estado_sii=FacturaDTE.EstadoSII.ACEPTADO)
         hoy = timezone.localdate()
+        from erp.finanzas import instantes_del_mes
+        inicio, fin = instantes_del_mes(hoy.year, hoy.month)
 
         def cifras(qs):
             a = qs.aggregate(emitidas=Count('id'), neto=Sum('monto_neto'), iva=Sum('monto_iva'), total=Sum('monto_total'))
@@ -80,7 +82,7 @@ class ResumenDTEView(_Base):
         return Response({
             'periodo': hoy.strftime('%Y-%m'),
             'tasa_iva': 19,
-            'mes': cifras(aceptadas.filter(emitido_en__year=hoy.year, emitido_en__month=hoy.month)),
+            'mes': cifras(aceptadas.filter(emitido_en__gte=inicio, emitido_en__lt=fin)),
             'acumulado': cifras(aceptadas),
             'procesando': FacturaDTE.objects.filter(estado_sii=FacturaDTE.EstadoSII.PROCESANDO).count(),
             'rechazadas': FacturaDTE.objects.filter(estado_sii=FacturaDTE.EstadoSII.RECHAZADO).count(),
