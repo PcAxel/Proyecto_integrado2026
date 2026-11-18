@@ -161,6 +161,7 @@ function Conversacion({ activo, onCerrar }) {
         opciones: limpia.opciones, bloqueado: r.estado_seguridad === 'BLOQUEADO_POR_ROL', motor: r.motor }])
       // El cursor del agente recorre el camino a la vista; con el panel acoplado a la derecha (pantalla grande) no tapa lo que se trabaja.
       if ((accion?.ancla || plan.some((p) => p.tipo !== 'NAVIGATE')) && !window.matchMedia('(min-width: 1024px)').matches) onCerrar?.() // en pantallas chicas el chat flota encima: se esconde (la conversación se conserva)
+      if (r.archivo?.autodescarga) iaService.descargarReporte(r.archivo).catch((err) => toast.error(err?.message || 'No se pudo descargar el archivo. Usa el botón del mensaje.')) // descarga silenciosa; el botón queda como respaldo
       if (plan.length) await ejecutarPlan(plan, navigate)
       else if (accion) await guiarA(accion.url, navigate) // respuesta sin `ui_actions` (servidor anterior): se navega como siempre
     } catch (err) {

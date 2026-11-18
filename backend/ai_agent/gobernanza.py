@@ -297,6 +297,14 @@ def responder_local(usuario, texto, rutas, origen=''):
     t = sin_tildes(texto).strip()
     salida = {'respuesta_texto': '', 'accion': 'ninguna', 'ruta': None, 'termino_busqueda': None}
 
+    # Reporte ejecutivo de finanzas: sin modelo se resuelve igual, con la misma herramienta del servidor y los permisos del usuario.
+    if re.search(r'(reporte|informe|presentacion|powerpoint|ppt)', t) and re.search(r'finanza|ingresos|gastos|impuesto|iva', t):
+        from . import herramientas
+        if herramientas.puede_reporte_finanzas(usuario):
+            resultado, archivo = herramientas.ejecutar(usuario, herramientas.NOMBRE_FINANZAS, '{}')
+            if archivo:
+                return {**salida, 'respuesta_texto': resultado.get('_mensaje') or herramientas.MENSAJE_FINANZAS, 'archivo': archivo}
+
     form = FORMULARIOS['cliente-nuevo']
     if re.search(r'(crea|registra|agrega|ingresa|nuevo)\w*\s+(un |el |al )?(nuevo )?cliente', t) and tablas.tiene(usuario, form['requiere']):
         campos = {}

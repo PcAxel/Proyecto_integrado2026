@@ -191,11 +191,18 @@ PREPARAR UNA FACTURA (herramienta preparar_factura):
 - Si hay varias obras que coinciden o ninguna, pide que precise el código; no adivines."""
 
 
-def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None, con_stock: bool = False, con_compras: bool = False, con_factura: bool = False) -> str:
+PROMPT_FINANZAS = """
+
+REPORTE EJECUTIVO DE FINANZAS (herramienta generar_reporte_finanzas):
+- Si piden «el reporte de finanzas», el reporte ejecutivo del mes o una presentación de ingresos, gastos e impuestos, llama a la herramienta (sin preguntar nada más; sin mes se usa el mes en curso).
+- La herramienta genera el PowerPoint y la descarga empieza sola. Tú no escribes cifras ni enlaces: confirma en una frase corta."""
+
+
+def system_prompt_agente(rol: str, rutas, con_reportes: bool = False, hoy=None, con_stock: bool = False, con_compras: bool = False, con_factura: bool = False, con_finanzas: bool = False) -> str:
     """Prompt de conversación + reglas de solo lectura + catálogo de pantallas que este usuario puede abrir (+ reportes si su rol los tiene)."""
     from django.utils import timezone
     hoy = hoy or timezone.localdate()
     lista = '\n'.join(f'- {r["ruta"]}: {r["label"]}{" [admite búsqueda]" if r.get("buscable") else ""}' for r in rutas) or '- (ninguna: responde solo con accion "ninguna")'
     reportes = PROMPT_REPORTES.replace('{hoy}', hoy.isoformat()) if con_reportes else ''
-    reportes += (PROMPT_STOCK if con_stock else '') + (PROMPT_COMPRAS if con_compras else '') + (PROMPT_FACTURA if con_factura else '')
+    reportes += (PROMPT_STOCK if con_stock else '') + (PROMPT_COMPRAS if con_compras else '') + (PROMPT_FACTURA if con_factura else '') + (PROMPT_FINANZAS if con_finanzas else '')
     return f'{system_prompt_chat(rol)}{PROMPT_AGENTE}{reportes}\n\nPANTALLAS DISPONIBLES PARA ESTE USUARIO:\n{lista}'

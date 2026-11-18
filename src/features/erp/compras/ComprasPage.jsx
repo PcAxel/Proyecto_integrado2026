@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { PageHeader, Tabs, Card, DataTable, Button, Badge, Mono, ExportMenu } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
-import { BotonInformeEjecutivo } from '@/components/InformeEjecutivo'
+import { MenuAvanzado } from '@/components/MenuAvanzado'
 import { comprasService, proveedoresService, articulosService } from '@/services'
 import { formatFecha } from '@/domain/format'
 import { can } from '@/domain/rbac'
@@ -59,7 +59,6 @@ export function ComprasPage() {
     <div className="space-y-5">
       <PageHeader title="Compras" subtitle="Facturas con descuentos en cascada y notas de crédito"
         actions={<>
-          <BotonInformeEjecutivo />
           {tab === 'facturas'
             ? <ExportMenu nombre="facturas-compra" titulo="Facturas de compra" filas={facturas.data ?? []} columnas={[
               { titulo: 'N°', clave: 'numero' }, { titulo: 'Proveedor', clave: (f) => prov(f.proveedor_id)?.razon_social, ancho: 36 }, { titulo: 'Fecha', clave: 'fecha', tipo: 'fecha' },
@@ -73,6 +72,7 @@ export function ComprasPage() {
           {puede && (tab === 'facturas'
             ? <Button icon={Plus} onClick={() => setNueva(true)}>Registrar factura</Button>
             : <Button icon={Plus} onClick={() => setNuevaNC(true)}>Nueva nota de crédito</Button>)}
+          <MenuAvanzado />
         </>} />
       <Tabs value={tab} onChange={setTab} tabs={[{ id: 'facturas', label: 'Facturas', count: facturas.data?.length }, { id: 'notas', label: 'Notas de crédito', count: notas.data?.length }]} />
       <Card padded={false}>

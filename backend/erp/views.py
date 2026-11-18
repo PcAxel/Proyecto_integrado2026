@@ -213,3 +213,30 @@ class ImpuestosView(ResumenTributarioView):
             return Response(finanzas.impuestos_del_mes(request.query_params.get('mes') or None))
         except (ValueError, TypeError):
             raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
+
+
+def informe_finanzas_pptx(usuario, mes):
+    """Bytes del .pptx de finanzas del mes (`YYYY-MM`, el mes en curso si es None). Comparte permisos con el resumen tributario; ValueError si el mes no sirve."""
+    from rest_framework.exceptions import PermissionDenied
+    from . import finanzas, informe_finanzas_pptx as generador, tablas
+    if not (tablas.tiene(usuario, ['facturacion.ver']) and tablas.puede_leer(usuario, 'facturas')):
+        raise PermissionDenied('Tu rol no puede generar el reporte de finanzas.')
+    return generador.generar_pptx_finanzas(finanzas.impuestos_del_mes(mes), generado_por=usuario.full_name or usuario.email)
+
+
+class ReportePptFinanzasView(APIView):
+    """`GET /api/finanzas/reporte-ppt/?mes=YYYY-MM`: PowerPoint de Ingresos, Gastos e Impuestos del mes con gráficos nativos, compilado al vuelo."""
+    permission_classes = [TermsAccepted]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from rest_framework.exceptions import ValidationError
+        mes = request.query_params.get('mes') or None
+        try:
+            contenido = informe_finanzas_pptx(request.user, mes)
+        except (ValueError, TypeError):
+            raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
+        respuesta = HttpResponse(contenido, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+        respuesta['Content-Disposition'] = f'attachment; filename="reporte-finanzas-{mes or "mes-en-curso"}.pptx"'
+        respuesta['Cache-Control'] = 'no-store'
+        return respuesta

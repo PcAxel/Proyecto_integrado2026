@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Landmark, Wallet, Clock, CheckCircle2, BadgeDollarSign } from 'lucide-react'
-import { BotonInformeEjecutivo } from '@/components/InformeEjecutivo'
 import { PageHeader, Card, DataTable, Badge, Button, Modal, Input, Select, NumberField, KpiTile, Mono } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
 import { cobranzasService } from '@/services'
@@ -77,8 +76,7 @@ export function CobranzasPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Cobranzas" subtitle="Pagos de clientes contra las facturas electrónicas emitidas"
-        actions={<BotonInformeEjecutivo />} />
+      <PageHeader title="Cobranzas" subtitle="Pagos de clientes contra las facturas electrónicas emitidas" />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <KpiTile label="Por cobrar" value={data ? formatCLP(data.por_cobrar) : '—'} icon={Wallet} tone={data?.por_cobrar ? 'warn' : undefined} hint={data ? `${data.pendientes} factura(s) pendiente(s)` : undefined} />
         <KpiTile label="Cobrado" value={data ? formatCLP(data.cobrado) : '—'} icon={Landmark} tone="ok" />

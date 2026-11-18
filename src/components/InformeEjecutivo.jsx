@@ -5,18 +5,18 @@ import { Button, Modal, Input } from '@/components/ui'
 import { informesService } from '@/services'
 import { can } from '@/domain/rbac'
 import { errorPeriodo, periodoRapido } from '@/domain/periodoInforme'
-import { useAuthStore } from '@/stores/authStore'
 
 const ATAJOS = [['mes', 'Este mes'], ['mes_anterior', 'Mes anterior'], ['anio', 'Este año'], ['todo', 'Todo el historial']]
 
-/** Botón + ventana para descargar el informe ejecutivo en PowerPoint de un periodo (el servidor calcula y filtra por fechas). */
-export function BotonInformeEjecutivo() {
-  const rol = useAuthStore((s) => s.user.rol)
-  const [abierto, setAbierto] = useState(false)
+/** Permiso para el informe ejecutivo por periodo (compras, bodega, presupuestos y obras). */
+export const puedeInformeEjecutivo = (rol) => ['compras.ver', 'bodega.ver', 'presupuestos.ver', 'obras.ver'].every((p) => can(rol, p))
+
+/** Ventana para descargar el informe ejecutivo en PowerPoint de un periodo (el servidor calcula y filtra por fechas). La abre el menú «⋯». */
+export function InformeEjecutivoModal({ abierto, onClose }) {
   const [periodo, setPeriodo] = useState(() => periodoRapido('mes'))
   const [generando, setGenerando] = useState(false)
-  if (!['compras.ver', 'bodega.ver', 'presupuestos.ver', 'obras.ver'].every((p) => can(rol, p))) return null
   const error = errorPeriodo(periodo)
+  const setAbierto = (v) => { if (!v) onClose() }
 
   const descargar = async () => {
     setGenerando(true)
@@ -25,7 +25,6 @@ export function BotonInformeEjecutivo() {
 
   return (
     <>
-      <Button variant="secondary" icon={Presentation} onClick={() => setAbierto(true)}>Informe ejecutivo</Button>
       <Modal open={abierto} onClose={() => setAbierto(false)} title="Informe ejecutivo (PowerPoint)"
         footer={<><Button variant="secondary" onClick={() => setAbierto(false)}>Cancelar</Button><Button icon={Presentation} onClick={descargar} loading={generando} disabled={Boolean(error)}>Descargar .pptx</Button></>}>
         <p className="mb-3 text-sm text-ink-soft">Elige el periodo: las compras, el gasto de obras y los presupuestos aprobados se acotan a esas fechas, y el dinero en bodega se calcula al cierre de la fecha final.</p>

@@ -571,7 +571,7 @@ class ToolsStockEnElChatTests(StockBase):
 
     def test_cada_rol_recibe_solo_las_tools_que_puede_usar(self):
         nombres = lambda rol: [t['function']['name'] for t in herramientas.herramientas_para(self.users[rol])]
-        self.assertEqual(nombres('FINANZAS'), ['generar_reporte', 'analizar_proyeccion_stock', 'generar_borrador_compra_critico', 'preparar_factura'])
+        self.assertEqual(nombres('FINANZAS'), ['generar_reporte', 'analizar_proyeccion_stock', 'generar_borrador_compra_critico', 'preparar_factura', 'generar_reporte_finanzas'])
         self.assertEqual(nombres('RRHH'), ['generar_reporte'])
         self.assertEqual(nombres('TECNICO'), [])
 

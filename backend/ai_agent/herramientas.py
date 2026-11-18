@@ -22,6 +22,8 @@ NOMBRE_REPORTE = 'generar_reporte'
 NOMBRE_PROYECCION = 'analizar_proyeccion_stock'
 NOMBRE_COMPRA = 'generar_borrador_compra_critico'
 NOMBRE_FACTURA = 'preparar_factura'
+NOMBRE_FINANZAS = 'generar_reporte_finanzas'
+MENSAJE_FINANZAS = 'Aquí tienes el reporte ejecutivo del mes con los gráficos actualizados.'
 FORMATOS_COMPRA = ('xlsx', 'docx')
 MAX_LARGO_PRODUCTO = 80
 MAX_LARGO_TRABAJO = 120
@@ -31,7 +33,7 @@ URL_DESCARGA = '/ai/reportes/{token}/?formato={formato}'
 
 def herramientas_para(usuario):
     """Definición de tools (formato OpenAI/DeepSeek) para este usuario: solo las que su rol puede usar (lista vacía si ninguna)."""
-    return [*_tool_reporte(usuario), *_tool_proyeccion(usuario), *_tool_compra(usuario), *_tool_factura(usuario)]
+    return [*_tool_reporte(usuario), *_tool_proyeccion(usuario), *_tool_compra(usuario), *_tool_factura(usuario), *_tool_finanzas(usuario)]
 
 
 def _tool_proyeccion(usuario):
@@ -45,6 +47,37 @@ def _tool_proyeccion(usuario):
             'producto': {'type': 'string', 'maxLength': MAX_LARGO_PRODUCTO, 'description': 'SKU, id o nombre del producto (basta una parte del nombre).'},
             'formato': {'type': 'string', 'enum': list(generadores.FORMATOS), 'description': 'Opcional. Solo si piden un reporte visual o con gráfico: xlsx (Excel), docx (Word), pptx (PowerPoint).'},
         }, 'required': ['producto'], 'additionalProperties': False}}}]
+
+
+def puede_reporte_finanzas(usuario):
+    return tablas.tiene(usuario, ['facturacion.ver']) and tablas.puede_leer(usuario, 'facturas')
+
+
+def _tool_finanzas(usuario):
+    if not puede_reporte_finanzas(usuario):
+        return []
+    return [{'type': 'function', 'function': {
+        'name': NOMBRE_FINANZAS,
+        'description': ('Genera y descarga el reporte ejecutivo de finanzas en PowerPoint (con gráficos) que compara Ingresos, Gastos e Impuestos (IVA) del mes. '
+                        'Úsala cuando pidan «el reporte de finanzas», el reporte ejecutivo del mes o una presentación de ingresos, gastos e impuestos. '
+                        'El sistema calcula todo y la descarga empieza sola; tú solo confirma en una frase.'),
+        'parameters': {'type': 'object', 'properties': {
+            'mes': {'type': 'string', 'pattern': r'^\d{4}-(0[1-9]|1[0-2])$', 'description': 'Opcional. Mes del reporte en formato AAAA-MM. Sin él se usa el mes en curso.'},
+        }, 'required': [], 'additionalProperties': False}}}]
+
+
+def _finanzas(usuario, args):
+    mes = args.get('mes')
+    if mes not in (None, '') and not (isinstance(mes, str) and len(mes) == 7 and mes[4] == '-' and mes[:4].isdigit() and mes[5:].isdigit() and 1 <= int(mes[5:]) <= 12):
+        return {'ok': False, 'error': 'El mes debe venir como AAAA-MM (por ejemplo 2026-11).'}, None
+    from erp.views import informe_finanzas_pptx
+    contenido = informe_finanzas_pptx(usuario, mes or None)  # con el usuario autenticado: sus permisos mandan, no lo que diga el modelo
+    nombre = f'reporte_finanzas_{mes or timezone.localdate().strftime("%Y-%m")}.pptx'
+    info = generadores.guardar_bytes(usuario, contenido, 'pptx', nombre)
+    logger.info('ai_reporte_finanzas user=%s rol=%s mes=%s', usuario.pk, usuario.role, mes or 'en_curso')
+    # `autodescarga`: el chat baja el archivo solo; `_mensaje`: el aviso que se muestra lo fija el servidor.
+    return ({'ok': True, 'nota': 'El reporte se generó y la descarga empieza sola. No escribas enlaces ni cifras: confirma brevemente.', '_mensaje': MENSAJE_FINANZAS},
+            {**_archivo(info), 'autodescarga': True})
 
 
 def _tool_factura(usuario):
@@ -181,7 +214,7 @@ def _preparar_factura(usuario, args):
     return {'ok': True, 'texto': texto, '_calculo': texto, 'nota': nota, '_navegacion': {'ruta': f'/erp/obras/{c.id}', 'ancla': 'facturacion', 'etiqueta': f'la obra {c.id}'}}, None
 
 
-_MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra, NOMBRE_FACTURA: _preparar_factura}
+_MANEJADORES = {NOMBRE_REPORTE: _reporte, NOMBRE_PROYECCION: _proyeccion, NOMBRE_COMPRA: _compra, NOMBRE_FACTURA: _preparar_factura, NOMBRE_FINANZAS: _finanzas}
 
 
 def ejecutar(usuario, nombre, argumentos_json):

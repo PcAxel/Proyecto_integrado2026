@@ -8,6 +8,7 @@ urlpatterns = [
     path('erp/informe-ejecutivo/', views.InformeEjecutivoPptxView.as_view()),
     path('erp/finanzas/resumen/', views.ResumenTributarioView.as_view()),
     path('erp/finanzas/impuestos/', views.ImpuestosView.as_view()),
+    path('finanzas/reporte-ppt/', views.ReportePptFinanzasView.as_view()),  # /api/finanzas/reporte-ppt/
     path('erp/buscar/<str:tabla>/', autocompletar.BuscarRelacionView.as_view()),
     path('erp/solicitudes-compra/<str:solicitud_id>/emitir/', views.EmitirOrdenesView.as_view()),
     path('erp/solicitudes-compra/<str:solicitud_id>/rechazar/', views.RechazarSolicitudView.as_view()),

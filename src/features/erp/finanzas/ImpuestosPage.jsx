@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Landmark, TrendingDown, TrendingUp, PiggyBank } from 'lucide-react'
 import { PageHeader, Card, DataTable, KpiTile, ExportMenu, Mono, Skeleton } from '@/components/ui'
 import { MoneyCell } from '@/components/domain'
+import { MenuAvanzado } from '@/components/MenuAvanzado'
 import { ErrorEstado } from '@/components/ErrorEstado'
 import { finanzasService } from '@/services'
 import { formatCLP } from '@/domain/money'
@@ -42,13 +43,14 @@ export function ImpuestosPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Impuestos (IVA)" subtitle="Débito, crédito y remanente del mes, con los documentos que lo respaldan para preparar el F29"
-        actions={
+        actions={<>
           <label className="text-xs font-medium text-ink-soft">
             <span className="mr-2">Mes</span>
             <input type="month" value={mes} max={fechaLocal().slice(0, 7)} onChange={(e) => e.target.value && setMes(e.target.value)}
               className="rounded-md border border-line bg-surface px-2 py-1 font-mono text-sm text-ink" />
           </label>
-        } />
+          <MenuAvanzado />
+        </>} />
 
       {error ? <ErrorEstado error={error} onRetry={reload} /> : !data ? <Skeleton rows={6} /> : (<>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
