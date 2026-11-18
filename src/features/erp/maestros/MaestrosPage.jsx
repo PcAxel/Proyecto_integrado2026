@@ -22,16 +22,16 @@ export function MaestrosPage() {
       {tab === 'clientes' ? (
         <MaestroTab key="c" singular="Cliente" plural="Clientes" servicio={clientesService} permisos={['maestros.gestionar', 'clientes.gestionar']}
           campos={[
-            { clave: 'rut', label: 'RUT' }, { clave: 'razon_social', label: 'Razón social' }, { clave: 'giro', label: 'Giro', ancho: 'sm:col-span-2' },
-            { clave: 'comuna', label: 'Comuna' }, { clave: 'contacto', label: 'Contacto' }, { clave: 'telefono', label: 'Teléfono' }, { clave: 'email', label: 'Correo', tipo: 'email' },
+            { clave: 'rut', label: 'RUT' }, { clave: 'razon_social', label: 'Razón social' }, { clave: 'giro', label: 'Giro', ancho: 'sm:col-span-2', opcional: true },
+            { clave: 'comuna', label: 'Comuna', opcional: true }, { clave: 'contacto', label: 'Contacto', opcional: true }, { clave: 'telefono', label: 'Teléfono', opcional: true }, { clave: 'email', label: 'Correo', tipo: 'email', opcional: true },
           ]}
           columnas={[...BASE, { key: 'telefono', header: 'Teléfono', mono: true }]}
           exportar={[...BASE_X, { titulo: 'Giro', clave: 'giro', ancho: 34 }, { titulo: 'Teléfono', clave: 'telefono' }, { titulo: 'Correo', clave: 'email', ancho: 28 }]} />
       ) : tab === 'proveedores' && (
         <MaestroTab key="p" singular="Proveedor" plural="Proveedores" servicio={proveedoresService}
           campos={[
-            { clave: 'rut', label: 'RUT' }, { clave: 'razon_social', label: 'Razón social' }, { clave: 'comuna', label: 'Comuna' },
-            { clave: 'contacto', label: 'Contacto' }, { clave: 'condicion_pago', label: 'Condición de pago' },
+            { clave: 'rut', label: 'RUT' }, { clave: 'razon_social', label: 'Razón social' }, { clave: 'comuna', label: 'Comuna', opcional: true },
+            { clave: 'contacto', label: 'Contacto', opcional: true }, { clave: 'condicion_pago', label: 'Condición de pago', opcional: true },
           ]}
           columnas={[...BASE, { key: 'condicion_pago', header: 'Pago' }, { key: 'desc', header: 'Descuentos habituales', mono: true, render: (r) => (r.descuentos_habituales ?? []).filter((d) => d > 0).map((d) => `${d}%`).join(' + ') || '—' }]}
           exportar={[...BASE_X, { titulo: 'Condición de pago', clave: 'condicion_pago' }, { titulo: 'Descuentos', clave: (r) => (r.descuentos_habituales ?? []).filter((d) => d > 0).map((d) => `${d}%`).join(' + ') }]} />

@@ -67,9 +67,10 @@ export function MaestroTab({ singular, plural, servicio, campos, columnas, expor
       {form && (
         <Modal open onClose={() => setForm(null)} size="lg" title={form.id ? `Editar ${form.datos.razon_social}` : `Nuevo ${singular.toLowerCase()}`}
           footer={<><Button variant="secondary" onClick={() => setForm(null)}>Cancelar</Button><Button data-agent-target="btn-guardar-maestro" loading={guardando} disabled={!valido} onClick={guardar}>Guardar</Button></>}>
+          <p className="mb-3 text-xs text-ink-faint"><span className="font-semibold text-crit">*</span> obligatorio · los demás son opcionales.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {campos.map((c) => (
-              <Input key={c.clave} data-agent-field={c.clave} className={c.ancho} label={c.label} type={c.tipo} mono={c.clave === 'rut'} value={form.datos[c.clave] ?? ''}
+              <Input key={c.clave} data-agent-field={c.clave} className={c.ancho} label={c.label} obligatorio={!c.opcional} opcional={c.opcional} type={c.tipo} mono={c.clave === 'rut'} value={form.datos[c.clave] ?? ''}
                 disabled={c.clave === 'rut' && Boolean(form.id)} hint={c.clave === 'rut' && !form.id ? 'Formato 12.345.678-5' : undefined}
                 error={c.clave === 'rut' && rutInvalido ? 'RUT inválido (dígito verificador)' : undefined}
                 onChange={(e) => setForm({ ...form, datos: { ...form.datos, [c.clave]: e.target.value } })} />

@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 're
 import { createPortal } from 'react-dom'
 import { ChevronsUpDown, X } from 'lucide-react'
 import { filtrarOpciones, prepararOpciones } from '@/domain/combobox'
-import { inputBase } from './Field'
+import { inputBase, TextoEtiqueta } from './Field'
 import { cn } from './cn'
 
 /**
@@ -12,7 +12,7 @@ import { cn } from './cn'
  * @param {{label?:string, options:Array<{value:string,label:string,detail?:string}>, value:string, onChange:(valor:string)=>void, placeholder?:string,
  *   hint?:string, error?:string, disabled?:boolean, max?:number, className?:string, 'aria-label'?:string, autoFocus?:boolean}} props
  */
-export function Combobox({ label, options, value, onChange, placeholder = 'Escribe para buscar…', hint, error, disabled, max = 50, className, autoFocus, ...rest }) {
+export function Combobox({ label, options, value, onChange, placeholder = 'Escribe para buscar…', hint, error, disabled, max = 50, className, autoFocus, obligatorio, opcional, ...rest }) {
   const id = useId()
   const lista = `${id}-lista`
   const raiz = useRef(null)
@@ -62,7 +62,7 @@ export function Combobox({ label, options, value, onChange, placeholder = 'Escri
 
   return (
     <div className={cn('block', className)} ref={raiz}>
-      {label && <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-ink">{label}</label>}
+      {label && <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-ink"><TextoEtiqueta texto={label} obligatorio={obligatorio} opcional={opcional} /></label>}
       <div className="relative">
         <input
           ref={entrada} id={id} type="text" role="combobox" autoComplete="off" spellCheck={false} disabled={disabled} autoFocus={autoFocus}

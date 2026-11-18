@@ -5,9 +5,9 @@ import { cn } from './cn'
  * Campo numérico controlado. `value` es number|null; entrega number|null en onChange.
  * `prefix`/`suffix` muestran unidades (ej. "$", "PSI").
  */
-export function NumberField({ label, hint, error, value, onChange, prefix, suffix, min, max, step = 1, className, size = 'md', ...rest }) {
+export function NumberField({ label, hint, error, value, onChange, prefix, suffix, min, max, step = 1, className, size = 'md', obligatorio, opcional, ...rest }) {
   return (
-    <Field label={label} hint={hint} error={error} className={className}>
+    <Field label={label} hint={hint} error={error} className={className} obligatorio={obligatorio ?? rest.required} opcional={opcional}>
       <div className="relative">
         {prefix && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-ink-soft">{prefix}</span>}
         <input
