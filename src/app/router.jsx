@@ -37,6 +37,7 @@ import { SistemaPage } from '@/features/erp/sistema/SistemaPage'
 import { GobernanzaIAPage } from '@/features/erp/sistema/GobernanzaIAPage'
 import { AprobacionComprasPage } from '@/features/erp/finanzas/AprobacionComprasPage'
 import { CobranzasPage } from '@/features/erp/finanzas/CobranzasPage'
+import { ImpuestosPage } from '@/features/erp/finanzas/ImpuestosPage'
 import { ROLES_ERP } from '@/domain/rolesApi'
 
 /**
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
           { path: 'compras', element: <RequireRole accion="compras.ver"><ComprasPage /></RequireRole> },
           { path: 'aprobacion-compras', element: <RequireRole accion="compras.aprobar"><AprobacionComprasPage /></RequireRole> },
           { path: 'cobranzas', element: <RequireRole accion="cobranzas.ver"><CobranzasPage /></RequireRole> },
+          { path: 'impuestos', element: <RequireRole accion="facturacion.ver"><ImpuestosPage /></RequireRole> },
         ],
       },
       {

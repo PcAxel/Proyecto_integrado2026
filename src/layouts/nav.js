@@ -1,5 +1,5 @@
 import { can } from '@/domain/rbac'
-import { Landmark, ClipboardList, LayoutDashboard, FileText, HardHat, Package, ShoppingCart, ClipboardCheck, Users, Building2, ScrollText, Shield, FileSignature, Wallet, Activity, Scale, BrainCircuit } from 'lucide-react'
+import { Landmark, ClipboardList, LayoutDashboard, FileText, HardHat, Package, ShoppingCart, ClipboardCheck, Users, Building2, ScrollText, Shield, FileSignature, Wallet, Activity, Scale, BrainCircuit, Receipt } from 'lucide-react'
 
 /** ¿Esta persona ve este ítem en su menú? Permiso de lectura y, además, `ocultoPara` (roles que pueden leer pero cuyo trabajo no pasa por esa pantalla). */
 export const itemVisible = (item, rol) => can(rol, item.accion) && !(item.ocultoPara ?? []).includes(rol)
@@ -24,6 +24,7 @@ export const ERP_NAV = [
   { to: '/erp/compras', grupo: 'Operación', label: 'Compras', icon: ShoppingCart, palabras: ['facturas','notas de credito','proveedores','descuentos'], accion: 'compras.ver' },
   { to: '/erp/aprobacion-compras', grupo: 'Finanzas', label: 'Aprobación de Compras', icon: ClipboardList, palabras: ['ordenes de compra','solicitudes','bodega','proveedores','aprobar','oc'], accion: 'compras.aprobar' },
   { to: '/erp/cobranzas', grupo: 'Finanzas', label: 'Cobranzas', icon: Landmark, palabras: ['pagos','clientes','cuentas por cobrar','facturas','cobrar','tesoreria','saldo'], accion: 'cobranzas.ver' },
+  { to: '/erp/impuestos', grupo: 'Finanzas', label: 'Impuestos (IVA)', icon: Receipt, palabras: ['iva','impuestos','f29','sii','remanente','credito fiscal','debito fiscal','declaracion','tributario','libro de compras','libro de ventas'], accion: 'facturacion.ver' },
   { to: '/erp/terreno', grupo: 'Operación', label: 'Auditoría de Terreno', icon: ClipboardCheck, palabras: ['hojas de servicio','checklist','fotos','tecnicos','gps'], accion: 'terreno.ver', ocultoPara: ['ADMINISTRACION', 'ADMIN_GENERAL'] },
   { to: '/erp/personal', grupo: 'Personas y socios', label: 'Personal y Flota', icon: Users, palabras: ['empleados','tecnicos','rrhh','flota','vehiculos','kilometraje','tarifas'], accion: 'personal.ver', buscable: true, ocultoPara: ['ADMINISTRACION'] },
   { to: '/erp/rrhh', grupo: 'Personas y socios', label: 'Contratos y Finiquitos', icon: FileSignature, palabras: ['contratos','finiquito','despido','amonestacion','anexo','sueldo','indemnizacion','vacaciones'], accion: 'rrhh.ver' },

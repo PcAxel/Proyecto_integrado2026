@@ -198,3 +198,18 @@ class ResumenTributarioView(APIView):
             return Response(finanzas.resumen_tributario(request.query_params.get('mes') or None))
         except (ValueError, TypeError):
             raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
+
+
+class ImpuestosView(ResumenTributarioView):
+    """`GET /api/erp/finanzas/impuestos/?mes=YYYY-MM`: libro de IVA del mes (documentos de venta y de compra, notas de crédito, remanente que se
+    arrastra e historial) para preparar el pago de impuestos. Mismos permisos que el resumen."""
+
+    def get(self, request):
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+        from . import finanzas, tablas
+        if not (tablas.tiene(request.user, ['facturacion.ver']) and tablas.puede_leer(request.user, 'facturas')):
+            raise PermissionDenied('Tu rol no puede ver los impuestos.')
+        try:
+            return Response(finanzas.impuestos_del_mes(request.query_params.get('mes') or None))
+        except (ValueError, TypeError):
+            raise ValidationError({'mes': 'Usa el formato AAAA-MM.'})
