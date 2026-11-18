@@ -133,3 +133,22 @@ class RechazarObraView(APIView):
 
     def post(self, request, obra_id):
         return _resolver_obra(request, obra_id, aprobacion_obras.rechazar, 'RECHAZAR_OBRA', motivo=request.data.get('motivo'))
+
+
+class InformeEjecutivoPptxView(APIView):
+    """Informe ejecutivo en PowerPoint, compilado al vuelo con las cifras calculadas por el servidor (ORM). Lo puede descargar quien ya puede leer
+    compras, bodega, presupuestos y obras (Administrador, Finanzas y Auditoría)."""
+    permission_classes = [TermsAccepted]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from rest_framework.exceptions import PermissionDenied
+        from . import informe_pptx, informes, tablas
+        if not all(tablas.puede_leer(request.user, t) for t in ('facturas', 'cardex', 'presupuestos', 'obras')):
+            raise PermissionDenied('Tu rol no puede descargar el informe ejecutivo.')
+        persona = request.user.full_name or request.user.email
+        contenido = informe_pptx.generar_pptx(informes.informe_ejecutivo(), generado_por=persona)
+        respuesta = HttpResponse(contenido, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+        respuesta['Content-Disposition'] = 'attachment; filename="informe-ejecutivo-fyag.pptx"'
+        respuesta['Cache-Control'] = 'no-store'
+        return respuesta
