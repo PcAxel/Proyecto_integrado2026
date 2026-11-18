@@ -34,6 +34,9 @@ CONFIG = {
     'articulos': {'campos': ['datos__sku', 'datos__nombre', 'datos__categoria'], 'label': lambda f: f"{f.get('sku', '')} · {f.get('nombre', '')}",
                   'detalle': lambda f: f.get('categoria', ''), 'activos': True, 'filtros': {'proveedor': 'datos__proveedor_id'}},
     'obras': {'campos': ['datos__nombre'], 'label': lambda f: f"{f['id']} · {f.get('nombre', '')}", 'detalle': lambda f: f.get('estado', ''), 'filtros': {'estado': 'datos__estado'}},
+    # Presupuestos: `?estado=APROBADO&cliente=CLI-001&libre=1` → los aprobados de ese cliente que todavía no tienen obra.
+    'presupuestos': {'campos': ['datos__titulo'], 'label': lambda f: f"{f['id']} · {f.get('titulo', '')}", 'detalle': lambda f: f.get('estado', ''),
+                     'filtros': {'estado': 'datos__estado', 'cliente': 'datos__cliente_id'}, 'libre_de': 'obras'},
     'facturas': {'campos': ['datos__numero', 'datos__proveedor_id'], 'label': lambda f: f"N° {f.get('numero', '')} · {_proveedor(f)}", 'detalle': lambda f: f.get('fecha', '')},
 }
 
@@ -80,6 +83,9 @@ class BuscarRelacionView(ListAPIView):
                 valor = str(request.query_params.get(parametro, '')).strip()[:60]
                 if valor:
                     consulta = consulta.filter(**{campo: valor})
+            if cfg.get('libre_de') and request.query_params.get('libre') in ('1', 'true'):
+                usados = {o.datos.get('presupuesto_id') for o in Registro.objects.filter(tabla=cfg['libre_de'])} - {None}
+                consulta = consulta.exclude(rid__in=usados)  # un presupuesto ya vinculado a una obra no se ofrece otra vez
             if cfg.get('activos'):
                 consulta = consulta.exclude(datos__activo=False)  # un inactivo no se ofrece para operaciones nuevas
             registros = list(consulta[:limite])

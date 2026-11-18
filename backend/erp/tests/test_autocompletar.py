@@ -90,3 +90,30 @@ class FiltrosYFacturasTests(ErpBase):
         d = self.buscar('FINANZAS', 'facturas', search='8841').json()
         self.assertEqual(d, [{'id': 'FC-0001', 'label': 'N° 8841 · Proveedor Demo 01', 'detalle': '2026-11-05'}])
         self.assertEqual(self.buscar('RRHH', 'facturas', search='8841').status_code, 403)
+
+
+class PresupuestosLibresTests(ErpBase):
+    def setUp(self):
+        super().setUp()
+        crear('presupuestos', 'PRE-0001', titulo='Cámara A', cliente_id='CLI-001', estado='APROBADO')
+        crear('presupuestos', 'PRE-0002', titulo='Cámara B', cliente_id='CLI-001', estado='APROBADO')
+        crear('presupuestos', 'PRE-0003', titulo='Cámara C', cliente_id='CLI-009', estado='APROBADO')
+        crear('presupuestos', 'PRE-0004', titulo='Cámara D', cliente_id='CLI-001', estado='BORRADOR')
+        o = Registro.objects.get(tabla='obras', rid='OB-0001')
+        o.datos = {**o.datos, 'presupuesto_id': 'PRE-0001'}; o.save()
+
+    def buscar(self, rol, **p):
+        self.as_role(rol)
+        return self.client.get('/api/erp/buscar/presupuestos/', p)
+
+    def test_aprobados_de_un_cliente_sin_obra(self):
+        r = self.buscar('OPERACIONES', estado='APROBADO', cliente='CLI-001', libre=1)
+        self.assertEqual([x['id'] for x in r.json()], ['PRE-0002'])  # PRE-0001 ya tiene obra; PRE-0003 es de otro cliente; PRE-0004 no está aprobado
+        self.assertEqual(sorted(x['id'] for x in self.buscar('OPERACIONES', estado='APROBADO', libre=1).json()), ['PRE-0002', 'PRE-0003'])
+        self.assertEqual(self.buscar('OPERACIONES', search='Cámara B').json()[0]['label'], 'PRE-0002 · Cámara B')
+
+    def test_permisos_y_sin_costos(self):
+        self.assertEqual(self.buscar('JEFE_BODEGA').status_code, 403)  # Bodega no ve presupuestos
+        self.assertEqual(self.buscar('RRHH').status_code, 403)
+        self.assertEqual(self.buscar('FINANZAS').status_code, 200)
+        self.assertNotIn('precio', str(self.buscar('FINANZAS').json()).lower())

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { CheckCircle2, XCircle, Flag, Lock } from 'lucide-react'
-import { Card, Button, ConfirmDialog, Modal, Select, Mono, cn } from '@/components/ui'
-import { obrasService, presupuestosService } from '@/services'
+import { Card, Button, ConfirmDialog, Modal, Mono, cn } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
+import { obrasService } from '@/services'
 import { can } from '@/domain/rbac'
 import { formatFecha } from '@/domain/format'
 import { useAuthStore } from '@/stores/authStore'
-import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 
 /** Panel de cierre (RF06): los 6 checks de validarCierreObra y el botón Finalizar, bloqueado si falta alguno. */
@@ -81,14 +81,12 @@ export function PanelCierre({ obra, onChanged }) {
 
 function RegularizarModal({ obra, onClose, onConfirm, trabajando }) {
   const [sel, setSel] = useState('')
-  const { data } = useResource(() => presupuestosService.list({ estado: 'APROBADO', cliente_id: obra.cliente_id }), [])
-  const libres = (data ?? []).filter((p) => !p.obra_id)
   return (
     <Modal open onClose={onClose} title="Regularizar presupuesto (CU30)"
       footer={<><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button loading={trabajando} disabled={!sel} onClick={() => onConfirm(sel)}>Vincular presupuesto</Button></>}>
       <p className="mb-4 text-sm text-ink-soft">Vincula un presupuesto <b>aprobado</b> del mismo cliente. Si aún no existe, créalo y apruébalo primero en Presupuestos.</p>
-      <Select label="Presupuesto aprobado" placeholder={libres.length ? 'Seleccione…' : 'No hay presupuestos aprobados disponibles'} value={sel} onChange={(e) => setSel(e.target.value)}
-        options={libres.map((p) => ({ value: p.id, label: `${p.id} · ${p.titulo}` }))} />
+      <BuscadorRelacion tabla="presupuestos" filtros={{ estado: 'APROBADO', cliente: obra.cliente_id, libre: '1' }} label="Presupuesto aprobado" obligatorio
+        placeholder="Escribe el código o el título del presupuesto…" value={sel} onChange={(id) => setSel(id)} />
     </Modal>
   )
 }

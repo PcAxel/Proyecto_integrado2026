@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Plus, X, Save, Send, CheckCircle2, XCircle, HardHat, Lock } from 'lucide-react'
 import { Button, IconButton, Input, Select, NumberField, Card, Skeleton, Modal, Textarea, PageHeader, Mono, cn } from '@/components/ui'
+import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { MoneyCell, PresupuestoStatusBadge, TIPO_OBRA_LABEL } from '@/components/domain'
-import { presupuestosService, clientesService } from '@/services'
+import { presupuestosService } from '@/services'
 import { simularRentabilidad, puedeAprobarPresupuesto } from '@/domain/rentabilidad'
 import { TIPOS_OBRA } from '@/domain/obras'
 import { can } from '@/domain/rbac'
@@ -50,7 +51,6 @@ function EditorForm({ inicial, onCambioEstado }) {
 
   const catalogo = useResource(() => presupuestosService.catalogoMateriales(), [])
   const tarifas = useResource(() => presupuestosService.tarifas(), [])
-  const clientes = useResource(() => clientesService.list(), [])
 
   const estado = inicial.estado ?? 'BORRADOR'
   const editable = can(rol, 'presupuestos.crear') && ['BORRADOR', 'ENVIADO'].includes(estado)
@@ -108,7 +108,6 @@ function EditorForm({ inicial, onCambioEstado }) {
   })
 
   const totales = { mat: sim.costoMateriales, mo: sim.costoManoObra, ad: sim.costoAdicionales }
-  const opcionesArt = (catalogo.data ?? []).map((a) => ({ value: a.id, label: `${a.sku} · ${a.nombre}` }))
   const opcionesCargo = (tarifas.data ?? []).map((t) => ({ value: t.cargo, label: `${t.cargo}` }))
 
   return (
@@ -128,10 +127,10 @@ function EditorForm({ inicial, onCambioEstado }) {
         <div className="space-y-5">
           <Card title="Datos generales">
             <div className="grid gap-4 sm:grid-cols-3">
-              <Input className="sm:col-span-3" label="Título" value={form.titulo} disabled={!editable} onChange={(e) => set('titulo', e.target.value)} />
-              <Select label="Cliente" placeholder="Seleccione…" value={form.cliente_id} disabled={!editable} onChange={(e) => set('cliente_id', e.target.value)}
-                options={(clientes.data ?? []).map((c) => ({ value: c.id, label: c.razon_social }))} className="sm:col-span-2" />
-              <Select label="Tipo de obra" value={form.tipo_obra} disabled={!editable} onChange={(e) => set('tipo_obra', e.target.value)}
+              <Input className="sm:col-span-3" label="Título" obligatorio value={form.titulo} disabled={!editable} onChange={(e) => set('titulo', e.target.value)} />
+              <BuscadorRelacion tabla="clientes" label="Cliente" obligatorio placeholder="Escribe la razón social o el RUT…" value={form.cliente_id} disabled={!editable}
+                onChange={(id) => set('cliente_id', id)} className="sm:col-span-2" />
+              <Select label="Tipo de obra" obligatorio value={form.tipo_obra} disabled={!editable} onChange={(e) => set('tipo_obra', e.target.value)}
                 options={TIPOS_OBRA.map((t) => ({ value: t, label: TIPO_OBRA_LABEL[t] }))} />
             </div>
           </Card>
@@ -141,9 +140,10 @@ function EditorForm({ inicial, onCambioEstado }) {
             <div className="space-y-2">
               {form.materiales.map((m, i) => (
                 <div key={i} className={cn('grid grid-cols-2 items-end gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_8rem_6rem_2rem]', i > 0 && 'sm:[&_label>span.mb-1]:sr-only')}>
-                  <Select className="col-span-2 sm:col-span-1" label="Artículo" placeholder="Seleccione…" value={m.articulo_id} disabled={!editable} onChange={(e) => elegirArticulo(i, e.target.value)} options={opcionesArt} />
-                  <NumberField label="Cant." min={1} value={m.cantidad} disabled={!editable} onChange={(v) => setLinea('materiales', i, { cantidad: v ?? 0 })} />
-                  <NumberField label="Costo unit." prefix="$" min={0} value={m.costo_unitario} disabled={!editable} onChange={(v) => setLinea('materiales', i, { costo_unitario: v ?? 0 })} />
+                  <BuscadorRelacion className="col-span-2 sm:col-span-1" tabla="articulos" label={i === 0 ? 'Artículo' : undefined} aria-label={`Artículo ${i + 1}`} obligatorio={i === 0}
+                    placeholder="Escribe el SKU o el nombre…" value={m.articulo_id} disabled={!editable} onChange={(id) => elegirArticulo(i, id)} />
+                  <NumberField label="Cant." obligatorio={i === 0} min={1} value={m.cantidad} disabled={!editable} onChange={(v) => setLinea('materiales', i, { cantidad: v ?? 0 })} />
+                  <NumberField label="Costo unit." obligatorio={i === 0} prefix="$" min={0} value={m.costo_unitario} disabled={!editable} onChange={(v) => setLinea('materiales', i, { costo_unitario: v ?? 0 })} />
                   <div className="pb-2 text-left sm:text-right"><p className={cn('mb-1 text-xs font-medium text-ink-soft', i > 0 && 'sm:hidden')}>Subtotal</p><MoneyCell value={m.cantidad * m.costo_unitario} className="text-sm" /></div>
                   {editable && <IconButton icon={X} label="Quitar línea" size="sm" className="justify-self-end" onClick={() => quitar('materiales', i)} />}
                 </div>
@@ -183,7 +183,7 @@ function EditorForm({ inicial, onCambioEstado }) {
           </Seccion>
 
           <Card title="Precio de venta">
-            <NumberField label="Precio de venta neto (sin IVA)" prefix="$" min={0} size="lg" value={form.precio_venta_neto} disabled={!editable}
+            <NumberField label="Precio de venta neto (sin IVA)" obligatorio prefix="$" min={0} size="lg" value={form.precio_venta_neto} disabled={!editable}
               onChange={(v) => set('precio_venta_neto', v)} hint="El simulador recalcula el margen mientras escribes." className="max-w-sm" />
           </Card>
         </div>
