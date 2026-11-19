@@ -59,11 +59,11 @@ class EndpointSaludTests(APITestCase):
         with mock.patch('evidencias.salud.mongo.ping'):
             self.assertEqual(self.client.get('/api/salud/').status_code, 200)
 
-    def test_respeta_el_limite_de_uso_anonimo(self):
+    def test_no_aplica_limite_de_uso(self):  # los health checks de la plataforma no deben recibir 429
         cache.clear()
         with mock.patch('evidencias.salud.mongo.ping'):
             codigos = [self.client.get('/api/salud/').status_code for _ in range(25)]
-        self.assertIn(429, codigos)
+        self.assertNotIn(429, codigos)
 
 
 class ComandoVerificarTests(TestCase):

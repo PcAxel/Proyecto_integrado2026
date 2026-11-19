@@ -131,9 +131,9 @@ class EmitirDTEView(_Base):
                 resp = ProveedorSimulado().emitir(datos)
             else:
                 resp = obtener_proveedor().emitir(datos)
-        except Exception:  # un fallo del proveedor no debe dejar la orden «Procesando» para siempre
+        except Exception as e:  # un fallo del proveedor no debe dejar la orden «Procesando» para siempre
             logger.exception('dte_proveedor_error orden=%s', id_orden)
-            resp = {'exito': False, 'error': 'El proveedor de facturación no respondió.'}
+            resp = {'exito': False, 'error': f'El proveedor de facturación no respondió ({type(e).__name__}).'}
         if not resp.get('exito'):
             return self._rechazar(f, str(resp.get('error') or 'El SII rechazó el documento.'))
         return self._aceptar(request, f, resp)

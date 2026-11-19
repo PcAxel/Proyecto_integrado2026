@@ -150,6 +150,7 @@ class SaludView(APIView):
     """GET /api/salud/: estado de cada servicio, sin detalles. 200 si todo responde, 503 si algo falla."""
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = []  # los health checks de la plataforma no deben recibir 429
 
     def get(self, request):
         servicios = (('postgresql', comprobar_postgresql), ('valkey', comprobar_valkey), ('mongodb', comprobar_mongodb_liviano))
