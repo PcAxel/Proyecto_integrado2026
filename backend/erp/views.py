@@ -96,6 +96,38 @@ class EmitirOrdenesView(APIView):
         return _resolver_solicitud(request, solicitud_id, compras.emitir_ordenes, 'APROBAR_SOLICITUD_COMPRA')
 
 
+class ConciliacionComprasView(APIView):
+    """GET /api/erp/compras/conciliacion/ — estado de conciliación (orden de compra ↔ recepción ↔ factura) de cada factura de compra, calculado por el servidor.
+    Lo ve quien ya puede leer las facturas de compra; es el mismo cálculo que usa el asistente de IA."""
+    permission_classes = [TermsAccepted]
+
+    def get(self, request):
+        from rest_framework.exceptions import PermissionDenied
+        from . import conciliacion, tablas
+        if request.user.role == 'TECNICO' or not tablas.puede_leer(request.user, 'facturas'):
+            raise PermissionDenied('Tu rol no puede ver la conciliación de compras.')
+        return Response(conciliacion.conciliar_todas())
+
+
+class LiberarFacturaView(APIView):
+    """POST /api/erp/facturas/<id>/liberar/ {motivo} — Finanzas o el Administrador General liberan una factura bloqueada por discrepancia (queda en la auditoría)."""
+    permission_classes = [TermsAccepted]
+
+    def post(self, request, factura_id):
+        try:
+            factura, antes = compras.liberar_factura(request.user, factura_id, request.data.get('motivo'))
+        except ReglaError as e:
+            return Response({'detail': e.mensaje, 'code': e.code}, status=e.status)
+        try:  # quién liberó qué y por qué; si la auditoría falla, la liberación ya está hecha
+            escritura.Lote(request.user, request.META.get('REMOTE_ADDR')).insertar('auditoria', {
+                'id': escritura.siguiente_id('auditoria'), 'entidad': 'FacturaCompra', 'entidad_id': factura_id, 'accion': 'LIBERAR_FACTURA',
+                'anterior': {'estado': antes['estado'], 'monto_retenido': antes['monto_retenido'], 'discrepancias': len(antes['discrepancias'])},
+                'nuevo': {'estado': factura['conciliacion']['estado'], 'motivo': factura['liberacion']['motivo']}})
+        except Exception:
+            logger.exception('liberar_factura_auditoria_error factura=%s', factura_id)
+        return Response(factura)
+
+
 class RechazarSolicitudView(APIView):
     """POST /api/erp/solicitudes-compra/<id>/rechazar/ {motivo} — Finanzas rechaza la solicitud (el motivo le llega a Bodega)."""
     permission_classes = [TermsAccepted]

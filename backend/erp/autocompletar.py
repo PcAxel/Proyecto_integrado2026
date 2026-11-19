@@ -37,6 +37,9 @@ CONFIG = {
     # Presupuestos: `?estado=APROBADO&cliente=CLI-001&libre=1` → los aprobados de ese cliente que todavía no tienen obra.
     'presupuestos': {'campos': ['datos__titulo'], 'label': lambda f: f"{f['id']} · {f.get('titulo', '')}", 'detalle': lambda f: f.get('estado', ''),
                      'filtros': {'estado': 'datos__estado', 'cliente': 'datos__cliente_id'}, 'libre_de': 'obras'},
+    # Órdenes de compra: `?estado=EMITIDA&proveedor=PRV-001` → las vigentes de ese proveedor (para enlazar recepciones y facturas).
+    'ordenes_compra': {'campos': ['datos__proveedor_id'], 'label': lambda f: f"{f['id']} · {_proveedor(f)}", 'detalle': lambda f: f"{f.get('fecha', '')[:10]} · ${f.get('total', 0):,}".replace(',', '.'),
+                       'filtros': {'proveedor': 'datos__proveedor_id', 'estado': 'datos__estado'}},
     'facturas': {'campos': ['datos__numero', 'datos__proveedor_id'], 'label': lambda f: f"N° {f.get('numero', '')} · {_proveedor(f)}", 'detalle': lambda f: f.get('fecha', '')},
 }
 

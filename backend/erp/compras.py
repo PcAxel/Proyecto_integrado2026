@@ -74,6 +74,29 @@ def rechazar(user, solicitud_id, motivo):
         return reg.fila()
 
 
+MIN_MOTIVO_LIBERACION = 10
+
+
+def liberar_factura(user, factura_id, motivo):
+    """Libera una factura de compra BLOQUEADA por discrepancia, con un motivo. Solo Finanzas y el Administrador General. Queda guardado quién, cuándo,
+    por qué y qué discrepancias había; no se puede deshacer ni liberar una factura que no esté bloqueada. El estado se calcula en `erp.conciliacion`."""
+    from . import conciliacion
+    exigir(tablas.tiene(user, ['compras.liberar_factura']), 'No tiene permiso para esta operación.', 403, 'permission_denied')
+    motivo = str(motivo or '').strip()
+    exigir(len(motivo) >= MIN_MOTIVO_LIBERACION, f'Explica el motivo de la liberación (al menos {MIN_MOTIVO_LIBERACION} caracteres).')
+    exigir(len(motivo) <= MAX_MOTIVO, 'El motivo es demasiado largo.')
+    with transaction.atomic():
+        reg = Registro.objects.select_for_update().filter(tabla='facturas', rid=factura_id).first()
+        if reg is None:
+            raise ReglaError('Factura no encontrada.', 404, 'not_found')
+        r = conciliacion.conciliar_todas()[factura_id]
+        exigir(r['estado'] != conciliacion.LIBERADA, 'La factura ya fue liberada.', 409, 'estado_invalido')
+        exigir(r['estado'] == conciliacion.BLOQUEADA, 'Solo se puede liberar una factura bloqueada por discrepancia.', 409, 'estado_invalido')
+        reg.datos = {**reg.datos, 'liberacion': {'por': uid(user), 'motivo': motivo, 'fecha': ahora(), 'monto_retenido': r['monto_retenido'], 'discrepancias': r['discrepancias']}}
+        reg.save(update_fields=['datos', 'actualizado'])
+        return {**reg.fila(), 'conciliacion': conciliacion.conciliar_todas()[factura_id]}, r
+
+
 def avisar_nueva_solicitud(solicitud_id, items):
     """Aviso a Finanzas cuando Bodega crea una solicitud."""
     notificar(CustomUser.objects.filter(role=Role.FINANZAS, is_active=True),

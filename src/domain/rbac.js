@@ -74,6 +74,7 @@ export const CATALOGO_PERMISOS = {
   'compras.ver': { tipo: 'lectura', modulo: 'Compras', descripcion: 'Ver facturas de compra y notas de crédito' },
   'facturacion.ver': { tipo: 'lectura', modulo: 'Facturación', descripcion: 'Ver el estado de la factura electrónica de una obra y descargar su PDF' },
   'facturacion.emitir': { tipo: 'aprobacion', modulo: 'Facturación', descripcion: 'Emitir la factura electrónica (DTE, SII) de una obra finalizada y descargar su PDF' },
+  'compras.liberar_factura': { tipo: 'aprobacion', modulo: 'Compras', descripcion: 'Liberar una factura de compra bloqueada por discrepancia (orden de compra, recepción y factura no coinciden), con un motivo que queda en la auditoría' },
   'compras.aprobar': { tipo: 'aprobacion', modulo: 'Compras', descripcion: 'Aprobar solicitudes de compra de Bodega y emitir las órdenes de compra a proveedores' },
   'solicitudes_compra.crear': { tipo: 'operativa', modulo: 'Bodega', descripcion: 'Solicitar a Finanzas la compra de artículos que faltan en bodega' },
   'cobranzas.ver': { tipo: 'lectura', modulo: 'Cobranzas', descripcion: 'Ver las facturas emitidas por cobrar y los pagos de los clientes' },
@@ -153,6 +154,7 @@ export const PERMISOS = {
   'conteo.aprobar': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'facturacion.emitir': ['ADMIN_GENERAL', 'ADMINISTRACION'],
   'compras.aprobar': ['ADMINISTRACION'],
+  'compras.liberar_factura': ['ADMIN_GENERAL', 'ADMINISTRACION'],
 
   // ── Operativas ──
   'presupuestos.crear': ['ADMINISTRACION', 'SUPERVISOR', 'COMERCIAL'],

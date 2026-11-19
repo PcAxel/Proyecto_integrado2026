@@ -8,6 +8,8 @@ import { MoneyCell } from '@/components/domain'
 import { MenuAvanzado } from '@/components/MenuAvanzado'
 import { comprasService, proveedoresService, articulosService } from '@/services'
 import { formatFecha } from '@/domain/format'
+import { formatCLP } from '@/domain/money'
+import { ESTADO_CONCILIACION, estadoDe } from '@/domain/conciliacion'
 import { can } from '@/domain/rbac'
 import { useAuthStore } from '@/stores/authStore'
 import { useResource } from '@/hooks/useResource'
@@ -31,11 +33,15 @@ export function ComprasPage() {
 
   const facturas = useResource(() => comprasService.listFacturas(), [])
   const notas = useResource(() => comprasService.listNotasCredito(), [])
+  // Estado del cruce orden de compra ↔ recepción ↔ factura (lo calcula el servidor); si falla, la tabla se ve igual, sin esa columna.
+  const conciliacion = useResource(() => comprasService.conciliacion().catch(() => null), [])
   const maestros = useResource(() => Promise.all([proveedoresService.list({ incluirInactivos: true }), articulosService.list({ incluirInactivos: true })]), [])
   const detalle = useResource(() => (detalleId ? comprasService.retrieveFactura(detalleId) : Promise.resolve(null)), [detalleId])
   const [proveedores, articulos] = maestros.data ?? [[], []]
   const prov = (id) => proveedores.find((p) => p.id === id)
-  const recargar = () => { facturas.reload(); notas.reload(); detalle.reload() }
+  const recargar = () => { facturas.reload(); notas.reload(); detalle.reload(); conciliacion.reload() }
+  const bloqueadas = Object.values(conciliacion.data ?? {}).filter((c) => c.estado === 'BLOQUEADA_POR_DISCREPANCIA')
+  const retenido = bloqueadas.reduce((s, c) => s + c.monto_retenido, 0)
 
   const colsFacturas = [
     { key: 'numero', header: 'N°', mono: true },
@@ -45,6 +51,10 @@ export function ComprasPage() {
     { key: 'bruto', header: 'Bruto', align: 'right', render: (f) => <MoneyCell value={f.neto_bruto} /> },
     { key: 'neto', header: 'Neto', align: 'right', render: (f) => <MoneyCell value={f.neto} /> },
     { key: 'total', header: 'Total c/IVA', align: 'right', render: (f) => <MoneyCell value={f.total} className="font-medium" /> },
+    ...(conciliacion.data ? [{ key: 'conciliacion', header: 'Conciliación', render: (f) => {
+      const e = ESTADO_CONCILIACION[estadoDe(conciliacion.data, f.id)]
+      return e ? <Badge tone={e.tone} title={e.ayuda}>{e.label}</Badge> : null
+    } }] : []),
   ]
   const colsNotas = [
     { key: 'id', header: 'Código', mono: true },
@@ -75,6 +85,11 @@ export function ComprasPage() {
           <MenuAvanzado />
         </>} />
       <Tabs value={tab} onChange={setTab} tabs={[{ id: 'facturas', label: 'Facturas', count: facturas.data?.length }, { id: 'notas', label: 'Notas de crédito', count: notas.data?.length }]} />
+      {tab === 'facturas' && bloqueadas.length > 0 && (
+        <p role="status" className="rounded-lg border border-crit/30 bg-crit-bg px-4 py-2 text-sm text-crit">
+          <b>{bloqueadas.length} factura{bloqueadas.length === 1 ? '' : 's'} bloqueada{bloqueadas.length === 1 ? '' : 's'} por discrepancia</b> · {formatCLP(retenido)} retenidos (con IVA). Ábrelas para ver qué no coincide.
+        </p>
+      )}
       <Card padded={false}>
         {tab === 'facturas'
           ? <DataTable columns={colsFacturas} rows={facturas.data ?? []} rowKey={(f) => f.id} loading={facturas.loading && !facturas.data} onRowClick={(f) => setDetalleId(f.id)} emptyTitle="Sin facturas" />
@@ -83,7 +98,7 @@ export function ComprasPage() {
 
       {nueva && <FacturaDrawer key={ubicacion.key} open onClose={() => setNueva(false)} onSaved={recargar} inicial={desdeIA} />}
       {nuevaNC && <NotaCreditoModal open onClose={() => setNuevaNC(false)} facturas={facturas.data ?? []} proveedores={proveedores} onSaved={recargar} />}
-      <FacturaDetalle factura={detalleId ? detalle.data : null} proveedor={prov(detalle.data?.proveedor_id)} articulos={articulos} onClose={() => setDetalleId(null)} />
+      <FacturaDetalle factura={detalleId ? detalle.data : null} proveedor={prov(detalle.data?.proveedor_id)} articulos={articulos} conciliacion={detalleId ? conciliacion.data?.[detalleId] : null} onLiberada={recargar} onClose={() => setDetalleId(null)} />
     </div>
   )
 }

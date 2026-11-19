@@ -67,7 +67,9 @@ def _tools_consultas(usuario):
             'fecha_desde': fecha, 'fecha_hasta': fecha,
             'proveedor': {**texto, 'description': 'Solo compras: razón social, RUT o código del proveedor (basta una parte).'},
             'cliente': {**texto, 'description': 'Solo ventas: razón social o RUT del cliente.'},
-            'estado_cobro': {'type': 'string', 'enum': list(consultas.ESTADOS_COBRO), 'description': 'Solo ventas: PENDIENTE_PAGO (por cobrar) o PAGADA.'}}),
+            'estado_cobro': {'type': 'string', 'enum': list(consultas.ESTADOS_COBRO), 'description': 'Solo ventas: PENDIENTE_PAGO (por cobrar) o PAGADA.'},
+            'estado_conciliacion': {'type': 'string', 'enum': list(consultas.ESTADOS_CONCILIACION), 'description': 'Solo compras: estado del cruce orden de compra ↔ recepción ↔ factura. BLOQUEADA_POR_DISCREPANCIA = facturas con discrepancias (faltante, sobre lo pedido, artículo no pedido o precio mayor); PENDIENTE_RECEPCION = facturadas y aún sin recibir; LIBERADA = bloqueadas que Finanzas liberó; SIN_ORDEN = compra directa.'},
+            'resumen_discrepancias': {'type': 'boolean', 'description': 'Solo compras. true = agrega el monto total retenido en facturas con discrepancias del periodo y el ranking de proveedores con más discrepancias en sus entregas.'}}),
         tool(consultas.F_KARDEX, 'Consulta el stock valorizado de la bodega según el Cardex: artículos con stock, su último movimiento y su valor. Úsala para inventario inmovilizado, stock sin rotación o valor en bodega.', {
             'categoria': {**texto, 'description': 'Categoría del artículo (basta una parte).'}, 'proveedor': {**texto, 'description': 'Proveedor habitual del artículo.'},
             'sin_movimiento_dias': {'type': 'integer', 'minimum': 0, 'maximum': 3650, 'description': 'Solo artículos sin movimiento hace al menos estos días.'},

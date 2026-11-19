@@ -45,7 +45,8 @@ describe('solicitudes de compra', () => {
 
   it('las órdenes de compra son de solo lectura desde el cliente', async () => {
     expect(await ordenesCompraService.list()).toEqual([])
-    expect(Object.keys(ordenesCompraService)).toEqual(['list'])
+    expect(Object.keys(ordenesCompraService).sort()).toEqual(['list', 'retrieve'])  // solo lecturas: no hay create/update/remove
+    expect(await ordenesCompraService.retrieve('OC-9999')).toBeNull()
   })
 })
 

@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { PackageCheck, Plus, X, AlertTriangle } from 'lucide-react'
 import { Modal, Button, NumberField, Input, IconButton } from '@/components/ui'
 import { BuscadorRelacion } from '@/components/BuscadorRelacion'
-import { articulosService, cardexService } from '@/services'
+import { articulosService, cardexService, ordenesCompraService } from '@/services'
 import { superaMaximo } from '@/domain/cardex'
+import { pendientesDeRecibir } from '@/domain/ordenesCompra'
 import { useResource } from '@/hooks/useResource'
 import { runAction } from '@/hooks/runAction'
 
@@ -16,18 +17,30 @@ const LINEA = () => ({ clave: Math.random().toString(36).slice(2), articulo_id: 
 export function RecepcionModal({ open, onClose, onSaved }) {
   const { data: articulos } = useResource(() => articulosService.list(), [])
   const [referencia, setReferencia] = useState('')
+  const [orden, setOrden] = useState(null) // orden de compra a la que pertenece lo que llega (opcional)
   const [lineas, setLineas] = useState([LINEA()])
   const [guardando, setGuardando] = useState(false)
   const activos = useMemo(() => (articulos ?? []).filter((a) => a.activo), [articulos])
   const cambiar = (clave, campo) => (v) => setLineas((ls) => ls.map((l) => (l.clave === clave ? { ...l, [campo]: v } : l)))
   const repetidos = new Set(lineas.map((l) => l.articulo_id).filter((id, i, arr) => id && arr.indexOf(id) !== i))
-  const valido = referencia.trim().length >= 3 && lineas.length > 0 && repetidos.size === 0
+  const valido = referencia.trim().length >= 3 && lineas.length > 0 && repetidos.size === 0 && fueraDeLaOrden.length === 0
     && lineas.every((l) => l.articulo_id && l.cantidad > 0 && activos.find((a) => a.id === l.articulo_id)?.costo_unitario > 0)
+
+  /** Elegir una orden precarga lo que falta recibir de ella; el usuario ajusta las cantidades a lo que realmente llegó. */
+  const elegirOrden = async (id) => {
+    if (!id) { setOrden(null); return }
+    const [o, movimientos] = await Promise.all([ordenesCompraService.retrieve(id), cardexService.list()])
+    if (!o) { setOrden(null); return }
+    setOrden(o)
+    const pend = pendientesDeRecibir(o, movimientos)
+    if (pend.length) setLineas(pend.map((p) => ({ ...LINEA(), articulo_id: p.articulo_id, cantidad: p.pendiente })))
+  }
+  const fueraDeLaOrden = orden ? lineas.filter((l) => l.articulo_id && !orden.items.some((i) => i.articulo_id === l.articulo_id)) : []
 
   const guardar = async () => {
     setGuardando(true)
     const r = await runAction(
-      cardexService.recepcionar({ referencia: referencia.trim(), items: lineas.map(({ articulo_id, cantidad }) => ({ articulo_id, cantidad })) }),
+      cardexService.recepcionar({ referencia: referencia.trim(), orden_compra_id: orden?.id ?? null, items: lineas.map(({ articulo_id, cantidad }) => ({ articulo_id, cantidad })) }),
       'Recepción ingresada: el stock ya está en bodega',
     )
     setGuardando(false)
@@ -41,6 +54,9 @@ export function RecepcionModal({ open, onClose, onSaved }) {
         <Button icon={PackageCheck} onClick={guardar} loading={guardando} disabled={!valido}>Registrar ingreso</Button>
       </>}>
       <div className="space-y-4">
+        <BuscadorRelacion tabla="ordenes_compra" filtros={{ estado: 'EMITIDA' }} label="Orden de compra" opcional placeholder="Escribe el código o el proveedor…" value={orden?.id ?? ''}
+          onChange={elegirOrden} hint="Si la mercadería viene de una orden, enlázala: así se compara lo pedido con lo recibido y lo facturado." />
+        {fueraDeLaOrden.length > 0 && <p role="alert" className="text-xs font-medium text-crit">Hay artículos que no están en la orden {orden.id}: quítalos o desenlaza la orden.</p>}
         <Input label="Documento de respaldo" obligatorio placeholder="N° de guía de despacho u orden de compra" value={referencia} onChange={(e) => setReferencia(e.target.value)}
           hint="Obligatorio: queda como referencia de cada entrada en el Cardex." />
         <div className="space-y-3">

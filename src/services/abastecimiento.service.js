@@ -72,6 +72,14 @@ export const solicitudesCompraService = {
 
 /** Órdenes de compra emitidas (solo lectura: nacen al aprobar una solicitud). */
 export const ordenesCompraService = {
+  /** Una orden de compra con el nombre de su proveedor (o null si no existe o no se puede ver). */
+  retrieve(id) {
+    return respond(() => {
+      requirePermiso('compras.ver')
+      const o = db.find('ordenes_compra', id)
+      return o ? { ...o, proveedor_nombre: db.find('proveedores', o.proveedor_id)?.razon_social ?? o.proveedor_id } : null
+    })
+  },
   list() {
     return respond(() => {
       requirePermiso('compras.ver')

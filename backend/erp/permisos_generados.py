@@ -28,6 +28,7 @@ PERMISOS = {
     'conteo.aprobar': {'ADMIN', 'FINANZAS'},
     'facturacion.emitir': {'ADMIN', 'FINANZAS'},
     'compras.aprobar': {'FINANZAS'},
+    'compras.liberar_factura': {'ADMIN', 'FINANZAS'},
     'presupuestos.crear': {'COMERCIAL', 'FINANZAS', 'OPERACIONES'},
     'obras.crear': {'FINANZAS', 'OPERACIONES'},
     'obras.delegar': {'OPERACIONES'},

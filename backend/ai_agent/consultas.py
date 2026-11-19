@@ -14,7 +14,7 @@ from django.db.models import Count, F, FloatField, Max, Q, Sum
 from django.db.models.functions import Substr
 from django.utils import timezone
 
-from erp import dominio, tablas
+from erp import conciliacion, dominio, tablas
 from erp.informes import _campo, _en_rango, _num, _tabla
 from erp.models import Registro
 from facturacion.models import FacturaDTE
@@ -27,12 +27,13 @@ ESTADOS_OBRA = ('PLANIFICADA', 'EN_CURSO', 'FINALIZADA')
 ESTADOS_PRESUPUESTO = ('BORRADOR', 'ENVIADO', 'APROBADO', 'RECHAZADO')  # ENVIADO = enviado a aprobación (pendiente)
 ESTADOS_COBRO = tuple(v for v, _ in FacturaDTE.EstadoCobro.choices)
 ORDENES_KARDEX = ('antiguedad', 'valor_total')
+ESTADOS_CONCILIACION = (conciliacion.SIN_ORDEN, conciliacion.CONCILIADA, conciliacion.PENDIENTE_RECEPCION, conciliacion.BLOQUEADA, conciliacion.LIBERADA)
 
 F_FINANZAS, F_KARDEX, F_OPERACIONES, F_PRESUPUESTOS = 'consultar_finanzas', 'consultar_kardex', 'consultar_operaciones', 'consultar_presupuestos'
 
 # Filtros permitidos por herramienta: cualquier otro parámetro se ignora.
 FILTROS = {
-    'consultar_finanzas': ('tipo', 'fecha_desde', 'fecha_hasta', 'proveedor', 'cliente', 'estado_cobro'),
+    'consultar_finanzas': ('tipo', 'fecha_desde', 'fecha_hasta', 'proveedor', 'cliente', 'estado_cobro', 'estado_conciliacion', 'resumen_discrepancias'),
     'consultar_kardex': ('categoria', 'proveedor', 'sin_movimiento_dias', 'ordenar_por'),
     'consultar_operaciones': ('estado', 'margen_menor_a', 'obra'),
     'consultar_presupuestos': ('estado', 'cliente', 'margen_menor_a'),
@@ -113,6 +114,10 @@ def consultar_finanzas(user, args):
         raise FiltroInvalido('«fecha_hasta» no puede ser anterior a «fecha_desde».')
     proveedor, cliente = _texto(f.get('proveedor')), _texto(f.get('cliente'))
     cobro = _enum(f.get('estado_cobro'), ESTADOS_COBRO, 'estado_cobro')
+    conc = _enum(f.get('estado_conciliacion'), ESTADOS_CONCILIACION, 'estado_conciliacion')
+    resumen_disc = f.get('resumen_discrepancias')
+    if resumen_disc is not None and not isinstance(resumen_disc, bool):
+        raise FiltroInvalido('«resumen_discrepancias» debe ser verdadero o falso.')
     puede_compra = tablas.puede_leer(user, 'facturas')
     puede_venta = tablas.tiene(user, ['facturacion.ver'])
     _exigir(user, puede_compra or puede_venta, 'las finanzas')
@@ -120,28 +125,66 @@ def consultar_finanzas(user, args):
         _exigir(user, puede_compra, 'las facturas de compra')
     if tipo == 'venta':
         _exigir(user, puede_venta, 'las facturas de venta')
-    if proveedor and tipo == 'venta' or (cliente or cobro) and tipo == 'compra':
-        raise FiltroInvalido('«proveedor» aplica solo a compras; «cliente» y «estado_cobro» solo a ventas.')
+    if (proveedor or conc or resumen_disc) and tipo == 'venta' or (cliente or cobro) and tipo == 'compra':
+        raise FiltroInvalido('«proveedor», «estado_conciliacion» y «resumen_discrepancias» aplican solo a compras; «cliente» y «estado_cobro» solo a ventas.')
     salida = {}
     if tipo in (None, 'compra') and puede_compra:
-        salida['compras'] = _compras(desde, hasta, proveedor)
-    if tipo in (None, 'venta') and puede_venta and not proveedor:
+        salida['compras'] = _compras(desde, hasta, proveedor, conc, bool(resumen_disc))
+    if tipo in (None, 'venta') and puede_venta and not (proveedor or conc or resumen_disc):
         salida['ventas'] = _ventas(desde, hasta, cliente, cobro)
     return {'ok': True, 'periodo': {'desde': desde, 'hasta': hasta}, **salida}
 
 
-def _compras(desde, hasta, proveedor):
+def _compras(desde, hasta, proveedor, estado_conciliacion=None, resumen_discrepancias=False):
+    """Facturas de compra con su estado de conciliación (orden de compra ↔ recepción ↔ factura), calculado por `erp.conciliacion`.
+    `resumen_discrepancias`: monto retenido y ranking de proveedores con más discrepancias, sobre las facturas del periodo (sin filtrar por estado)."""
     qs = _en_rango(_tabla('facturas'), 'fecha', desde, hasta)
     if proveedor:
         ids = _ids_de('proveedores', proveedor, ('razon_social', 'rut'))
         qs = qs.filter(datos__proveedor_id__in=ids) if ids else qs.none()
+    conc = conciliacion.conciliar_todas()
+    nombres = {r['rid']: r['datos'].get('razon_social', r['rid']) for r in _tabla('proveedores').values('rid', 'datos')}
+    del_periodo = set(qs.values_list('rid', flat=True)[:5000])
+    resumen = _resumen_discrepancias(qs, del_periodo, conc, nombres) if resumen_discrepancias else None
+    if estado_conciliacion:
+        del_periodo = {r for r in del_periodo if conc[r]['estado'] == estado_conciliacion}
+        qs = qs.filter(rid__in=del_periodo)
     base = qs.annotate(_n=_campo('neto', FloatField()), _i=_campo('iva', FloatField()))
     a = base.aggregate(n=Count('id'), neto=Sum('_n'), iva=Sum('_i'))
-    nombres = {r['rid']: r['datos'].get('razon_social', r['rid']) for r in _tabla('proveedores').values('rid', 'datos')}
-    filas = [{'numero': r['datos'].get('numero'), 'fecha': r['datos'].get('fecha'), 'proveedor': nombres.get(r['datos'].get('proveedor_id'), r['datos'].get('proveedor_id')),
-              'neto': round(_num(r['datos'].get('neto'))), 'iva': round(_num(r['datos'].get('iva'))), 'total': round(_num(r['datos'].get('total')))}
-             for r in qs.annotate(_d=Substr(_campo('fecha'), 1, 10)).order_by('-_d', '-rid').values('rid', 'datos')[:LIMITE]]
-    return _respuesta(filas, a['n'], {'neto': round(_num(a['neto'])), 'iva': round(_num(a['iva']))})
+    filas = []
+    for r in qs.annotate(_d=Substr(_campo('fecha'), 1, 10)).order_by('-_d', '-rid').values('rid', 'datos')[:LIMITE]:
+        d, c = r['datos'], conc[r['rid']]
+        filas.append({'numero': d.get('numero'), 'fecha': d.get('fecha'), 'proveedor': nombres.get(d.get('proveedor_id'), d.get('proveedor_id')),
+                      'neto': round(_num(d.get('neto'))), 'iva': round(_num(d.get('iva'))), 'total': round(_num(d.get('total'))),
+                      'orden_compra': d.get('orden_compra_id'), 'estado_conciliacion': c['estado'], 'monto_retenido': c['monto_retenido'],
+                      'discrepancias': [x['tipo'] for x in c['discrepancias']]})
+    salida = _respuesta(filas, a['n'], {'neto': round(_num(a['neto'])), 'iva': round(_num(a['iva']))})
+    if resumen is not None:
+        salida['resumen_discrepancias'] = resumen
+    return salida
+
+
+def _resumen_discrepancias(qs, ids, conc, nombres):
+    """Monto retenido y ranking de proveedores por discrepancias (solo facturas con orden de compra: son las únicas que se pueden cruzar)."""
+    prov_de = {r['rid']: r['datos'].get('proveedor_id') for r in qs.values('rid', 'datos')}
+    ranking, por_tipo, retenido, retenido_neto, bloqueadas, pendiente = {}, {}, 0, 0, 0, 0
+    for fid in ids:
+        c = conc[fid]
+        pendiente += c['monto_pendiente_recepcion']
+        if c['estado'] not in (conciliacion.BLOQUEADA, conciliacion.LIBERADA):
+            continue
+        retenido, retenido_neto = retenido + c['monto_retenido'], retenido_neto + c['monto_retenido_neto']
+        bloqueadas += c['estado'] == conciliacion.BLOQUEADA
+        p = ranking.setdefault(prov_de.get(fid), {'proveedor': nombres.get(prov_de.get(fid), prov_de.get(fid)), 'facturas_con_discrepancia': 0, 'discrepancias': 0, 'monto_retenido': 0})
+        p['facturas_con_discrepancia'] += 1
+        p['discrepancias'] += len(c['discrepancias'])
+        p['monto_retenido'] += c['monto_retenido']
+        for d in c['discrepancias']:
+            por_tipo[d['tipo']] = por_tipo.get(d['tipo'], 0) + 1
+    top = sorted(ranking.values(), key=lambda x: (-x['discrepancias'], -x['monto_retenido']))[:10]
+    return {'monto_retenido': retenido, 'monto_retenido_neto': retenido_neto, 'facturas_bloqueadas': bloqueadas, 'monto_pendiente_recepcion': pendiente,
+            'por_tipo': por_tipo, 'ranking_proveedores': top,
+            'nota': 'Retenido = facturas hoy bloqueadas, con IVA. El ranking cuenta bloqueadas y liberadas. Solo las facturas enlazadas a una orden de compra se pueden cruzar.'}
 
 
 def _ventas(desde, hasta, cliente, cobro):

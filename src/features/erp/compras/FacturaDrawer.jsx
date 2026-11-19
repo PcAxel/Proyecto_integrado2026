@@ -4,9 +4,10 @@ import { toast } from 'sonner'
 import { Drawer, Button, IconButton, Input, NumberField, Mono, cn } from '@/components/ui'
 import { BuscadorRelacion } from '@/components/BuscadorRelacion'
 import { MoneyCell } from '@/components/domain'
-import { comprasService, articulosService } from '@/services'
+import { comprasService, articulosService, ordenesCompraService } from '@/services'
 import { fechaLocal } from '@/domain/format'
 import { calcularFactura, calcularNeto, formatCLP } from '@/domain/money'
+import { itemsDeFacturaDesdeOrden } from '@/domain/ordenesCompra'
 import { resolverCodigo } from '@/domain/etiquetas'
 import { EscanerQr } from '../bodega/EscanerQr'
 import { useResource } from '@/hooks/useResource'
@@ -23,6 +24,7 @@ export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
   const [items, setItems] = useState([{ ...ITEM_VACIO }])
   const [guardando, setGuardando] = useState(false)
   const [escaneando, setEscaneando] = useState(false)
+  const [orden, setOrden] = useState(null) // orden de compra que cobra esta factura (opcional)
   const { data: articulos } = useResource(() => articulosService.list(), [])
 
   const dscs = descuentos.map((d) => d ?? 0)
@@ -48,10 +50,17 @@ export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
     toast.success(`${a.sku} agregado a la factura`)
   }
 
+  /** Elegir la orden precarga sus ítems (cantidad y precio pactados); se corrigen a lo que dice la factura de papel. */
+  const elegirOrden = async (id) => {
+    const o = id ? await ordenesCompraService.retrieve(id) : null
+    setOrden(o)
+    if (o) setItems(itemsDeFacturaDesdeOrden(o))
+  }
+
   const guardar = async () => {
     setGuardando(true)
     const r = await runAction(
-      comprasService.createFactura({ ...form, numero: form.numero.trim(), descuentos: dscs.filter((d) => d > 0), items: completos }),
+      comprasService.createFactura({ ...form, orden_compra_id: orden?.id ?? null, numero: form.numero.trim(), descuentos: dscs.filter((d) => d > 0), items: completos }),
       'Factura registrada y entradas generadas en el Cardex',
     )
     setGuardando(false)
@@ -63,7 +72,10 @@ export function FacturaDrawer({ open, onClose, onSaved, inicial }) {
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <BuscadorRelacion className="sm:col-span-2" tabla="proveedores" label="Proveedor" obligatorio placeholder="Escribe la razón social o el RUT…" value={form.proveedor_id}
-            onChange={(id) => { if (id !== form.proveedor_id) { setForm({ ...form, proveedor_id: id }); setItems([{ ...ITEM_VACIO }]) } }} />
+            onChange={(id) => { if (id !== form.proveedor_id) { setForm({ ...form, proveedor_id: id }); setItems([{ ...ITEM_VACIO }]); setOrden(null) } }} />
+          <BuscadorRelacion className="sm:col-span-3" tabla="ordenes_compra" filtros={{ estado: 'EMITIDA', proveedor: form.proveedor_id }} label="Orden de compra" opcional disabled={!form.proveedor_id}
+            placeholder={form.proveedor_id ? 'Escribe el código de la orden…' : 'Elige primero el proveedor'} value={orden?.id ?? ''} onChange={elegirOrden}
+            hint="Con orden de compra, el stock entra por la recepción de Bodega y esta factura se compara con lo pedido y lo recibido (no suma stock otra vez)." />
           <Input label="N° factura" obligatorio mono value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} />
           <Input label="Fecha" obligatorio type="date" mono value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
         </div>

@@ -13,6 +13,8 @@ urlpatterns = [
     path('erp/buscar/<str:tabla>/', autocompletar.BuscarRelacionView.as_view()),
     path('erp/solicitudes-compra/<str:solicitud_id>/emitir/', views.EmitirOrdenesView.as_view()),
     path('erp/solicitudes-compra/<str:solicitud_id>/rechazar/', views.RechazarSolicitudView.as_view()),
+    path('erp/compras/conciliacion/', views.ConciliacionComprasView.as_view()),
+    path('erp/facturas/<str:factura_id>/liberar/', views.LiberarFacturaView.as_view()),
     path('erp/obras/<str:obra_id>/aprobar/', views.AprobarObraView.as_view()),
     path('erp/obras/<str:obra_id>/rechazar/', views.RechazarObraView.as_view()),
     path('erp/obras/<str:obra_id>/delegar/', views.DelegarObraView.as_view()),

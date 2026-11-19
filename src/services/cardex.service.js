@@ -65,9 +65,9 @@ export const cardexService = {
   },
   /**
    * Recepción directa de mercadería (guía de despacho): una ENTRADA_RECEPCION por artículo, todo o nada, valorada al costo vigente
-   * (el costo real se actualiza cuando llega la factura). @param {{referencia:string, items:Array<{articulo_id:string,cantidad:number}>}} data
+   * (el costo real se actualiza cuando llega la factura). @param {{referencia:string, items:Array<{articulo_id:string,cantidad:number}>, orden_compra_id?:string|null}} data (con `orden_compra_id` la recepción queda enlazada a esa orden)
    */
-  recepcionar({ referencia, items }) {
+  recepcionar({ referencia, items, orden_compra_id = null }) {
     return respond(() => {
       const u = requirePermiso('bodega.recepcionar')
       if (!items?.length) throw new ApiError(422, 'Agrega al menos un artículo.')
@@ -81,7 +81,7 @@ export const cardexService = {
           referencia: referencia ?? '', usuario_id: u.id, fecha: ahora(),
         })
         if (!r.ok) throw new ApiError(422, `${a.sku}: ${r.error}`)
-        simulados.push(r.movimiento)
+        simulados.push(orden_compra_id ? { ...r.movimiento, orden_compra_id } : r.movimiento)
       }
       return simulados.map((m) => vista(persistir({ ok: true, movimiento: m }, 'ENTRADA_RECEPCION'), u.rol))
     })

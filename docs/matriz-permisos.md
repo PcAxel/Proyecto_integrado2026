@@ -7,8 +7,8 @@
 
 | Rol | Código | Qué hace | Lectura | Aprobación | Operativas | Sistema |
 | --- | --- | --- | :-: | :-: | :-: | :-: |
-| **Gerente General** | `ADMIN_GENERAL` | Dirección ejecutiva: aprueba presupuestos con margen bajo, cierra obras y ve toda la gestión. Administra accesos mientras no exista un área de TI. No ejecuta tareas operativas. | 21 | 4 | 0 | 3 |
-| **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 17 | 5 | 6 | 0 |
+| **Gerente General** | `ADMIN_GENERAL` | Dirección ejecutiva: aprueba presupuestos con margen bajo, cierra obras y ve toda la gestión. Administra accesos mientras no exista un área de TI. No ejecuta tareas operativas. | 21 | 5 | 0 | 3 |
+| **Finanzas y Tributario** | `ADMINISTRACION` | Contabilidad y cumplimiento tributario: factura electrónica (DTE), compras, pago de finiquitos, clientes y proveedores, y auditoría. Ve el personal, pero no lo modifica. | 17 | 6 | 6 | 0 |
 | **Jefe de Bodega** | `BODEGA` | Inventario y Cardex: artículos, reglas de stock, recepciones, retiros con escáner, conteos y reversas. No ve ni gestiona obras, presupuestos ni facturación. | 8 | 0 | 8 | 0 |
 | **Jefe de Operaciones** | `SUPERVISOR` | Obras: delegar a terreno, auditar el trabajo de terreno (avisa a Finanzas) y CU30. Ve el inventario solo para consultar; no lo opera. No emite facturas ni toca estados financieros. | 11 | 1 | 5 | 0 |
 | **Técnico en Terreno** | `TECNICO` | Solo la app de terreno: hojas de servicio, horas, reloj control y retiro de materiales. | 0 | 0 | 2 | 0 |
@@ -45,6 +45,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | Bodega | `conteo.aprobar` | Aprobación | Aprobar o rechazar el ajuste de inventario de un conteo (siempre otra persona que quien contó) | ✅ | ✅ | — | — | — | — | — | — | — |
 | Bodega | `solicitudes_compra.crear` | Operativa | Solicitar a Finanzas la compra de artículos que faltan en bodega | — | — | ✅ | — | — | — | — | — | — |
 | Compras | `compras.ver` | Lectura | Ver facturas de compra y notas de crédito | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | — | — |
+| Compras | `compras.liberar_factura` | Aprobación | Liberar una factura de compra bloqueada por discrepancia (orden de compra, recepción y factura no coinciden), con un motivo que queda en la auditoría | ✅ | ✅ | — | — | — | — | — | — | — |
 | Compras | `compras.aprobar` | Aprobación | Aprobar solicitudes de compra de Bodega y emitir las órdenes de compra a proveedores | — | ✅ | — | — | — | — | — | — | — |
 | Compras | `compras.registrar` | Operativa | Registrar facturas (hasta 3 descuentos) y notas de crédito | — | ✅ | ✅ | — | — | — | — | — | — |
 | Facturación | `facturacion.ver` | Lectura | Ver el estado de la factura electrónica de una obra y descargar su PDF | ✅ | ✅ | — | — | — | ✅ | — | — | — |
@@ -96,7 +97,7 @@ Las cifras son la cantidad de permisos de cada clase que tiene el rol.
 | ✅ | Solo RRHH modifica el personal y la flota (personal.editar) | Finanzas y el Gerente General ya no lo modifican |
 | ✅ | Quien genera el finiquito (RRHH) no lo paga, y quien lo paga (Administración) no lo genera | rrhh.gestionar es de RRHH y finiquitos.pagar es de Administración |
 | ✅ | El Técnico solo usa la app de terreno | Solo pwa.usar y asistencia.marcar (reloj control) |
-| ✅ | Toda acción está catalogada y solo nombra roles existentes | 53 acciones catalogadas |
+| ✅ | Toda acción está catalogada y solo nombra roles existentes | 54 acciones catalogadas |
 | ✅ | Ninguna acción permite borrar (Cardex y entidades críticas inmutables) | No existen acciones de eliminación |
 
 ## 4. Observaciones (sin cambios)

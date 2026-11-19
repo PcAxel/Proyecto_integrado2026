@@ -212,6 +212,14 @@ class Lote:
             exigir(item and item['cantidad'] == d.get('cantidad')
                    and d.get('costo_unitario') == dom.calcular_neto(item['precio_lista'], f.get('descuentos') or []),
                    'La entrada no coincide con la factura.')
+            # Una factura enlazada a una orden de compra NO suma stock: el stock ya entró (o entrará) por la recepción de esa orden.
+            exigir(not f.get('orden_compra_id'), 'Esta factura está enlazada a una orden de compra: el stock entra por la recepción, no por la factura.', 409, 'estado_invalido')
+        if d.get('tipo') == reglas.RECEPCION and d.get('orden_compra_id'):
+            oc = self._orden_vigente(d['orden_compra_id'])
+            exigir(any(i['articulo_id'] == d.get('articulo_id') for i in oc['items']), 'Ese artículo no está en la orden de compra.')
+        else:
+            exigir(not d.get('orden_compra_id'), 'Solo una recepción puede enlazarse a una orden de compra.')
+            d.pop('orden_compra_id', None)
         reglas.validar_movimiento(
             d, filas('cardex'),
             existe_obra=lambda i: bool(fila('obras', i)),
@@ -296,10 +304,23 @@ class Lote:
         for it in items:
             exigir(fila('articulos', it.get('articulo_id')) and positivo(it.get('cantidad')) and positivo(it.get('precio_lista')), 'Ítem de factura inválido.')
         exigir(str(d.get('numero') or '').strip(), 'Indique el número de factura.')
+        if d.get('orden_compra_id'):
+            self._orden_vigente(d['orden_compra_id'], proveedor_id=d['proveedor_id'])
+        else:
+            d.pop('orden_compra_id', None)
         exigir(not any(f['proveedor_id'] == d['proveedor_id'] and f['numero'] == d['numero'] for f in filas('facturas')),
                'Ya existe una factura con ese número para el proveedor.', 409, 'duplicado')
         c = dom.calcular_factura(items, desc)  # los totales los calcula el servidor
         d.update(descuentos=desc, neto_bruto=c['bruto'], neto=c['neto'], iva=c['iva'], total=c['total'], estado='REGISTRADA')
+
+    @staticmethod
+    def _orden_vigente(orden_id, proveedor_id=None):
+        """La orden de compra a la que se enlaza una recepción o una factura: debe existir, estar emitida y, si se indica, ser del mismo proveedor."""
+        oc = fila('ordenes_compra', orden_id)
+        exigir(oc, 'La orden de compra indicada no existe.')
+        exigir(oc.get('estado') == 'EMITIDA', 'La orden de compra no está vigente.', 409, 'estado_invalido')
+        exigir(proveedor_id is None or oc['proveedor_id'] == proveedor_id, 'La orden de compra es de otro proveedor.')
+        return oc
 
     def _alta_notas_credito(self, d):
         f = fila('facturas', d.get('factura_id'))

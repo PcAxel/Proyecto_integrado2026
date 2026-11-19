@@ -181,6 +181,73 @@ class PresupuestosTests(ConsultasBase):
             self.assertEqual(self.q(rol, 'consultar_presupuestos')['status'], 403, rol)
 
 
+class ConciliacionIATests(ConsultasBase):
+    """consultar_finanzas con el cruce orden de compra ↔ recepción ↔ factura: facturas bloqueadas, monto retenido y ranking de proveedores."""
+
+    def setUp(self):
+        super().setUp()
+        art = lambda a, q, p: [{'articulo_id': a, 'cantidad': q, 'precio_lista': p}]
+        orden = lambda oid, prov, a, q, p: reg('ordenes_compra', oid, proveedor_id=prov, estado='EMITIDA', fecha='2026-11-01T10:00:00', items=[{'articulo_id': a, 'cantidad': q, 'precio_unitario': p}])
+        recep = lambda n, oid, a, q: reg('cardex', f'MOV-8{n:05d}', tipo='ENTRADA_RECEPCION', signo=1, cantidad=q, articulo_id=a, costo_unitario=1, obra_id=None, orden_compra_id=oid, fecha='2026-11-02T10:00:00')
+        # PRV-001: dos facturas con problemas (faltante y precio mayor); PRV-002: una conciliada y una pendiente
+        orden('OC-0001', 'PRV-001', 'ART-001', 10, 1000); recep(1, 'OC-0001', 'ART-001', 6)
+        reg('facturas', 'FC-0101', numero='B1', proveedor_id='PRV-001', fecha='2026-11-10', descuentos=[], neto=10000, iva=1900, total=11900, orden_compra_id='OC-0001', items=art('ART-001', 10, 1000))
+        orden('OC-0002', 'PRV-001', 'ART-003', 5, 100); recep(2, 'OC-0002', 'ART-003', 5)
+        reg('facturas', 'FC-0102', numero='B2', proveedor_id='PRV-001', fecha='2026-11-12', descuentos=[], neto=600, iva=114, total=714, orden_compra_id='OC-0002', items=art('ART-003', 5, 120))
+        orden('OC-0003', 'PRV-002', 'ART-002', 4, 500); recep(3, 'OC-0003', 'ART-002', 4)
+        reg('facturas', 'FC-0103', numero='B3', proveedor_id='PRV-002', fecha='2026-11-14', descuentos=[], neto=2000, iva=380, total=2380, orden_compra_id='OC-0003', items=art('ART-002', 4, 500))
+        orden('OC-0004', 'PRV-002', 'ART-002', 3, 500)
+        reg('facturas', 'FC-0104', numero='B4', proveedor_id='PRV-002', fecha='2026-11-15', descuentos=[], neto=1500, iva=285, total=1785, orden_compra_id='OC-0004', items=art('ART-002', 3, 500))
+
+    def compras(self, rol='FINANZAS', **args):
+        return self.q(rol, 'consultar_finanzas', tipo='compra', **args)['compras']
+
+    def test_filtra_las_facturas_bloqueadas_por_discrepancia(self):
+        c = self.compras(estado_conciliacion='BLOQUEADA_POR_DISCREPANCIA')
+        self.assertEqual(sorted((f['numero'], f['discrepancias']) for f in c['filas']), [('B1', ['FALTANTE_DE_ENTREGA']), ('B2', ['PRECIO_MAYOR'])])
+        self.assertEqual(c['total_coincidencias'], 2)
+        self.assertEqual([f['numero'] for f in self.compras(estado_conciliacion='PENDIENTE_RECEPCION')['filas']], ['B4'])
+        self.assertEqual([f['numero'] for f in self.compras(estado_conciliacion='CONCILIADA')['filas']], ['B3'])
+
+    def test_cada_factura_trae_su_estado_y_el_monto_retenido(self):
+        por_numero = {f['numero']: f for f in self.compras()['filas']}
+        self.assertEqual(por_numero['B1']['estado_conciliacion'], 'BLOQUEADA_POR_DISCREPANCIA')
+        self.assertEqual(por_numero['B1']['monto_retenido'], 4760)  # 4 unidades × 1.000 + IVA
+        self.assertEqual((por_numero['A1']['estado_conciliacion'], por_numero['A1']['monto_retenido']), ('SIN_ORDEN', 0))
+
+    def test_resumen_de_discrepancias_con_monto_y_ranking(self):
+        r = self.compras(resumen_discrepancias=True)['resumen_discrepancias']
+        self.assertEqual(r['facturas_bloqueadas'], 2)
+        self.assertEqual(r['monto_retenido_neto'], 4000 + 100)   # faltante 4.000 + sobreprecio 5 × 20
+        self.assertEqual(r['monto_retenido'], 4760 + 119)
+        self.assertEqual(r['monto_pendiente_recepcion'], 1500)
+        self.assertEqual(r['por_tipo'], {'FALTANTE_DE_ENTREGA': 1, 'PRECIO_MAYOR': 1})
+        self.assertEqual([(p['proveedor'], p['discrepancias']) for p in r['ranking_proveedores']], [('Frío Sur SpA', 2)])
+
+    def test_el_resumen_respeta_el_rango_de_fechas(self):
+        r = self.compras(resumen_discrepancias=True, fecha_desde='2026-11-11')['resumen_discrepancias']
+        self.assertEqual((r['facturas_bloqueadas'], r['monto_retenido_neto']), (1, 100))  # solo B2 (12-nov) entra
+
+    def test_una_factura_liberada_deja_de_retener_pero_cuenta_en_el_ranking(self):
+        Registro.objects.filter(tabla='facturas', rid='FC-0101').update(datos={**Registro.objects.get(tabla='facturas', rid='FC-0101').datos, 'liberacion': {'por': 'U-001', 'motivo': 'Llegó con la guía 9'}})
+        r = self.compras(resumen_discrepancias=True)['resumen_discrepancias']
+        self.assertEqual((r['facturas_bloqueadas'], r['monto_retenido_neto']), (1, 100))
+        self.assertEqual(r['ranking_proveedores'][0]['discrepancias'], 2)
+
+    def test_filtros_de_compra_no_se_mezclan_con_ventas_y_se_validan(self):
+        self.assertEqual(self.q('FINANZAS', 'consultar_finanzas', tipo='venta', estado_conciliacion='CONCILIADA')['status'], 400)
+        self.assertEqual(self.q('FINANZAS', 'consultar_finanzas', estado_conciliacion='RARO')['status'], 400)
+        self.assertEqual(self.q('FINANZAS', 'consultar_finanzas', resumen_discrepancias='si')['status'], 400)
+        sin_ventas = self.q('FINANZAS', 'consultar_finanzas', estado_conciliacion='CONCILIADA')
+        self.assertNotIn('ventas', sin_ventas)
+
+    def test_permisos_gerente_y_finanzas_si_otros_no(self):
+        for rol in ('FINANZAS', 'ADMIN', 'AUDITOR'):
+            self.assertEqual(self.compras(rol, resumen_discrepancias=True)['resumen_discrepancias']['facturas_bloqueadas'], 2, rol)
+        for rol in ('RRHH', 'COMERCIAL', 'TECNICO'):
+            self.assertEqual(self.q(rol, 'consultar_finanzas', resumen_discrepancias=True)['status'], 403, rol)
+
+
 class ChatConConsultasTests(ConsultasBase):
     def test_el_modelo_pide_la_consulta_y_recibe_json_limpio(self):
         fake = self.ia(mensaje(tool_calls=[llamada({'tipo': 'compra', 'proveedor': 'Frío'}, 'consultar_finanzas')]), mensaje('Hay 2 facturas de compra de Frío Sur.'))

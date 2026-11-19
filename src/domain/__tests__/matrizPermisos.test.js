@@ -14,7 +14,7 @@ describe('segregación de funciones', () => {
     expect(permisosDe(ROLES.ADMIN_GENERAL, 'operativa')).toEqual([])
     expect(permisosDe(ROLES.ADMIN_GENERAL, 'sistema').sort()).toEqual(['gobernanza_ia.ver', 'usuarios.crear', 'usuarios.editar']) // la gobernanza de IA la ve, pero no la cambia
     expect(can('ADMIN_GENERAL', 'gobernanza_ia.gestionar')).toBe(false)
-    expect(permisosDe(ROLES.ADMIN_GENERAL, 'aprobacion').sort()).toEqual(['conteo.aprobar', 'facturacion.emitir', 'obras.cerrar', 'presupuestos.aprobar'])
+    expect(permisosDe(ROLES.ADMIN_GENERAL, 'aprobacion').sort()).toEqual(['compras.liberar_factura', 'conteo.aprobar', 'facturacion.emitir', 'obras.cerrar', 'presupuestos.aprobar'])
     for (const a of ['cardex.crear', 'cardex.reversar', 'compras.registrar', 'articulos.gestionar', 'hojas.auditar', 'personal.editar', 'maestros.gestionar', 'presupuestos.crear', 'obras.crear', 'pwa.usar']) {
       expect(can('ADMIN_GENERAL', a)).toBe(false)
     }

@@ -1,7 +1,7 @@
 import { api } from './api'
 
-/** Tablas que se pueden buscar para elegir (el servidor decide además, por rol, cuáles puede usar cada persona). Filtros admitidos: artículos `proveedor`, obras `estado`. */
-export const TABLAS_BUSCABLES = ['proveedores', 'clientes', 'articulos', 'obras', 'facturas']
+/** Tablas que se pueden buscar para elegir (el servidor decide además, por rol, cuáles puede usar cada persona). Filtros admitidos: artículos `proveedor`, obras `estado`, órdenes de compra `proveedor` y `estado`. */
+export const TABLAS_BUSCABLES = ['proveedores', 'clientes', 'articulos', 'obras', 'facturas', 'presupuestos', 'ordenes_compra']
 
 /**
  * Búsqueda asíncrona para los campos que relacionan datos. El navegador nunca baja la lista completa: pide pocas coincidencias por vez
