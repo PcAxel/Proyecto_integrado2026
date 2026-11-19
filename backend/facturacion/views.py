@@ -19,7 +19,7 @@ from erp.escritura import Lote, siguiente_id
 
 from . import ordenes
 from .models import FacturaDTE
-from .servicios_dte import DatosFactura, ProveedorSimulado, almacen_dte, generar_pdf_dte, guardar_pdf, obtener_proveedor
+from .servicios_dte import DatosFactura, ProveedorSimulado, almacen_de, generar_pdf_dte, guardar_pdf, obtener_proveedor
 
 logger = logging.getLogger(__name__)
 ACCION = 'facturacion.emitir'
@@ -196,11 +196,13 @@ class DescargarPDFView(_Base):
         f = FacturaDTE.objects.filter(orden_id=id_orden, estado_sii=FacturaDTE.EstadoSII.ACEPTADO).first()
         if f is None:
             raise Http404
-        if not f.pdf_archivo or not almacen_dte.exists(f.pdf_archivo):
+        almacen = almacen_de(f.pdf_archivo) if f.pdf_archivo else None
+        if almacen is None:
             datos = DatosFactura(f.orden_id, f.receptor_rut, f.receptor_razon_social, f.glosa, f.monto_neto, f.monto_iva, f.monto_total, f.pdf_url or '', f.folio_sii, f.emitido_en.date())
             f.pdf_archivo = guardar_pdf(generar_pdf_dte(datos, f.folio_sii, simulado=settings.DTE_PROVEEDOR == 'simulado'))
             f.save(update_fields=['pdf_archivo', 'actualizado_en'])
-        respuesta = FileResponse(almacen_dte.open(f.pdf_archivo, 'rb'), as_attachment=True, filename=f'factura-{f.folio_sii}.pdf', content_type='application/pdf')
+            almacen = almacen_de(f.pdf_archivo)
+        respuesta = FileResponse(almacen.open(f.pdf_archivo, 'rb'), as_attachment=True, filename=f'factura-{f.folio_sii}.pdf', content_type='application/pdf')
         respuesta['Cache-Control'] = 'private, no-store'
         respuesta['X-Content-Type-Options'] = 'nosniff'
         return respuesta

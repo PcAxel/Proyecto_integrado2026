@@ -286,3 +286,21 @@ class ModoSimulacionTests(DTEBase):
         with override_settings(SII_MODO_SIMULACION=True), self.assertLogs('facturacion', level='INFO') as log:
             self.emitir()
         self.assertTrue(any('track_id=SIM-' in linea and 'folio=9999' in linea for linea in log.output))
+
+
+class RespaldoDeDiscoTests(DTEBase):
+    """Si ARCHIVOS_PRIVADOS no es escribible (permisos en la plataforma), la emisión usa el directorio temporal en vez de fallar."""
+
+    def test_emite_y_descarga_con_el_disco_principal_sin_permisos(self):
+        respaldo = tempfile.TemporaryDirectory()
+        self.addCleanup(respaldo.cleanup)
+        from django.core.files.storage import FileSystemStorage
+        with patch.object(servicios_dte.almacen_dte, 'save', side_effect=PermissionError('sin permiso')), \
+                patch.object(servicios_dte, '_almacen_respaldo', lambda: FileSystemStorage(location=respaldo.name)):
+            r = self.emitir()
+            self.assertEqual(r.status_code, 200, r.content)
+            self.assertEqual(self.client.get('/api/facturacion/OB-0001/pdf/').status_code, 200)
+
+    def test_el_pdf_tolera_campos_vacios(self):
+        datos = DatosFactura('OB-9', None, None, None, 100, 19, 119, '', 1, __import__('datetime').date.today())
+        self.assertTrue(servicios_dte.generar_pdf_dte(datos, 1).startswith(b'%PDF'))

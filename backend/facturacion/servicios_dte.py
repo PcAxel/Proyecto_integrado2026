@@ -7,6 +7,9 @@ Contrato de `emitir(datos)` → dict:
   {'exito': bool, 'folio_sii': int, 'pdf_url': str, 'pdf_archivo': str, 'xml_timbre': str|None, 'error': str}   (`error` solo si `exito` es False)
 """
 import io
+import logging
+import os
+import tempfile
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -22,6 +25,12 @@ from reportlab.pdfgen import canvas
 
 # PDFs en almacenamiento PRIVADO (sin URL pública): solo se entregan por una vista que comprueba el permiso.
 almacen_dte = FileSystemStorage(location=settings.ARCHIVOS_PRIVADOS)
+logger = logging.getLogger(__name__)
+
+
+def _almacen_respaldo():
+    """Almacenamiento temporal para cuando el disco principal no es escribible (p. ej. permisos en la plataforma): la emisión nunca debe fallar por eso."""
+    return FileSystemStorage(location=os.path.join(tempfile.gettempdir(), 'dte_pdfs'))
 
 
 @dataclass(frozen=True)
@@ -89,9 +98,9 @@ def generar_pdf_dte(datos: DatosFactura, folio: int, simulado: bool = True) -> b
     c.setFont('Helvetica-Bold', 10)
     c.drawString(40, alto - 140, 'Señor(es)')
     c.setFont('Helvetica', 10)
-    c.drawString(120, alto - 140, datos.receptor_razon_social[:70])
+    c.drawString(120, alto - 140, (datos.receptor_razon_social or '')[:70])
     c.drawString(40, alto - 156, 'R.U.T.')
-    c.drawString(120, alto - 156, datos.receptor_rut)
+    c.drawString(120, alto - 156, datos.receptor_rut or '')
     c.drawString(40, alto - 172, 'Fecha emisión')
     c.drawString(120, alto - 172, datos.fecha.strftime('%d-%m-%Y'))
     c.drawString(40, alto - 188, 'Orden')
@@ -106,7 +115,7 @@ def generar_pdf_dte(datos: DatosFactura, folio: int, simulado: bool = True) -> b
     c.drawRightString(ancho - 48, y + 6, 'Monto neto')
     c.setFillColor(colors.black)
     c.setFont('Helvetica', 10)
-    c.drawString(48, y - 16, datos.glosa[:90])
+    c.drawString(48, y - 16, (datos.glosa or '')[:90])
     c.drawRightString(ancho - 48, y - 16, _clp(datos.neto))
     c.line(40, y - 28, ancho - 40, y - 28)
 
@@ -128,7 +137,23 @@ def generar_pdf_dte(datos: DatosFactura, folio: int, simulado: bool = True) -> b
 
 def guardar_pdf(contenido: bytes) -> str:
     """Escribe el PDF en el almacenamiento privado y devuelve su ruta relativa."""
-    return almacen_dte.save(f'dtes/{uuid.uuid4().hex}.pdf', ContentFile(contenido))
+    nombre = f'dtes/{uuid.uuid4().hex}.pdf'
+    try:
+        os.makedirs(os.path.join(str(almacen_dte.location), 'dtes'), exist_ok=True)
+        return almacen_dte.save(nombre, ContentFile(contenido))
+    except OSError:  # PermissionError incluido
+        logger.warning('dte_pdf_respaldo: ARCHIVOS_PRIVADOS no es escribible, se usa el directorio temporal', exc_info=True)
+        respaldo = _almacen_respaldo()
+        os.makedirs(os.path.join(str(respaldo.location), 'dtes'), exist_ok=True)
+        return respaldo.save(nombre, ContentFile(contenido))
+
+
+def almacen_de(nombre: str):
+    """Almacenamiento donde está el PDF `nombre` (el principal o, si se guardó con el respaldo, el temporal); None si no existe en ninguno."""
+    for almacen in (almacen_dte, _almacen_respaldo()):
+        if almacen.exists(nombre):
+            return almacen
+    return None
 
 
 class ProveedorSimulado(ProveedorDTEBase):
