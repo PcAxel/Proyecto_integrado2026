@@ -524,6 +524,7 @@ class Lote:
         nuevo = c['estado']
         if a['estado'] == 'BORRADOR' and nuevo == 'ENVIADO':
             self.exigir_permiso('presupuestos.crear')
+            flujo.avisar_presupuesto_por_aprobar(a, self.user)
             return {'estado': 'ENVIADO'}
         exigir(a['estado'] == 'ENVIADO' and nuevo in ('APROBADO', 'RECHAZADO'), 'Transición de estado inválida.', 409, 'estado_invalido')
         self.exigir_permiso('presupuestos.aprobar')

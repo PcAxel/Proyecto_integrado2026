@@ -44,3 +44,14 @@ def avisar_obra_por_aprobar(obra):
     from notificaciones.models import Notification, notificar
     destino = CustomUser.objects.filter(role=Role.FINANZAS, is_active=True)
     return notificar(destino, f"Nueva obra {obra['id']} ({obra.get('nombre') or 'sin nombre'}) creada por Operaciones. Espera tu aprobación.", Notification.Tipo.GENERAL)
+
+
+def avisar_presupuesto_por_aprobar(presupuesto, remitente=None):
+    """Aviso a Finanzas y a la Gerencia General: un presupuesto fue enviado a aprobación. No avisa a quien lo envió."""
+    from accounts.models import CustomUser, Role
+    from notificaciones.models import Notification, notificar
+    destino = CustomUser.objects.filter(role__in=(Role.FINANZAS, Role.ADMIN), is_active=True)
+    if remitente is not None:
+        destino = destino.exclude(pk=remitente.pk)
+    titulo = presupuesto.get('titulo') or 'sin título'
+    return notificar(destino, f"Presupuesto {presupuesto['id']} ({titulo}) enviado a aprobación. Espera tu revisión.", Notification.Tipo.GENERAL)

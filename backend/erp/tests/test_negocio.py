@@ -40,6 +40,14 @@ class PresupuestoTests(Negocio):
         self.assertEqual(self.datos('presupuestos', 'PRE-0001')['aprobado_por'], uid(self.users['FINANZAS']))  # lo fija el servidor
         self.assertEqual(self.parchar('FINANZAS', 'presupuestos', 'PRE-0001', {'titulo': 'otro'}).status_code, 409)  # aprobado = inmutable
 
+    def test_enviar_a_aprobacion_avisa_a_finanzas_y_gerencia_pero_no_a_quien_envia(self):
+        from notificaciones.models import Notification
+        self.nuevo()
+        self.assertEqual(self.parchar('OPERACIONES', 'presupuestos', 'PRE-0001', {'estado': 'ENVIADO'}).status_code, 200)
+        avisos = Notification.objects.filter(mensaje__contains='PRE-0001')
+        self.assertEqual({n.usuario_destino.role for n in avisos}, {'FINANZAS', 'ADMIN'})
+        self.assertTrue(all('enviado a aprobación' in n.mensaje and not n.leida for n in avisos))
+
     def test_margen_bajo_solo_lo_aprueba_la_gerencia(self):
         self.nuevo(adicionales=[{'monto': 950}])  # margen 5 %
         self.parchar('FINANZAS', 'presupuestos', 'PRE-0001', {'estado': 'ENVIADO'})
